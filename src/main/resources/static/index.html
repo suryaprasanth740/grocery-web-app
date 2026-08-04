@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FreshCart &mdash; Groceries delivered from your neighbourhood</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="signboard">
+  <div class="wrap">
+    <a href="/" class="brand"><span class="crate">&#127811;</span>FreshCart</a>
+    <nav class="nav-links">
+      <a href="/products.html">Shop</a>
+      <a href="/orders.html" id="nav-orders" style="display:none">My Orders</a>
+      <span id="nav-auth-area"><a href="/login.html" id="nav-login">Login</a></span>
+      <a href="/cart.html" class="cart-pill">&#128722; Cart <span class="count" id="cart-count">0</span></a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <span class="eyebrow">fresh off the crate, today&rsquo;s picks</span>
+      <h1>Your neighbourhood grocer, now a click away.</h1>
+      <p class="sub">Browse the daily stock, fill your basket, and check out &mdash; no store visit required. Real produce, real prices, straight to your door.</p>
+      <div class="search-row">
+        <input type="text" id="hero-search" placeholder="Search for tomatoes, milk, rice...">
+        <button class="btn btn-primary" id="hero-search-btn">Search</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <div class="section-heading">
+      <h2>Shop by category</h2>
+      <span class="note">Everything from the produce crate to the pantry shelf</span>
+    </div>
+    <div class="category-row" id="category-row">
+      <div class="skeleton" style="width:140px;height:44px;border-radius:999px;"></div>
+      <div class="skeleton" style="width:140px;height:44px;border-radius:999px;"></div>
+      <div class="skeleton" style="width:140px;height:44px;border-radius:999px;"></div>
+    </div>
+
+    <div class="section-heading">
+      <h2>Today&rsquo;s picks</h2>
+      <span class="note"><a href="/products.html" style="text-decoration:underline;">See full catalog &rarr;</a></span>
+    </div>
+    <div class="grid" id="featured-grid">
+      <div class="skeleton" style="height:220px;"></div>
+      <div class="skeleton" style="height:220px;"></div>
+      <div class="skeleton" style="height:220px;"></div>
+      <div class="skeleton" style="height:220px;"></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    FreshCart &mdash; a student full-stack demo project. Built with Spring Boot, MySQL, and vanilla JS by
+    <a href="https://github.com/suryaprasanth740" target="_blank" rel="noopener">Surya Prasanth</a>.
+  </div>
+</footer>
+
+<div id="toast"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('hero-search-btn').addEventListener('click', runSearch);
+  document.getElementById('hero-search').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') runSearch();
+  });
+  function runSearch() {
+    const q = document.getElementById('hero-search').value.trim();
+    window.location.href = '/products.html' + (q ? '?search=' + encodeURIComponent(q) : '');
+  }
+
+  try {
+    const categories = await API.categories();
+    const catRow = document.getElementById('category-row');
+    catRow.innerHTML = categories.map(c => `
+      <a class="category-chip" href="/products.html?categoryId=${c.id}">
+        <span class="emoji">${c.icon || '\u{1F6D2}'}</span>${escapeHtml(c.name)}
+      </a>
+    `).join('');
+  } catch (e) {
+    document.getElementById('category-row').innerHTML = '<p>Could not load categories right now.</p>';
+  }
+
+  try {
+    const products = await API.products();
+    const featured = products.slice(0, 8);
+    const grid = document.getElementById('featured-grid');
+    grid.innerHTML = featured.map(productCardHtml).join('');
+    attachAddToCartHandlers(grid);
+  } catch (e) {
+    document.getElementById('featured-grid').innerHTML = '<p>Could not load products right now.</p>';
+  }
+});
+
+function productCardHtml(p) {
+  const lowStock = p.stock > 0 && p.stock <= 5;
+  return `
+    <div class="product-card">
+      <div class="stamp">${formatRupees(p.price)}<small>${escapeHtml(p.unit || '')}</small></div>
+      <div class="product-emoji">${p.imageEmoji || '\u{1F6D2}'}</div>
+      <h3>${escapeHtml(p.name)}</h3>
+      <div class="unit">${escapeHtml(p.unit || '')}</div>
+      <div class="desc">${escapeHtml(p.description || '')}</div>
+      <div class="row">
+        ${p.stock > 0
+          ? `<button class="btn btn-accent btn-sm add-to-cart-btn" data-id="${p.id}">Add to cart</button>`
+          : `<span class="stock-low">Out of stock</span>`}
+        ${lowStock ? `<span class="stock-low">Only ${p.stock} left</span>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function attachAddToCartHandlers(container) {
+  container.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        await API.addToCart(Number(btn.dataset.id), 1);
+        showToast('Added to cart');
+        refreshCartCount();
+      } catch (e) {
+        if (e.status === 401) {
+          window.location.href = '/login.html?next=/index.html';
+        } else {
+          showToast(e.message);
+        }
+      }
+    });
+  });
+}
+</script>
+</body>
+</html>

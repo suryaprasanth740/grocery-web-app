@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: grocery-web-app
+    env: java
+    plan: free
+    region: singapore
+    buildCommand: "mvn clean package -DskipTests"
+    startCommand: "java -Xmx400m -Xss512k -jar target/grocery-web-app.jar"
+    healthCheckPath: /index.html
+    envVars:
+      - key: DB_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false

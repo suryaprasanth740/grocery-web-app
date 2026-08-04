@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order details &mdash; FreshCart</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="signboard">
+  <div class="wrap">
+    <a href="/" class="brand"><span class="crate">&#127811;</span>FreshCart</a>
+    <nav class="nav-links">
+      <a href="/products.html">Shop</a>
+      <a href="/orders.html" id="nav-orders" style="display:none">My Orders</a>
+      <span id="nav-auth-area"><a href="/login.html" id="nav-login">Login</a></span>
+      <a href="/cart.html" class="cart-pill">&#128722; Cart <span class="count" id="cart-count">0</span></a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap" style="max-width:640px;">
+    <div id="order-root">
+      <div class="skeleton" style="height:220px;margin-top:34px;"></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    FreshCart &mdash; a student full-stack demo project. Built with Spring Boot, MySQL, and vanilla JS by
+    <a href="https://github.com/suryaprasanth740" target="_blank" rel="noopener">Surya Prasanth</a>.
+  </div>
+</footer>
+
+<div id="toast"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const root = document.getElementById('order-root');
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+  const justPlaced = params.get('justPlaced') === '1';
+
+  try {
+    await API.me();
+  } catch (e) {
+    window.location.href = '/login.html?next=/orders.html';
+    return;
+  }
+
+  if (!id) {
+    root.innerHTML = '<p>No order specified.</p>';
+    return;
+  }
+
+  try {
+    const order = await API.order(id);
+    root.innerHTML = `
+      ${justPlaced ? `
+        <div class="confirm-banner">
+          <div class="stamp-big">&#9989;</div>
+          <h2 style="color:#fff;">Order placed!</h2>
+          <p style="opacity:0.85;">Order #${order.id} is confirmed. Thanks for shopping with FreshCart.</p>
+        </div>
+      ` : `<div class="section-heading" style="margin-top:34px;"><h2>Order #${order.id}</h2></div>`}
+
+      <div class="order-card">
+        <div class="top-row">
+          <div>
+            <div class="order-id">Order #${order.id}</div>
+            <div class="date">${new Date(order.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+          </div>
+          <span class="status-badge">${escapeHtml(order.status)}</span>
+        </div>
+        <div style="font-size:0.9rem;color:var(--ink-soft);"><strong>Delivering to:</strong> ${escapeHtml(order.shippingAddress)}</div>
+        <div class="order-items-list">
+          ${order.items.map(it => `
+            <div class="order-line"><span><b>${escapeHtml(it.productName)}</b> &times; ${it.quantity}</span><span>${formatRupees(it.price * it.quantity)}</span></div>
+          `).join('')}
+        </div>
+        <div class="summary-row total" style="margin-top:10px;"><span>Total</span><span>${formatRupees(order.totalAmount)}</span></div>
+      </div>
+
+      <a href="/orders.html" class="btn btn-outline">Back to my orders</a>
+      <a href="/products.html" class="btn btn-primary">Continue shopping</a>
+    `;
+  } catch (e) {
+    root.innerHTML = `<p>Could not load this order. ${escapeHtml(e.message)}</p>`;
+  }
+});
+</script>
+</body>
+</html>

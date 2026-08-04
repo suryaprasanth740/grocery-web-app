@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Cart &mdash; FreshCart</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="signboard">
+  <div class="wrap">
+    <a href="/" class="brand"><span class="crate">&#127811;</span>FreshCart</a>
+    <nav class="nav-links">
+      <a href="/products.html">Shop</a>
+      <a href="/orders.html" id="nav-orders" style="display:none">My Orders</a>
+      <span id="nav-auth-area"><a href="/login.html" id="nav-login">Login</a></span>
+      <a href="/cart.html" class="cart-pill">&#128722; Cart <span class="count" id="cart-count">0</span></a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="section-heading" style="margin-top:34px;">
+      <h2>Your cart</h2>
+    </div>
+    <div id="cart-root">
+      <div class="skeleton" style="height:90px;margin-bottom:12px;"></div>
+      <div class="skeleton" style="height:90px;"></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    FreshCart &mdash; a student full-stack demo project. Built with Spring Boot, MySQL, and vanilla JS by
+    <a href="https://github.com/suryaprasanth740" target="_blank" rel="noopener">Surya Prasanth</a>.
+  </div>
+</footer>
+
+<div id="toast"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', loadCart);
+
+async function loadCart() {
+  const root = document.getElementById('cart-root');
+  let user;
+  try {
+    user = await API.me();
+  } catch (e) {
+    window.location.href = '/login.html?next=/cart.html';
+    return;
+  }
+
+  let items;
+  try {
+    items = await API.cart();
+  } catch (e) {
+    root.innerHTML = `<p>Could not load your cart right now.</p>`;
+    return;
+  }
+
+  if (items.length === 0) {
+    root.innerHTML = `
+      <div class="empty-state">
+        <div class="big-emoji">&#128722;</div>
+        <h3>Your cart is empty</h3>
+        <p>Add a few things from the shop to see them here.</p>
+        <a href="/products.html" class="btn btn-primary mt-40">Browse products</a>
+      </div>
+    `;
+    return;
+  }
+
+  const subtotal = items.reduce((sum, it) => sum + it.product.price * it.quantity, 0);
+  const deliveryFee = subtotal >= 500 ? 0 : 30;
+  const total = subtotal + deliveryFee;
+
+  root.innerHTML = `
+    <div class="cart-layout">
+      <div id="cart-items-list">
+        ${items.map(cartItemHtml).join('')}
+      </div>
+      <aside class="cart-summary">
+        <h3 style="font-size:1.1rem;margin-bottom:16px;">Order summary</h3>
+        <div class="summary-row"><span>Subtotal</span><span>${formatRupees(subtotal)}</span></div>
+        <div class="summary-row"><span>Delivery</span><span>${deliveryFee === 0 ? 'Free' : formatRupees(deliveryFee)}</span></div>
+        ${deliveryFee > 0 ? `<div class="summary-row" style="font-size:0.8rem;">Free delivery on orders over &#8377;500</div>` : ''}
+        <div class="summary-row total"><span>Total</span><span>${formatRupees(total)}</span></div>
+        <a href="/checkout.html" class="btn btn-accent btn-block" style="margin-top:16px;">Proceed to checkout</a>
+      </aside>
+    </div>
+  `;
+  attachCartHandlers();
+}
+
+function cartItemHtml(item) {
+  const p = item.product;
+  return `
+    <div class="cart-item" data-product-id="${p.id}">
+      <div class="emoji">${p.imageEmoji || '\u{1F6D2}'}</div>
+      <div class="info">
+        <h4>${escapeHtml(p.name)}</h4>
+        <div class="unit">${escapeHtml(p.unit || '')} &middot; ${formatRupees(p.price)} each</div>
+      </div>
+      <div class="qty-control">
+        <button class="qty-minus" aria-label="Decrease quantity">&minus;</button>
+        <span>${item.quantity}</span>
+        <button class="qty-plus" aria-label="Increase quantity">+</button>
+      </div>
+      <div class="line-total">${formatRupees(p.price * item.quantity)}</div>
+      <button class="remove" aria-label="Remove item">&times;</button>
+    </div>
+  `;
+}
+
+function attachCartHandlers() {
+  document.querySelectorAll('.cart-item').forEach(row => {
+    const productId = Number(row.dataset.productId);
+    const qtySpan = row.querySelector('.qty-control span');
+
+    row.querySelector('.qty-plus').addEventListener('click', async () => {
+      const newQty = Number(qtySpan.textContent) + 1;
+      await updateQty(productId, newQty);
+    });
+    row.querySelector('.qty-minus').addEventListener('click', async () => {
+      const newQty = Number(qtySpan.textContent) - 1;
+      if (newQty <= 0) {
+        await removeItem(productId);
+      } else {
+        await updateQty(productId, newQty);
+      }
+    });
+    row.querySelector('.remove').addEventListener('click', async () => {
+      await removeItem(productId);
+    });
+  });
+}
+
+async function updateQty(productId, quantity) {
+  try {
+    await API.updateCartQty(productId, quantity);
+    await loadCart();
+    refreshCartCount();
+  } catch (e) {
+    showToast(e.message);
+  }
+}
+
+async function removeItem(productId) {
+  try {
+    await API.removeFromCart(productId);
+    await loadCart();
+    refreshCartCount();
+    showToast('Item removed');
+  } catch (e) {
+    showToast(e.message);
+  }
+}
+</script>
+</body>
+</html>
