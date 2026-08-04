@@ -1,7 +1,7 @@
 services:
   - type: web
     name: grocery-web-app
-    env: java
+    runtime: java
     plan: free
     region: singapore
     buildCommand: "mvn clean package -DskipTests"
