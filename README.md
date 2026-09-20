@@ -36,7 +36,9 @@ and complete checkout — built as a portfolio/demo project.
 ```
 grocery-web-app/
 ├── pom.xml
-├── render.yaml                  # Render deployment config
+├── render.yaml                  # Render deployment config (backend)
+├── netlify.toml                 # Netlify: hosts the frontend, proxies /api to Render
+├── vercel.json                  # Vercel: hosts the frontend, proxies /api to Render
 ├── src/main/java/com/suryaprasanth/grocery/
 │   ├── GroceryApplication.java
 │   ├── model/                   # JPA entities: Product, Category, User, CartItem, Order, OrderItem
@@ -116,6 +118,35 @@ copy its URL into the command above.)
 5. Select the **Free** instance type and click **Create Web Service**.
 6. Wait for the build to finish (first build can take a few minutes). Render will give you
    a URL like `https://grocery-web-app-xxxx.onrender.com` — **that's your live link.**
+
+### Optional — Host the frontend on Netlify or Vercel
+
+Netlify and Vercel **cannot run the Java backend**. They only host static files, and a Spring Boot server needs a long-running JVM. So the setup is split:
+
+```
+Browser ──► Netlify / Vercel  (HTML, CSS, JS from src/main/resources/static)
+               │
+               └── /api/*  ──proxy──►  Render  (Spring Boot API + MySQL)
+```
+
+Netlify/Vercel **forward** every `/api/...` request to Render. The browser only ever talks to one domain, so the login session cookie keeps working. No CORS setup and no Java changes are needed.
+
+**Netlify** (uses `netlify.toml`)
+1. netlify.com → **Add new site → Import an existing project** → pick this repo.
+2. Leave the settings as they are. `netlify.toml` already sets the publish folder and the `/api` proxy.
+3. Deploy. Your site is at `https://<name>.netlify.app`.
+
+**Vercel** (uses `vercel.json`)
+1. vercel.com → **Add New → Project** → import this repo.
+2. Framework preset: **Other**. Leave everything else as it is.
+3. Deploy. Your site is at `https://<name>.vercel.app`.
+
+Keep the Render service running. It is still the backend. If your Render URL changes, update it in **both** `netlify.toml` (`to = ...`) and `vercel.json` (`destination`).
+
+**Cold starts:** a free Render service sleeps after 15 minutes idle and needs about 30–60 s to wake up.
+- Netlify gives up on a proxied request after 26 s, and Vercel after 2 minutes.
+- `js/api.js` handles this. While the server wakes up, it shows *"Waking up the server…"* and retries page-loading (GET) requests automatically. Actions like placing an order are never retried, so nothing happens twice.
+- To avoid the wait completely, the optional GitHub Action `.github/workflows/keep-backend-awake.yml` pings the backend every 10 minutes. One always-on free service uses about 744 of Render's 750 free hours a month. Turn it off any time under the repo's **Actions** tab.
 
 ### Step 4 — Put the link on your resume
 

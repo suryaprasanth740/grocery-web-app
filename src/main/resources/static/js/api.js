@@ -1,8 +1,17 @@
 // Thin wrapper around fetch() for the Grocery Web App REST API.
 // All calls include credentials so the session cookie (login state) is sent.
 
+// When the frontend is hosted on Vercel/Netlify, /api/* is proxied to the
+// backend on Render. A free Render service sleeps when idle and needs up to
+// ~1 minute to wake up; meanwhile the proxy answers 502/503/504 (Netlify gives
+// up after 26 s). Safe GET requests are retried automatically while it wakes.
+// POST/PUT/DELETE are never retried, so an order is never placed twice.
+const WAKE_UP_STATUSES = [502, 503, 504];
+const MAX_WAKE_UP_RETRIES = 5;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const API = {
-  async _request(method, url, body) {
+  async _request(method, url, body, attempt = 0) {
     const options = {
       method,
       headers: { 'Content-Type': 'application/json' },
@@ -11,7 +20,22 @@ const API = {
     if (body !== undefined) {
       options.body = JSON.stringify(body);
     }
-    const res = await fetch(url, options);
+    const canRetry = method === 'GET' && attempt < MAX_WAKE_UP_RETRIES;
+
+    let res;
+    try {
+      res = await fetch(url, options);
+    } catch (networkError) {
+      if (canRetry) return this._retryWhileWaking(method, url, body, attempt);
+      throw new Error('Cannot reach the server. Please check your connection and try again.');
+    }
+
+    if (WAKE_UP_STATUSES.includes(res.status)) {
+      if (canRetry) return this._retryWhileWaking(method, url, body, attempt);
+      const err = new Error('The server is waking up. Please try again in a few seconds.');
+      err.status = res.status;
+      throw err;
+    }
 
     if (res.status === 204) {
       return null;
@@ -31,6 +55,14 @@ const API = {
       throw err;
     }
     return data;
+  },
+
+  async _retryWhileWaking(method, url, body, attempt) {
+    if (attempt === 0 && typeof showToast === 'function') {
+      showToast('Waking up the server… this can take up to a minute.');
+    }
+    await sleep(Math.min(2000 * (attempt + 1), 8000)); // 2s, 4s, 6s, 8s, 8s
+    return this._request(method, url, body, attempt + 1);
   },
 
   get(url) { return this._request('GET', url); },
