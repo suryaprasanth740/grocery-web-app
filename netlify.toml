@@ -1,0 +1,33 @@
+# FreshCart frontend on Netlify.
+# The Java backend + MySQL stay on Render; Netlify serves the HTML/CSS/JS and
+# forwards every /api/* request to Render. The browser only ever talks to the
+# Netlify domain, so the login session cookie keeps working with no code changes.
+#
+# If your Render URL changes, update the "to" line below.
+
+[build]
+  publish = "src/main/resources/static"
+  command = "echo 'Static frontend - no build step'"
+
+# Proxy the REST API to the Spring Boot backend on Render (status 200 = rewrite, not redirect).
+[[redirects]]
+  from = "/api/*"
+  to = "https://grocery-web-app-fb3j.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
