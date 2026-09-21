@@ -1,21 +1,42 @@
-# Optional: pings the Render backend every 10 minutes so the free instance
-# doesn't fall asleep (it sleeps after 15 minutes idle).
-# One always-on free service uses ~744 of Render's 750 free hours per month.
-# Disable it any time: GitHub repo → Actions → "Keep backend awake" → Disable workflow.
+# Keeps the free Render backend from sleeping (it sleeps after 15 minutes idle).
+#
+# Why the loop: GitHub often delays or skips scheduled workflows, so a "*/10"
+# cron actually fired only every 2-5 hours and the backend slept in between.
+# Instead each run stays alive and pings every 5 minutes for ~5h40m (just under
+# GitHub's 6 h job limit), so one run covers a long stretch even when the next
+# scheduled start is late. Actions minutes are free on public repositories.
+#
+# Turn it off any time: repo -> Actions -> "Keep backend awake" -> Disable workflow.
 name: Keep backend awake
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "7 * * * *"
   workflow_dispatch:
+
+# Never run two pingers at once; a late run simply waits its turn.
+concurrency:
+  group: keep-backend-awake
+  cancel-in-progress: false
 
 jobs:
   ping:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 350
     steps:
-      - name: Ping /api/categories
+      - name: Ping the API every 5 minutes
+        env:
+          URL: https://grocery-web-app-fb3j.onrender.com/api/categories
+          DURATION_SECONDS: 20400 # 5h 40m
+          INTERVAL_SECONDS: 300 # 5 minutes
         run: |
-          curl --silent --show-error --fail --retry 3 --retry-delay 20 --max-time 90 \
-            -o /dev/null -w "HTTP %{http_code} in %{time_total}s\n" \
-            https://grocery-web-app-fb3j.onrender.com/api/categories
+          end=$(( $(date +%s) + DURATION_SECONDS ))
+          while [ "$(date +%s)" -lt "$end" ]; do
+            start=$(date +%s)
+            code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 120 "$URL" || echo 000)
+            echo "$(date -u '+%Y-%m-%d %H:%M:%S UTC') -> HTTP $code"
+            if [ "$code" != "200" ]; then echo "::warning::backend answered $code"; fi
+            elapsed=$(( $(date +%s) - start ))
+            sleep $(( INTERVAL_SECONDS > elapsed ? INTERVAL_SECONDS - elapsed : 5 ))
+          done
+          echo "Finished this window; the next scheduled run takes over."
