@@ -3,11 +3,12 @@
 
 // When the frontend is hosted on Vercel/Netlify, /api/* is proxied to the
 // backend on Render. A free Render service sleeps when idle and needs up to
-// ~1 minute to wake up; meanwhile the proxy answers 502/503/504 (Netlify gives
-// up after 26 s). Safe GET requests are retried automatically while it wakes.
+// 30-90 s to wake up; meanwhile the proxy answers 502/503/504 (Netlify gives
+// up after 26 s, Vercel after 2 min). Safe GET requests are retried for about
+// 90 s while it wakes, which covers a slow cold start.
 // POST/PUT/DELETE are never retried, so an order is never placed twice.
 const WAKE_UP_STATUSES = [502, 503, 504];
-const MAX_WAKE_UP_RETRIES = 5;
+const MAX_WAKE_UP_RETRIES = 8;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const API = {
@@ -59,9 +60,9 @@ const API = {
 
   async _retryWhileWaking(method, url, body, attempt) {
     if (attempt === 0 && typeof showToast === 'function') {
-      showToast('Waking up the server… this can take up to a minute.');
+      showToast('Waking up the server… the free host sleeps, so this can take a minute.');
     }
-    await sleep(Math.min(2000 * (attempt + 1), 8000)); // 2s, 4s, 6s, 8s, 8s
+    await sleep(Math.min(3000 * (attempt + 1), 15000)); // 3s, 6s, 9s, 12s, 15s, 15s, 15s, 15s = ~90s
     return this._request(method, url, body, attempt + 1);
   },
 
