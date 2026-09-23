@@ -24,7 +24,10 @@ public class Product {
     private String unit; // e.g. "1 kg", "500 ml", "1 dozen"
 
     @Column(name = "image_emoji", length = 10)
-    private String imageEmoji; // simple emoji used as a product thumbnail
+    private String imageEmoji; // simple emoji used as a product thumbnail fallback
+
+    @Column(name = "image_url", length = 500)
+    private String imageUrl; // real product photo; falls back to imageEmoji when null/blank
 
     @Column(nullable = false)
     private Integer stock;
@@ -43,6 +46,18 @@ public class Product {
         this.price = price;
         this.unit = unit;
         this.imageEmoji = imageEmoji;
+        this.stock = stock;
+        this.category = category;
+    }
+
+    public Product(String name, String description, BigDecimal price, String unit,
+                    String imageEmoji, String imageUrl, Integer stock, Category category) {
+        this.name = name;
+        this.description = description;
+        this.price = price;
+        this.unit = unit;
+        this.imageEmoji = imageEmoji;
+        this.imageUrl = imageUrl;
         this.stock = stock;
         this.category = category;
     }
@@ -93,6 +108,14 @@ public class Product {
 
     public void setImageEmoji(String imageEmoji) {
         this.imageEmoji = imageEmoji;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public Integer getStock() {

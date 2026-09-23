@@ -144,7 +144,8 @@ function productCardHtml(p) {
     <div class="product-card">
       <div class="product-photo">
         ${p.stock === 0 ? `<span class="stock-tag">Out of stock</span>` : lowStock ? `<span class="stock-tag">Only ${p.stock} left</span>` : ''}
-        ${p.imageEmoji || '\u{1F6D2}'}
+        ${p.imageUrl ? `<img src="${p.imageUrl}" alt="${escapeHtml(p.name)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` : ''}
+        <span class="photo-emoji" style="${p.imageUrl ? 'display:none;' : ''}">${p.imageEmoji || '\u{1F6D2}'}</span>
       </div>
       <div class="body">
         <h3>${escapeHtml(p.name)}</h3>
