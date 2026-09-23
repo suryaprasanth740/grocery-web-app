@@ -87,10 +87,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 function renderCategories() {
   const categories = window.__categories || [];
   const row = document.getElementById('category-row');
-  const allChip = `<button class="category-chip ${!activeCategoryId ? 'active' : ''}" data-cat="">All</button>`;
+  const allChip = `<button class="category-chip ${!activeCategoryId ? 'active' : ''}" data-cat=""><span class="emoji">&#128722;</span><span>All</span></button>`;
   const chips = categories.map(c => `
     <button class="category-chip ${activeCategoryId === c.id ? 'active' : ''}" data-cat="${c.id}">
-      <span class="emoji">${c.icon || '\u{1F6D2}'}</span>${escapeHtml(c.name)}
+      <span class="emoji">${c.icon || '\u{1F6D2}'}</span><span>${escapeHtml(c.name)}</span>
     </button>
   `).join('');
   row.innerHTML = allChip + chips;
@@ -142,16 +142,20 @@ function productCardHtml(p) {
   const lowStock = p.stock > 0 && p.stock <= 5;
   return `
     <div class="product-card">
-      <div class="stamp">${formatRupees(p.price)}<small>${escapeHtml(p.unit || '')}</small></div>
-      <div class="product-emoji">${p.imageEmoji || '\u{1F6D2}'}</div>
-      <h3>${escapeHtml(p.name)}</h3>
-      <div class="unit">${escapeHtml(p.unit || '')}</div>
-      <div class="desc">${escapeHtml(p.description || '')}</div>
-      <div class="row">
-        ${p.stock > 0
-          ? `<button class="btn btn-accent btn-sm add-to-cart-btn" data-id="${p.id}">Add to cart</button>`
-          : `<span class="stock-low">Out of stock</span>`}
-        ${lowStock ? `<span class="stock-low">Only ${p.stock} left</span>` : ''}
+      <div class="product-photo">
+        ${p.stock === 0 ? `<span class="stock-tag">Out of stock</span>` : lowStock ? `<span class="stock-tag">Only ${p.stock} left</span>` : ''}
+        ${p.imageEmoji || '\u{1F6D2}'}
+      </div>
+      <div class="body">
+        <h3>${escapeHtml(p.name)}</h3>
+        <div class="unit">${escapeHtml(p.unit || '')}</div>
+        <div class="desc">${escapeHtml(p.description || '')}</div>
+        <div class="row">
+          <span class="price">${formatRupees(p.price)}</span>
+          ${p.stock > 0
+            ? `<button class="add-to-cart-btn" data-id="${p.id}">Add</button>`
+            : `<button class="add-to-cart-btn" disabled>Add</button>`}
+        </div>
       </div>
     </div>
   `;
