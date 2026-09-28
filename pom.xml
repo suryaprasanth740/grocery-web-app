@@ -40,6 +40,12 @@
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- PostgreSQL driver: lets the app use a free permanent cloud database (e.g. Neon) -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
 
         <!-- Used only as a fallback local database if no MySQL env vars are set,
              so the project also runs out-of-the-box with zero setup. -->

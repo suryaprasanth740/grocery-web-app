@@ -20,4 +20,13 @@ public final class SessionUtil {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Please log in first"));
     }
+
+    /** Like requireLoggedInUser, but also requires the ADMIN role (403 for normal customers). */
+    public static User requireAdmin(HttpSession session, UserRepository userRepository) {
+        User user = requireLoggedInUser(session, userRepository);
+        if (!user.isAdmin()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admins only");
+        }
+        return user;
+    }
 }

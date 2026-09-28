@@ -43,22 +43,23 @@
 
 <script src="/js/api.js"></script>
 <script src="/js/nav.js"></script>
+<script src="/js/shop.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', loadCart);
 
 async function loadCart() {
   const root = document.getElementById('cart-root');
-  let user;
   try {
-    user = await API.me();
+    await API.me();
   } catch (e) {
     window.location.href = '/login.html?next=/cart.html';
     return;
   }
 
-  let items;
+  let items, bill, coupons = [];
   try {
-    items = await API.cart();
+    [items, bill] = await Promise.all([API.cart(), API.quote()]);
+    coupons = await API.coupons().catch(() => []);
   } catch (e) {
     root.innerHTML = `<p>Could not load your cart right now.</p>`;
     return;
@@ -76,36 +77,67 @@ async function loadCart() {
     return;
   }
 
-  const subtotal = items.reduce((sum, it) => sum + it.product.price * it.quantity, 0);
-  const deliveryFee = subtotal >= 500 ? 0 : 30;
-  const total = subtotal + deliveryFee;
+  const hasProblems = bill.problems.length > 0;
+  const freeAbove = Number(bill.freeDeliveryAbove);
+  const addMore = Number(bill.addForFreeDelivery);
+  const progress = Math.min(100, Math.round(((freeAbove - addMore) / freeAbove) * 100));
 
   root.innerHTML = `
+    ${bill.priceChangeNotes.length ? `
+      <div class="notice warn" id="price-notice">
+        <b>Prices changed since you added these items:</b>
+        <ul>${bill.priceChangeNotes.map(n => `<li>${escapeHtml(n)}</li>`).join('')}</ul>
+        <button class="btn btn-sm btn-outline" id="accept-prices-btn">OK, got it</button>
+      </div>` : ''}
+    ${hasProblems ? `
+      <div class="alert alert-error">
+        Please fix these before checkout:
+        <ul>${bill.problems.map(pr => `<li>${escapeHtml(pr)}</li>`).join('')}</ul>
+      </div>` : ''}
     <div class="cart-layout">
       <div id="cart-items-list">
         ${items.map(cartItemHtml).join('')}
       </div>
       <aside class="cart-summary">
-        <h3 style="font-size:1.1rem;margin-bottom:16px;">Order summary</h3>
-        <div class="summary-row"><span>Subtotal</span><span>${formatRupees(subtotal)}</span></div>
-        <div class="summary-row"><span>Delivery</span><span>${deliveryFee === 0 ? 'Free' : formatRupees(deliveryFee)}</span></div>
-        ${deliveryFee > 0 ? `<div class="summary-row" style="font-size:0.8rem;">Free delivery on orders over &#8377;500</div>` : ''}
-        <div class="summary-row total"><span>Total</span><span>${formatRupees(total)}</span></div>
-        <a href="/checkout.html" class="btn btn-accent btn-block" style="margin-top:16px;">Proceed to checkout</a>
+        <h3 style="font-size:1.1rem;margin-bottom:16px;">Bill details</h3>
+        ${addMore > 0 ? `
+          <div class="free-delivery">
+            Add <b>${formatRupees(addMore)}</b> more for <b>FREE delivery</b>
+            <div class="progress"><span style="width:${progress}%"></span></div>
+          </div>` : `<div class="free-delivery ok">&#127881; You get FREE delivery</div>`}
+        ${billRowsHtml(bill)}
+        ${coupons.length ? `
+          <div class="offers">
+            <div class="offers-title">Offers you can apply at checkout</div>
+            ${coupons.map(c => `<div class="offer"><b>${escapeHtml(c.code)}</b> &middot; ${escapeHtml(c.description)}</div>`).join('')}
+          </div>` : ''}
+        ${hasProblems
+          ? `<button class="btn btn-accent btn-block" style="margin-top:16px;" disabled>Fix the issues above to continue</button>`
+          : `<a href="/checkout.html" class="btn btn-accent btn-block" style="margin-top:16px;">Proceed to checkout</a>`}
       </aside>
     </div>
   `;
   attachCartHandlers();
+  const acceptBtn = document.getElementById('accept-prices-btn');
+  if (acceptBtn) {
+    acceptBtn.addEventListener('click', async () => {
+      acceptBtn.disabled = true;
+      try { await API.acceptPrices(); await loadCart(); } catch (e) { showToast(e.message); acceptBtn.disabled = false; }
+    });
+  }
 }
 
 function cartItemHtml(item) {
   const p = item.product;
   return `
-    <div class="cart-item" data-product-id="${p.id}">
+    <div class="cart-item${p.expired ? ' is-problem' : ''}" data-product-id="${p.id}">
       <div class="emoji">${p.imageEmoji || '\u{1F6D2}'}</div>
       <div class="info">
         <h4>${escapeHtml(p.name)}</h4>
-        <div class="unit">${escapeHtml(p.unit || '')} &middot; ${formatRupees(p.price)} each</div>
+        <div class="unit">${escapeHtml(p.unit || '')} &middot; ${formatRupees(p.price)} each
+          ${item.priceChanged ? `<span class="price-changed">was ${formatRupees(item.priceWhenAdded)}</span>` : ''}
+        </div>
+        ${expiryTagHtml(p)}
       </div>
       <div class="qty-control">
         <button class="qty-minus" aria-label="Decrease quantity">&minus;</button>
@@ -122,20 +154,26 @@ function attachCartHandlers() {
   document.querySelectorAll('.cart-item').forEach(row => {
     const productId = Number(row.dataset.productId);
     const qtySpan = row.querySelector('.qty-control span');
+    const buttons = row.querySelectorAll('button');
+    const busy = (on) => buttons.forEach(b => { b.disabled = on; });
 
     row.querySelector('.qty-plus').addEventListener('click', async () => {
-      const newQty = Number(qtySpan.textContent) + 1;
-      await updateQty(productId, newQty);
+      busy(true);
+      await updateQty(productId, Number(qtySpan.textContent) + 1);
+      busy(false);
     });
     row.querySelector('.qty-minus').addEventListener('click', async () => {
+      busy(true);
       const newQty = Number(qtySpan.textContent) - 1;
       if (newQty <= 0) {
         await removeItem(productId);
       } else {
         await updateQty(productId, newQty);
       }
+      busy(false);
     });
     row.querySelector('.remove').addEventListener('click', async () => {
+      busy(true);
       await removeItem(productId);
     });
   });

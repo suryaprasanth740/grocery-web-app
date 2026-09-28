@@ -4,7 +4,7 @@ A full-stack grocery shopping platform: browse a product catalog, add items to a
 and complete checkout — built as a portfolio/demo project.
 
 **Live demo:** _add your deployed link here once you complete the deployment steps below_
-**Tech stack:** Java (Spring Boot) · MySQL · HTML/CSS/JavaScript
+**Tech stack:** Java (Spring Boot) · PostgreSQL / MySQL · HTML/CSS/JavaScript · JUnit
 
 ---
 
@@ -13,9 +13,34 @@ and complete checkout — built as a portfolio/demo project.
 - Browse products by category or search
 - Create an account / log in (passwords are salted + hashed, never stored in plain text)
 - Add to cart, adjust quantities, remove items
-- Checkout with a shipping address (demo project — no real payment is processed)
-- View order history and order details
-- Stock is tracked and decremented per order
+- Checkout with PIN code check, coupons, a full bill breakdown and a choice of payment
+  (Cash on Delivery or a **demo UPI** screen — no real money moves)
+- View order history, cancel an order, report a missing item after delivery
+- Admin panel to manage orders, products, stock, expiry dates and coupons
+
+## QA-driven features (edge cases most e-commerce apps miss)
+
+I tested this app like a QA engineer, compared it with Zomato / Swiggy Instamart, and built
+fixes for the gaps I found. Every rule below has an automated test in `src/test/java`.
+
+| Problem found | What the app does now |
+|---|---|
+| Two customers buy the **last item** at the same moment | Stock is reserved with one atomic SQL `UPDATE ... WHERE stock >= qty`; only one wins. The database also refuses negative stock. |
+| **Double click** on "Place order" | Each checkout has a request id; the same id twice returns the same order |
+| Same cart checked out in **two tabs** | The cart is deleted in one statement; the second checkout finds nothing and is refused |
+| No input limits | Address 10–300 chars, max 20 of one item, never more than stock |
+| **Price changed** after adding to cart | Cart shows "price changed from ₹30 to ₹32"; an order with the old total is refused |
+| Bill on the page ≠ amount charged | The bill is calculated only on the server; cart, checkout and order use the same numbers |
+| **Hidden fees** | Bill shows item total, coupon, delivery fee, "other fees ₹0" and GST included |
+| **PIN code** checked only at the end | PIN code checked while typing, before placing the order |
+| Coupon misuse | Minimum order, expiry, per-customer limit, cap on % discounts, never below ₹0 |
+| **Money deducted but order failed** | Demo UPI: success / failure / 10-minute timeout. A late payment is refunded automatically |
+| Cancel after the order is packed | Only allowed while "Placed"; stock goes back; paid orders are refunded |
+| **Missing item** in a grocery delivery | "Report a problem" within 48 hours, refund approved instantly (coupon share taken off) |
+| Item out of stock while packing | Customer chooses at checkout: refund / replace with similar / call me |
+| **Expired products** | Every product has a best-before date; items expiring today cannot be sold |
+| Brute-force login | Account locked for 15 minutes after 5 wrong passwords |
+| Seeing another customer's order by changing the URL | Every order API checks the owner (403) |
 
 ## Tech stack
 
@@ -26,6 +51,7 @@ and complete checkout — built as a portfolio/demo project.
 | Frontend | HTML, CSS, vanilla JavaScript (no framework/build step) |
 | Auth | Session-based, salted SHA-256 password hashing |
 | Hosting (suggested) | Render.com (free tier) |
+| Tests | JUnit 5 + Spring Boot Test + MockMvc, run by GitHub Actions on every push |
 
 > **Why Spring Boot instead of plain Java/servlets:** it's the current industry-standard
 > way to build Java web backends and is what most job postings screen for, while keeping
@@ -41,7 +67,8 @@ grocery-web-app/
 ├── vercel.json                  # Vercel: hosts the frontend, proxies /api to Render
 ├── src/main/java/com/suryaprasanth/grocery/
 │   ├── GroceryApplication.java
-│   ├── model/                   # JPA entities: Product, Category, User, CartItem, Order, OrderItem
+│   ├── model/                   # JPA entities: Product, Category, User, CartItem, Order, OrderItem, Coupon, OrderIssue
+│   ├── service/                 # Business rules: OrderService, BillingService, CouponService, DeliveryService
 │   ├── repository/              # Spring Data JPA repositories
 │   ├── controller/               # REST controllers (auth, products, categories, cart, orders)
 │   ├── dto/                      # Request/response payloads
@@ -49,7 +76,8 @@ grocery-web-app/
 │   └── config/DataInitializer.java  # Seeds the catalog on first run
 └── src/main/resources/
     ├── application.properties
-    └── static/                  # Frontend: index/products/cart/checkout/orders/login/register .html, css/, js/
+    └── static/                  # Frontend pages (incl. admin.html), css/, js/
+src/test/java/...                # Automated API tests (JUnit 5 + MockMvc)
 ```
 
 ## Running it locally
@@ -64,6 +92,25 @@ mvn spring-boot:run
 
 Then open **http://localhost:8080** in your browser. The catalog is seeded automatically
 on first startup.
+
+**Admin login:** `admin@freshcart.com`. If you did not set `ADMIN_PASSWORD`, a random password
+is printed in the console when the app starts (look for `ADMIN_PASSWORD is not set`).
+To choose your own: `ADMIN_PASSWORD=MySecret123 mvn spring-boot:run`
+
+**Test coupons:** `FRESH50` (₹50 off above ₹299), `SAVE10` (10% up to ₹100 above ₹199),
+`BIG100` (₹100 off above ₹999), `OLD20` (already expired — always rejected).
+**Test PIN codes:** any `560xxx` (Bengaluru) is delivered; others like `110001` are not.
+
+## Running the tests
+
+```bash
+mvn test
+```
+
+The tests are also run automatically by GitHub Actions on every push
+(repo → **Actions** tab → **Build and test**). They cover the last-item race, double clicks,
+boundary values, coupons, UPI success / failure / timeout, cancel rules, missing-item refunds,
+expiry dates, admin rules and security checks.
 
 ---
 
@@ -87,18 +134,18 @@ git push -u origin main
 (Create the empty repository on GitHub first — github.com → New repository — then
 copy its URL into the command above.)
 
-### Step 2 — Create a free MySQL database on db4free.net
+### Step 2 — Create a free permanent PostgreSQL database on Neon
 
-1. Go to **https://www.db4free.net/** and click **Sign up**.
-2. Pick a database name (e.g. `groceryapp123` — db4free requires it to be somewhat unique),
-   a username, and password. Confirm via the email they send you.
-3. Note down: hostname `db4free.net`, port `3306`, your database name, username, and password.
+Without this step the app uses an in-memory database, and **every restart wipes all users
+and orders**. Neon's free tier keeps your data.
 
-> **Be upfront about this in interviews if asked:** db4free.net is explicitly a free
-> *testing/development* MySQL host, not a production-grade service — it can have occasional
-> outages and isn't meant for real customer data. That's fine for a portfolio demo (and it's
-> honestly how most free student-project databases work), just don't describe it as
-> production infrastructure.
+1. Go to **https://neon.tech** and sign up (GitHub login is easiest).
+2. Create a project (any name, region: Singapore is closest to India).
+3. On the dashboard click **Connect** and copy the connection details. You need:
+   host (like `ep-xxxx.ap-southeast-1.aws.neon.tech`), database name (usually `neondb`),
+   user, and password.
+4. Build the JDBC URL:
+   `jdbc:postgresql://<host>/<database>?sslmode=require`
 
 ### Step 3 — Deploy the backend on Render
 
@@ -112,9 +159,10 @@ copy its URL into the command above.)
 4. Under **Environment Variables**, add:
    | Key | Value |
    |---|---|
-   | `DB_URL` | `jdbc:mysql://db4free.net:3306/<your_db_name>` |
-   | `DB_USER` | your db4free.net username |
-   | `DB_PASSWORD` | your db4free.net password |
+   | `DB_URL` | `jdbc:postgresql://<host>/<database>?sslmode=require` |
+   | `DB_USER` | your Neon user |
+   | `DB_PASSWORD` | your Neon password |
+   | `ADMIN_PASSWORD` | a strong password for the admin panel |
 5. Select the **Free** instance type and click **Create Web Service**.
 6. Wait for the build to finish (first build can take a few minutes). Render will give you
    a URL like `https://grocery-web-app-xxxx.onrender.com` — **that's your live link.**
@@ -173,14 +221,26 @@ bug in your app.
 | POST | `/api/cart/add` | Add item to cart |
 | PUT | `/api/cart/update` | Update item quantity |
 | DELETE | `/api/cart/remove/{productId}` | Remove item |
+| POST | `/api/cart/accept-prices` | Accept changed prices in the cart |
+| GET | `/api/delivery/check?pincode=` | Do we deliver to this PIN code? |
+| GET | `/api/coupons` | Offers available now |
+| POST | `/api/orders/quote` | The bill for the current cart (optional coupon) |
 | POST | `/api/orders/checkout` | Place an order from the current cart |
 | GET | `/api/orders` | Order history |
 | GET | `/api/orders/{id}` | Single order detail |
+| POST | `/api/orders/{id}/pay` | Demo UPI result (`SUCCESS` / `FAILED`) |
+| POST | `/api/orders/{id}/cancel` | Cancel (only while placed) |
+| POST | `/api/orders/{id}/issues` | Report a missing / damaged / expired item |
+| GET/PUT/POST | `/api/admin/...` | Admin: orders, status, products, issues, coupons |
 
 ## Honest limitations (worth knowing, not hiding)
 
-- No real payment gateway — checkout is a demo "Cash on Delivery" flow.
-- `db4free.net` is a free testing database, not production-grade (see Step 2 above).
+- No real payment gateway — UPI is a demo screen. A real app would use Razorpay / PhonePe
+  and trust only their signed webhook, never the browser.
+- Login lockout counts are kept in memory (reset on restart); a bigger site would use Redis.
+- Seeded demo products get a fresh best-before date on restart once they expire
+  (`app.demo.refresh-expired-stock=true`) so the free live demo keeps working. Set it to
+  `false` to test expiry by hand.
 - Render's free tier sleeps after inactivity, causing a cold-start delay on the first visit.
 - Table schema is auto-generated by Hibernate (`ddl-auto=update`) rather than versioned
   migrations — fine for a project this size, but a real production app would use a tool
@@ -188,11 +248,12 @@ bug in your app.
 
 ## Possible next steps (good talking points for interviews)
 
-- Add an admin panel to manage products/stock
-- Add product images instead of emoji placeholders
-- Add pagination for large catalogs
-- Move to a managed production database + a paid always-on host
-- Add automated tests (JUnit for backend, Playwright/Cypress for frontend flows)
+- Real payment gateway (Razorpay test mode) with webhook signature checks
+- Photo upload for missing / damaged item reports
+- Live delivery tracking and delivery-time estimates per area
+- Pagination for large catalogs
+- UI automation tests with Playwright or Selenium
+- Versioned database migrations with Flyway
 
 ---
 

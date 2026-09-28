@@ -9,6 +9,7 @@ async function initNav() {
     const user = await API.me();
     if (authArea) {
       authArea.innerHTML = `
+        ${user.role === 'ADMIN' ? '<a href="/admin.html" style="margin-right:18px;">Admin</a>' : ''}
         <span style="margin-right:18px;">Hi, ${escapeHtml(user.name.split(' ')[0])}</span>
         <button class="linklike" id="nav-logout-btn">Logout</button>
       `;

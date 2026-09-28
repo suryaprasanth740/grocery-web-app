@@ -28,6 +28,13 @@ public class OrderItem {
     @Column(nullable = false)
     private Integer quantity;
 
+    /** Which product this came from, so stock can be returned if the order is cancelled. */
+    @Column(name = "product_id")
+    private Long productId;
+
+    @Column(name = "gst_percent")
+    private Integer gstPercent = 0;
+
     public OrderItem() {
     }
 
@@ -36,6 +43,32 @@ public class OrderItem {
         this.productName = productName;
         this.price = price;
         this.quantity = quantity;
+    }
+
+    public OrderItem(Order order, Product product, Integer quantity) {
+        this(order, product.getName(), product.getPrice(), quantity);
+        this.productId = product.getId();
+        this.gstPercent = product.getGstPercent();
+    }
+
+    public BigDecimal lineTotal() {
+        return price.multiply(BigDecimal.valueOf(quantity));
+    }
+
+    public Long getProductId() {
+        return productId;
+    }
+
+    public void setProductId(Long productId) {
+        this.productId = productId;
+    }
+
+    public Integer getGstPercent() {
+        return gstPercent == null ? 0 : gstPercent;
+    }
+
+    public void setGstPercent(Integer gstPercent) {
+        this.gstPercent = gstPercent;
     }
 
     public Long getId() {

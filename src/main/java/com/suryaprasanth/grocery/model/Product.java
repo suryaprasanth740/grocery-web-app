@@ -1,10 +1,16 @@
 package com.suryaprasanth.grocery.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Check;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "products")
+// Safety net: the database itself refuses a negative stock, even if a bug slips through.
+@Check(constraints = "stock >= 0")
 public class Product {
 
     @Id
@@ -35,6 +41,19 @@ public class Product {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id")
     private Category category;
+
+    /** Best-before date. Null means the item does not expire (e.g. salt). */
+    @Column(name = "expiry_date")
+    private LocalDate expiryDate;
+
+    /** GST rate already included in the price: 0, 5, 12 or 18. */
+    @Column(name = "gst_percent")
+    private Integer gstPercent = 0;
+
+    /** A product that expires today or earlier cannot be sold. */
+    public static final int MIN_DAYS_OF_SHELF_LIFE = 1;
+    /** Shown as "Expires soon" when this close to the date. */
+    public static final int EXPIRES_SOON_DAYS = 3;
 
     public Product() {
     }
@@ -132,5 +151,40 @@ public class Product {
 
     public void setCategory(Category category) {
         this.category = category;
+    }
+
+    public LocalDate getExpiryDate() {
+        return expiryDate;
+    }
+
+    public void setExpiryDate(LocalDate expiryDate) {
+        this.expiryDate = expiryDate;
+    }
+
+    public Integer getGstPercent() {
+        return gstPercent == null ? 0 : gstPercent;
+    }
+
+    public void setGstPercent(Integer gstPercent) {
+        this.gstPercent = gstPercent;
+    }
+
+    /** Days left before expiry (negative = already expired). Null if it never expires. */
+    @JsonProperty("daysToExpiry")
+    public Long daysToExpiry() {
+        return expiryDate == null ? null : ChronoUnit.DAYS.between(LocalDate.now(), expiryDate);
+    }
+
+    /** True when the product is too close to (or past) its expiry date to sell. */
+    @JsonProperty("expired")
+    public boolean isExpired() {
+        Long days = daysToExpiry();
+        return days != null && days < MIN_DAYS_OF_SHELF_LIFE;
+    }
+
+    @JsonProperty("expiresSoon")
+    public boolean isExpiresSoon() {
+        Long days = daysToExpiry();
+        return days != null && !isExpired() && days <= EXPIRES_SOON_DAYS;
     }
 }

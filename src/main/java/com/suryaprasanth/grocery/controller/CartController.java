@@ -1,5 +1,6 @@
 package com.suryaprasanth.grocery.controller;
 
+import com.suryaprasanth.grocery.config.ShopRules;
 import com.suryaprasanth.grocery.dto.CartRequest;
 import com.suryaprasanth.grocery.model.CartItem;
 import com.suryaprasanth.grocery.model.Product;
@@ -23,12 +24,14 @@ public class CartController {
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final ShopRules rules;
 
     public CartController(CartItemRepository cartItemRepository, ProductRepository productRepository,
-                           UserRepository userRepository) {
+                          UserRepository userRepository, ShopRules rules) {
         this.cartItemRepository = cartItemRepository;
         this.productRepository = productRepository;
         this.userRepository = userRepository;
+        this.rules = rules;
     }
 
     @GetMapping
@@ -45,7 +48,9 @@ public class CartController {
 
         CartItem item = cartItemRepository.findByUserIdAndProductId(user.getId(), product.getId())
                 .orElse(new CartItem(user, product, 0));
-        item.setQuantity(item.getQuantity() + request.getQuantity());
+        int newQuantity = item.getQuantity() + request.getQuantity();
+        checkCanBuy(product, newQuantity);
+        item.setQuantity(newQuantity);
         cartItemRepository.save(item);
 
         return cartItemRepository.findByUserId(user.getId());
@@ -56,9 +61,25 @@ public class CartController {
         User user = SessionUtil.requireLoggedInUser(session, userRepository);
         CartItem item = cartItemRepository.findByUserIdAndProductId(user.getId(), request.getProductId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not in cart"));
+        // Lowering the quantity is always allowed (helps the customer fix a stock problem).
+        if (request.getQuantity() > item.getQuantity()) {
+            checkCanBuy(item.getProduct(), request.getQuantity());
+        }
         item.setQuantity(request.getQuantity());
         cartItemRepository.save(item);
         return cartItemRepository.findByUserId(user.getId());
+    }
+
+    /** The customer saw the new price and accepts it. */
+    @PostMapping("/accept-prices")
+    public List<CartItem> acceptNewPrices(HttpSession session) {
+        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        List<CartItem> items = cartItemRepository.findByUserId(user.getId());
+        for (CartItem item : items) {
+            item.setPriceWhenAdded(item.getProduct().getPrice());
+        }
+        cartItemRepository.saveAll(items);
+        return items;
     }
 
     @DeleteMapping("/remove/{productId}")
@@ -75,5 +96,24 @@ public class CartController {
         User user = SessionUtil.requireLoggedInUser(session, userRepository);
         cartItemRepository.deleteByUserId(user.getId());
         return List.of();
+    }
+
+    /** Stops expired items, out-of-stock items and silly quantities entering the cart. */
+    private void checkCanBuy(Product product, int quantity) {
+        if (product.isExpired()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    product.getName() + " is past its best-before date and cannot be sold.");
+        }
+        if (product.getStock() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, product.getName() + " is out of stock.");
+        }
+        if (quantity > product.getStock()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Only " + product.getStock() + " " + product.getName() + " left in stock.");
+        }
+        if (quantity > rules.getMaxQtyPerItem()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "You can buy at most " + rules.getMaxQtyPerItem() + " of one item.");
+        }
     }
 }

@@ -93,9 +93,28 @@ const API = {
   clearCart() { return this.del('/api/cart/clear'); },
 
   // Orders
-  checkout(shippingAddress) { return this.post('/api/orders/checkout', { shippingAddress }); },
+  quote(couponCode) { return this.post('/api/orders/quote', { couponCode: couponCode || null }); },
+  checkout(payload) { return this.post('/api/orders/checkout', payload); },
   orders() { return this.get('/api/orders'); },
   order(id) { return this.get(`/api/orders/${id}`); },
+  pay(id, outcome) { return this.post(`/api/orders/${id}/pay`, { outcome }); },
+  cancelOrder(id) { return this.post(`/api/orders/${id}/cancel`); },
+  reportIssue(id, payload) { return this.post(`/api/orders/${id}/issues`, payload); },
+
+  // Cart extras, delivery and offers
+  acceptPrices() { return this.post('/api/cart/accept-prices'); },
+  checkPincode(pincode) { return this.get('/api/delivery/check?pincode=' + encodeURIComponent(pincode)); },
+  coupons() { return this.get('/api/coupons'); },
+
+  // Admin (only works for an ADMIN login)
+  adminOrders() { return this.get('/api/admin/orders'); },
+  adminSetStatus(id, status) { return this.put(`/api/admin/orders/${id}/status`, { status }); },
+  adminProducts() { return this.get('/api/admin/products'); },
+  adminCreateProduct(payload) { return this.post('/api/admin/products', payload); },
+  adminUpdateProduct(id, payload) { return this.put(`/api/admin/products/${id}`, payload); },
+  adminIssues() { return this.get('/api/admin/issues'); },
+  adminCoupons() { return this.get('/api/admin/coupons'); },
+  adminSetCouponActive(id, active) { return this.put(`/api/admin/coupons/${id}/active`, { active }); },
 };
 
 function formatRupees(amount) {
@@ -114,6 +133,14 @@ function showToast(message) {
   toast.classList.add('show');
   clearTimeout(window.__toastTimer);
   window.__toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+}
+
+/** A random id for one checkout attempt. Sending it twice can never create two orders. */
+function newRequestId() {
+  if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+    return window.crypto.randomUUID();
+  }
+  return 'req-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
 }
 
 function escapeHtml(str) {
