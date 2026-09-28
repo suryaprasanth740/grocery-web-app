@@ -39,60 +39,226 @@
 
 <script src="/js/api.js"></script>
 <script src="/js/nav.js"></script>
+<script src="/js/shop.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', async () => {
-  const root = document.getElementById('order-root');
-  const params = new URLSearchParams(window.location.search);
-  const id = params.get('id');
-  const justPlaced = params.get('justPlaced') === '1';
+const params = new URLSearchParams(window.location.search);
+const ORDER_ID = params.get('id');
+const JUST_PLACED = params.get('justPlaced') === '1';
+const ISSUE_WINDOW_HOURS = 48; // same as app.issue.window-hours on the server
+const STEPS = ['PLACED', 'PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
 
+document.addEventListener('DOMContentLoaded', async () => {
   try {
     await API.me();
   } catch (e) {
-    window.location.href = '/login.html?next=/orders.html';
+    window.location.href = '/login.html?next=' + encodeURIComponent('/order.html?id=' + (ORDER_ID || ''));
     return;
   }
-
-  if (!id) {
-    root.innerHTML = '<p>No order specified.</p>';
+  if (!ORDER_ID) {
+    document.getElementById('order-root').innerHTML = '<p>No order specified.</p>';
     return;
   }
+  loadOrder();
+});
 
+async function loadOrder(flash) {
+  const root = document.getElementById('order-root');
+  let order;
   try {
-    const order = await API.order(id);
-    root.innerHTML = `
-      ${justPlaced ? `
-        <div class="confirm-banner">
-          <div class="stamp-big">&#9989;</div>
-          <h2 style="color:#fff;">Order placed!</h2>
-          <p style="opacity:0.85;">Order #${order.id} is confirmed. Thanks for shopping with FreshCart.</p>
-        </div>
-      ` : `<div class="section-heading" style="margin-top:34px;"><h2>Order #${order.id}</h2></div>`}
-
-      <div class="order-card">
-        <div class="top-row">
-          <div>
-            <div class="order-id">Order #${order.id}</div>
-            <div class="date">${new Date(order.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</div>
-          </div>
-          <span class="status-badge">${escapeHtml(order.status)}</span>
-        </div>
-        <div style="font-size:0.9rem;color:var(--ink-soft);"><strong>Delivering to:</strong> ${escapeHtml(order.shippingAddress)}</div>
-        <div class="order-items-list">
-          ${order.items.map(it => `
-            <div class="order-line"><span><b>${escapeHtml(it.productName)}</b> &times; ${it.quantity}</span><span>${formatRupees(it.price * it.quantity)}</span></div>
-          `).join('')}
-        </div>
-        <div class="summary-row total" style="margin-top:10px;"><span>Total</span><span>${formatRupees(order.totalAmount)}</span></div>
-      </div>
-
-      <a href="/orders.html" class="btn btn-outline">Back to my orders</a>
-      <a href="/products.html" class="btn btn-primary">Continue shopping</a>
-    `;
+    order = await API.order(ORDER_ID);
   } catch (e) {
     root.innerHTML = `<p>Could not load this order. ${escapeHtml(e.message)}</p>`;
+    return;
   }
-});
+  root.innerHTML = orderHtml(order, flash);
+  wireActions(order);
+}
+
+function orderHtml(order, flash) {
+  const pending = order.status === 'PAYMENT_PENDING';
+  const deliveredRecently = order.status === 'DELIVERED' && order.deliveredAt
+    && (Date.now() - new Date(order.deliveredAt).getTime()) < ISSUE_WINDOW_HOURS * 3600 * 1000;
+  const canCancel = order.status === 'PLACED' || pending;
+
+  return `
+    ${JUST_PLACED && order.status === 'PLACED' && !flash ? `
+      <div class="confirm-banner">
+        <div class="stamp-big">&#9989;</div>
+        <h2 style="color:#fff;">Order placed!</h2>
+        <p style="opacity:0.85;">Order #${order.id} is confirmed. Thanks for shopping with FreshCart.</p>
+      </div>` : `<div class="section-heading" style="margin-top:34px;"><h2>Order #${order.id}</h2></div>`}
+
+    ${flash ? `<div class="alert alert-success">${escapeHtml(flash)}</div>` : ''}
+    ${order.statusNote ? `<div class="notice ${order.status === 'PAYMENT_FAILED' || order.status === 'CANCELLED' ? 'warn' : 'info'}">${escapeHtml(order.statusNote)}</div>` : ''}
+
+    ${pending ? upiPanelHtml(order) : ''}
+
+    <div class="order-card">
+      <div class="top-row">
+        <div>
+          <div class="order-id">Order #${order.id}</div>
+          <div class="date">${formatDateTime(order.createdAt)}</div>
+        </div>
+        ${statusBadgeHtml(order.status)}
+      </div>
+      ${timelineHtml(order)}
+      <div class="order-meta">
+        <div><strong>Delivering to:</strong> ${escapeHtml(order.shippingAddress)}${order.pincode ? ' &ndash; ' + escapeHtml(order.pincode) : ''}</div>
+        <div><strong>Payment:</strong> ${escapeHtml(order.paymentMethod)} &middot; ${escapeHtml(PAYMENT_LABELS[order.paymentStatus] || order.paymentStatus)}</div>
+        <div><strong>If an item is unavailable:</strong> ${escapeHtml(SUBSTITUTION_LABELS[order.substitutionPreference] || '-')}</div>
+      </div>
+      <div class="order-items-list">
+        ${order.items.map(it => `
+          <div class="order-line"><span><b>${escapeHtml(it.productName)}</b> &times; ${it.quantity}</span><span>${formatRupees(it.price * it.quantity)}</span></div>
+        `).join('')}
+      </div>
+      <div style="margin-top:10px;">${billRowsHtml(order)}</div>
+    </div>
+
+    ${order.issues.length ? `
+      <div class="order-card">
+        <h3 style="font-size:1rem;margin-bottom:10px;">Reported problems</h3>
+        ${order.issues.map(i => `
+          <div class="order-line"><span>${escapeHtml(i.productName)} &times; ${i.quantity} &middot; ${escapeHtml(i.reason.toLowerCase())}</span>
+          <span class="saving">Refund ${formatRupees(i.refundAmount)}</span></div>`).join('')}
+        <div class="bill-note">Refunds go back to your original payment method in 3-5 working days.</div>
+      </div>` : ''}
+
+    ${deliveredRecently ? issueFormHtml(order) : ''}
+
+    <div id="action-error"></div>
+    <div class="action-row">
+      ${canCancel ? `<button class="btn btn-outline danger" id="cancel-btn">Cancel order</button>` : ''}
+      <a href="/orders.html" class="btn btn-outline">Back to my orders</a>
+      <a href="/products.html" class="btn btn-primary">Continue shopping</a>
+    </div>
+  `;
+}
+
+function timelineHtml(order) {
+  if (!STEPS.includes(order.status)) return '';
+  const current = STEPS.indexOf(order.status);
+  return `<div class="timeline">${STEPS.map((s, i) => `
+    <div class="step ${i <= current ? 'done' : ''}"><span class="dot"></span>${escapeHtml(STATUS_LABELS[s][0])}</div>`).join('')}</div>`;
+}
+
+function upiPanelHtml(order) {
+  return `
+    <div class="upi-panel">
+      <div class="upi-head">&#128241; Demo UPI app</div>
+      <p>Pay <b>${formatRupees(order.totalAmount)}</b> to FreshCart. This is a <b>test</b> screen, so no real money moves.
+         Pick what the "bank" should do:</p>
+      <div class="action-row">
+        <button class="btn btn-primary" id="pay-success-btn">Payment succeeds</button>
+        <button class="btn btn-outline danger" id="pay-fail-btn">Payment fails</button>
+      </div>
+      <p class="bill-note">To test a <b>timeout</b>, just leave this page. After 10 minutes the order is cancelled
+         automatically, the stock is released and the items go back to your cart.</p>
+    </div>`;
+}
+
+function issueFormHtml(order) {
+  const reported = {};
+  order.issues.forEach(i => { reported[i.orderItemId] = (reported[i.orderItemId] || 0) + i.quantity; });
+  const options = order.items
+    .map(it => ({ it, left: it.quantity - (reported[it.id] || 0) }))
+    .filter(x => x.left > 0);
+  if (!options.length) return '';
+  return `
+    <form class="order-card" id="issue-form">
+      <h3 style="font-size:1rem;margin-bottom:6px;">Something missing or wrong?</h3>
+      <p class="bill-note" style="margin-bottom:12px;">Report within ${ISSUE_WINDOW_HOURS} hours of delivery. Refund is approved instantly.</p>
+      <div class="field">
+        <label for="issue-item">Item</label>
+        <select id="issue-item">
+          ${options.map(x => `<option value="${x.it.id}" data-left="${x.left}">${escapeHtml(x.it.productName)} (up to ${x.left})</option>`).join('')}
+        </select>
+      </div>
+      <div class="inline-row">
+        <div class="field" style="flex:1;">
+          <label for="issue-qty">Quantity</label>
+          <input id="issue-qty" type="number" min="1" value="1">
+        </div>
+        <div class="field" style="flex:2;">
+          <label for="issue-reason">Problem</label>
+          <select id="issue-reason">
+            <option value="MISSING">Item missing</option>
+            <option value="DAMAGED">Damaged / spoiled</option>
+            <option value="EXPIRED">Expired / near expiry</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="issue-note">Note (optional)</label>
+        <input id="issue-note" type="text" maxlength="300" placeholder="e.g. packet was torn">
+      </div>
+      <button type="submit" class="btn btn-accent" id="issue-btn">Report &amp; get refund</button>
+    </form>`;
+}
+
+function showActionError(message) {
+  document.getElementById('action-error').innerHTML = `<div class="alert alert-error">${escapeHtml(message)}</div>`;
+}
+
+function wireActions(order) {
+  const payOk = document.getElementById('pay-success-btn');
+  const payFail = document.getElementById('pay-fail-btn');
+  if (payOk) {
+    const pay = async (outcome) => {
+      payOk.disabled = payFail.disabled = true;
+      try {
+        const updated = await API.pay(order.id, outcome);
+        refreshCartCount();
+        await loadOrder(updated.status === 'PLACED' ? 'Payment successful. Your order is confirmed!' : null);
+      } catch (e) {
+        showActionError(e.message);
+        payOk.disabled = payFail.disabled = false;
+      }
+    };
+    payOk.addEventListener('click', () => pay('SUCCESS'));
+    payFail.addEventListener('click', () => pay('FAILED'));
+  }
+
+  const cancelBtn = document.getElementById('cancel-btn');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', async () => {
+      if (!cancelBtn.dataset.confirm) { // two-step confirm, no browser pop-up
+        cancelBtn.dataset.confirm = '1';
+        cancelBtn.textContent = 'Tap again to confirm cancel';
+        return;
+      }
+      cancelBtn.disabled = true;
+      try {
+        await API.cancelOrder(order.id);
+        await loadOrder('Your order was cancelled.');
+      } catch (e) {
+        showActionError(e.message);
+        cancelBtn.disabled = false;
+      }
+    });
+  }
+
+  const form = document.getElementById('issue-form');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('issue-btn');
+      btn.disabled = true;
+      try {
+        await API.reportIssue(order.id, {
+          orderItemId: Number(document.getElementById('issue-item').value),
+          quantity: Number(document.getElementById('issue-qty').value),
+          reason: document.getElementById('issue-reason').value,
+          note: document.getElementById('issue-note').value.trim() || null,
+        });
+        await loadOrder('Thanks for telling us. Your refund is approved.');
+      } catch (err) {
+        showActionError(err.message);
+        btn.disabled = false;
+      }
+    });
+  }
+}
 </script>
 </body>
 </html>

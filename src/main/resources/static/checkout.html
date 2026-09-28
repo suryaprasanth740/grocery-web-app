@@ -42,8 +42,16 @@
 
 <script src="/js/api.js"></script>
 <script src="/js/nav.js"></script>
+<script src="/js/shop.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', init);
+
+// One id per checkout attempt. If the button is clicked twice, or the network retries,
+// the server sees the same id and returns the same order instead of creating two.
+const REQUEST_ID = newRequestId();
+let appliedCoupon = null;
+let currentBill = null;
+let pincodeOk = false;
 
 async function init() {
   const root = document.getElementById('checkout-root');
@@ -54,15 +62,14 @@ async function init() {
     return;
   }
 
-  let items;
   try {
-    items = await API.cart();
+    currentBill = await API.quote();
   } catch (e) {
     root.innerHTML = '<p>Could not load your cart.</p>';
     return;
   }
 
-  if (items.length === 0) {
+  if (currentBill.lines.length === 0) {
     root.innerHTML = `
       <div class="empty-state">
         <div class="big-emoji">&#128722;</div>
@@ -72,56 +79,222 @@ async function init() {
       </div>`;
     return;
   }
-
-  const subtotal = items.reduce((sum, it) => sum + it.product.price * it.quantity, 0);
-  const deliveryFee = subtotal >= 500 ? 0 : 30;
-  const total = subtotal + deliveryFee;
+  if (currentBill.problems.length > 0) {
+    root.innerHTML = `
+      <div class="alert alert-error">Your cart needs attention:
+        <ul>${currentBill.problems.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul>
+      </div>
+      <a href="/cart.html" class="btn btn-primary">Back to cart</a>`;
+    return;
+  }
 
   root.innerHTML = `
     <div class="cart-summary" style="position:static;margin-bottom:24px;">
-      <h3 style="font-size:1.05rem;margin-bottom:14px;">${items.length} item${items.length === 1 ? '' : 's'} in your order</h3>
-      ${items.map(it => `
-        <div class="summary-row"><span>${escapeHtml(it.product.name)} &times; ${it.quantity}</span><span>${formatRupees(it.product.price * it.quantity)}</span></div>
+      <h3 style="font-size:1.05rem;margin-bottom:14px;">${currentBill.lines.length} item${currentBill.lines.length === 1 ? '' : 's'} in your order</h3>
+      ${currentBill.lines.map(l => `
+        <div class="summary-row"><span>${escapeHtml(l.name)} &times; ${l.quantity}</span><span>${formatRupees(l.lineTotal)}</span></div>
       `).join('')}
-      <div class="summary-row"><span>Delivery</span><span>${deliveryFee === 0 ? 'Free' : formatRupees(deliveryFee)}</span></div>
-      <div class="summary-row total"><span>Total</span><span>${formatRupees(total)}</span></div>
+      <hr class="soft">
+      <div class="field coupon-field">
+        <label for="coupon">Coupon code</label>
+        <div class="inline-row">
+          <input id="coupon" type="text" maxlength="30" placeholder="e.g. FRESH50" autocomplete="off">
+          <button type="button" class="btn btn-outline" id="coupon-btn">Apply</button>
+        </div>
+        <div id="coupon-msg" class="field-msg"></div>
+      </div>
+      <div id="bill-rows"></div>
     </div>
 
-    <form id="checkout-form">
+    <form id="checkout-form" novalidate>
       <div id="checkout-error"></div>
+
+      <div class="field">
+        <label for="pincode">Delivery PIN code</label>
+        <div class="inline-row">
+          <input id="pincode" type="text" inputmode="numeric" maxlength="6" placeholder="6 digits, e.g. 560073" autocomplete="postal-code">
+          <button type="button" class="btn btn-outline" id="pincode-btn">Check</button>
+        </div>
+        <div id="pincode-msg" class="field-msg"></div>
+      </div>
+
       <div class="field">
         <label for="address">Delivery address</label>
-        <textarea id="address" rows="3" placeholder="House / flat no., street, area, city, PIN code" required></textarea>
+        <textarea id="address" rows="3" maxlength="300" placeholder="House / flat no., street, area, landmark"></textarea>
+        <div class="field-msg muted"><span id="address-count">0</span>/300 characters (at least 10)</div>
       </div>
+
+      <div class="field">
+        <label>If an item is out of stock while packing</label>
+        <div class="choice-list">
+          <label class="choice"><input type="radio" name="subst" value="REFUND_ITEM" checked> Refund that item</label>
+          <label class="choice"><input type="radio" name="subst" value="REPLACE_SIMILAR"> Replace with a similar item (same or lower price)</label>
+          <label class="choice"><input type="radio" name="subst" value="CALL_ME"> Call me first</label>
+        </div>
+      </div>
+
       <div class="field">
         <label>Payment method</label>
-        <select disabled>
-          <option>Cash on Delivery (demo project &mdash; no real payment is processed)</option>
-        </select>
+        <div class="choice-list" id="payment-choices"></div>
       </div>
-      <button type="submit" class="btn btn-accent btn-block" id="place-order-btn">Place order &middot; ${formatRupees(total)}</button>
+
+      <button type="submit" class="btn btn-accent btn-block" id="place-order-btn" disabled>Place order</button>
+      <div class="field-msg muted center" id="place-hint" style="margin-top:8px;">Enter a PIN code we deliver to, to continue.</div>
     </form>
   `;
 
-  document.getElementById('checkout-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('place-order-btn');
-    const errorBox = document.getElementById('checkout-error');
-    errorBox.innerHTML = '';
-    const address = document.getElementById('address').value.trim();
-    if (!address) return;
+  renderBill();
+  wireCoupon();
+  wirePincode();
+  const address = document.getElementById('address');
+  address.addEventListener('input', () => {
+    document.getElementById('address-count').textContent = address.value.length;
+  });
+  document.getElementById('checkout-form').addEventListener('submit', placeOrder);
+}
 
+function renderBill() {
+  if (appliedCoupon && !currentBill.couponApplied) {
+    // The coupon stopped working (e.g. expired, or items removed below the minimum).
+    appliedCoupon = null;
+    const input = document.getElementById('coupon');
+    input.disabled = false;
+    document.getElementById('coupon-btn').textContent = 'Apply';
+    const msg = document.getElementById('coupon-msg');
+    msg.className = 'field-msg error';
+    msg.textContent = currentBill.couponMessage || 'The coupon no longer applies.';
+  }
+  document.getElementById('bill-rows').innerHTML = billRowsHtml(currentBill);
+
+  const choices = document.getElementById('payment-choices');
+  const previous = document.querySelector('input[name="pay"]:checked');
+  let selected = previous ? previous.value : 'UPI';
+  if (!currentBill.codAllowed && selected === 'COD') selected = 'UPI';
+  choices.innerHTML = `
+    <label class="choice"><input type="radio" name="pay" value="UPI" ${selected === 'UPI' ? 'checked' : ''}>
+      UPI <span class="muted">(demo &mdash; you choose success or failure)</span></label>
+    <label class="choice ${currentBill.codAllowed ? '' : 'disabled'}"><input type="radio" name="pay" value="COD"
+      ${selected === 'COD' ? 'checked' : ''} ${currentBill.codAllowed ? '' : 'disabled'}>
+      Cash on delivery ${currentBill.codAllowed ? '' : `<span class="muted">(only for orders up to ${formatRupees(currentBill.codMaxAmount)})</span>`}</label>
+  `;
+  updatePlaceButton();
+}
+
+function updatePlaceButton() {
+  const btn = document.getElementById('place-order-btn');
+  btn.disabled = !pincodeOk;
+  const hint = document.getElementById('place-hint');
+  if (hint) hint.style.display = pincodeOk ? 'none' : '';
+  btn.textContent = `Place order · ${formatRupees(currentBill.total)}`;
+}
+
+function wireCoupon() {
+  const input = document.getElementById('coupon');
+  const btn = document.getElementById('coupon-btn');
+  const msg = document.getElementById('coupon-msg');
+
+  btn.addEventListener('click', async () => {
+    if (appliedCoupon) { // "Remove"
+      appliedCoupon = null;
+      input.value = '';
+      input.disabled = false;
+      btn.textContent = 'Apply';
+      msg.textContent = '';
+      currentBill = await API.quote();
+      renderBill();
+      return;
+    }
+    const code = input.value.trim();
+    if (!code) { msg.className = 'field-msg error'; msg.textContent = 'Enter a coupon code.'; return; }
     btn.disabled = true;
-    btn.textContent = 'Placing order...';
     try {
-      const order = await API.checkout(address);
-      window.location.href = `/order.html?id=${order.id}&justPlaced=1`;
-    } catch (err) {
-      errorBox.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+      const bill = await API.quote(code);
+      if (bill.couponApplied) {
+        appliedCoupon = bill.couponCode;
+        currentBill = bill;
+        input.value = bill.couponCode;
+        input.disabled = true;
+        btn.textContent = 'Remove';
+        msg.className = 'field-msg ok';
+      } else {
+        msg.className = 'field-msg error';
+      }
+      msg.textContent = bill.couponMessage || '';
+      renderBill();
+    } catch (e) {
+      msg.className = 'field-msg error';
+      msg.textContent = e.message;
+    } finally {
       btn.disabled = false;
-      btn.textContent = `Place order \u00B7 ${formatRupees(total)}`;
     }
   });
+}
+
+function wirePincode() {
+  const input = document.getElementById('pincode');
+  const msg = document.getElementById('pincode-msg');
+  const check = async () => {
+    input.value = input.value.replace(/\D/g, '').slice(0, 6);
+    pincodeOk = false;
+    updatePlaceButton();
+    if (input.value.length < 6) {
+      msg.className = 'field-msg';
+      msg.textContent = '';
+      return;
+    }
+    try {
+      const r = await API.checkPincode(input.value);
+      pincodeOk = r.serviceable;
+      msg.className = 'field-msg ' + (r.serviceable ? 'ok' : 'error');
+      msg.textContent = r.message + (r.eta ? ` Delivery in ${r.eta}.` : '');
+    } catch (e) {
+      msg.className = 'field-msg error';
+      msg.textContent = e.message;
+    }
+    updatePlaceButton();
+  };
+  input.addEventListener('input', check);
+  document.getElementById('pincode-btn').addEventListener('click', check);
+}
+
+async function placeOrder(e) {
+  e.preventDefault();
+  const btn = document.getElementById('place-order-btn');
+  const errorBox = document.getElementById('checkout-error');
+  errorBox.innerHTML = '';
+
+  const address = document.getElementById('address').value.trim();
+  const pincode = document.getElementById('pincode').value.trim();
+  if (address.length < 10) {
+    errorBox.innerHTML = '<div class="alert alert-error">Please enter your full address (at least 10 characters).</div>';
+    return;
+  }
+  if (!pincodeOk) return;
+
+  btn.disabled = true; // first protection against double clicks (the server has the real one)
+  btn.textContent = 'Placing order...';
+  try {
+    const order = await API.checkout({
+      requestId: REQUEST_ID,
+      shippingAddress: address,
+      pincode,
+      paymentMethod: document.querySelector('input[name="pay"]:checked').value,
+      couponCode: appliedCoupon,
+      substitutionPreference: document.querySelector('input[name="subst"]:checked').value,
+      expectedTotal: currentBill.total,
+    });
+    refreshCartCount();
+    const next = order.status === 'PAYMENT_PENDING' ? 'pay=1' : 'justPlaced=1';
+    window.location.href = `/order.html?id=${order.id}&${next}`;
+  } catch (err) {
+    errorBox.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+    if (err.status === 409) {
+      // Bill changed (price / stock / coupon). Show the fresh bill.
+      try { currentBill = await API.quote(appliedCoupon); renderBill(); } catch (_) { /* ignore */ }
+    }
+    updatePlaceButton();
+    errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 }
 </script>
 </body>

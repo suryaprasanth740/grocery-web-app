@@ -138,47 +138,7 @@ async function loadProducts() {
   }
 }
 
-function productCardHtml(p) {
-  const lowStock = p.stock > 0 && p.stock <= 5;
-  return `
-    <div class="product-card">
-      <div class="product-photo">
-        ${p.stock === 0 ? `<span class="stock-tag">Out of stock</span>` : lowStock ? `<span class="stock-tag">Only ${p.stock} left</span>` : ''}
-        ${p.imageUrl ? `<img src="${p.imageUrl}" alt="${escapeHtml(p.name)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` : ''}
-        <span class="photo-emoji" style="${p.imageUrl ? 'display:none;' : ''}">${p.imageEmoji || '\u{1F6D2}'}</span>
-      </div>
-      <div class="body">
-        <h3>${escapeHtml(p.name)}</h3>
-        <div class="unit">${escapeHtml(p.unit || '')}</div>
-        <div class="desc">${escapeHtml(p.description || '')}</div>
-        <div class="row">
-          <span class="price">${formatRupees(p.price)}</span>
-          ${p.stock > 0
-            ? `<button class="add-to-cart-btn" data-id="${p.id}">Add</button>`
-            : `<button class="add-to-cart-btn" disabled>Add</button>`}
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function attachAddToCartHandlers(container) {
-  container.querySelectorAll('.add-to-cart-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      try {
-        await API.addToCart(Number(btn.dataset.id), 1);
-        showToast('Added to cart');
-        refreshCartCount();
-      } catch (e) {
-        if (e.status === 401) {
-          window.location.href = '/login.html?next=/products.html';
-        } else {
-          showToast(e.message);
-        }
-      }
-    });
-  });
-}
+// productCardHtml() and attachAddToCartHandlers() live in /js/shop.js
 </script>
 </body>
 </html>

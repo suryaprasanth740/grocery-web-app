@@ -43,6 +43,7 @@
 
 <script src="/js/api.js"></script>
 <script src="/js/nav.js"></script>
+<script src="/js/shop.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
   const root = document.getElementById('orders-root');
@@ -71,9 +72,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="top-row">
           <div>
             <div class="order-id">Order #${o.id}</div>
-            <div class="date">${new Date(o.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+            <div class="date">${formatDateTime(o.createdAt)}</div>
           </div>
-          <span class="status-badge">${escapeHtml(o.status)}</span>
+          ${statusBadgeHtml(o.status)}
         </div>
         <div class="order-items-list">
           ${o.items.slice(0, 3).map(it => `<div class="order-line"><span>${escapeHtml(it.productName)} &times; ${it.quantity}</span></div>`).join('')}
