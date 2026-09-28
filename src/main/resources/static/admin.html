@@ -187,7 +187,7 @@ async function renderCoupons(root) {
   root.innerHTML = `<div class="table-wrap"><table class="admin-table">
     <thead><tr><th>Code</th><th>Offer</th><th>Min order</th><th>Per customer</th><th>Expires</th><th>Active</th></tr></thead>
     <tbody>${coupons.map(c => {
-      const expired = c.expiresAt && new Date(c.expiresAt).getTime() <= now;
+      const expired = c.expiresAt && serverDate(c.expiresAt).getTime() <= now;
       return `<tr>
         <td><b>${escapeHtml(c.code)}</b></td><td>${escapeHtml(c.description)}</td><td>${formatRupees(c.minOrder)}</td>
         <td>${c.perUserLimit}</td>

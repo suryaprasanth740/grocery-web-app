@@ -437,7 +437,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); }
   transition: transform 0.25s ease;
   z-index: 200;
 }
-#toast.show { transform: translateX(-50%) translateY(0); }
+#toast { opacity: 0; visibility: hidden; }
+#toast.show { transform: translateX(-50%) translateY(0); opacity: 1; visibility: visible; }
 
 /* ---------- Cart ---------- */
 .cart-item {
