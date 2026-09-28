@@ -77,7 +77,7 @@ async function loadOrder(flash) {
 function orderHtml(order, flash) {
   const pending = order.status === 'PAYMENT_PENDING';
   const deliveredRecently = order.status === 'DELIVERED' && order.deliveredAt
-    && (Date.now() - new Date(order.deliveredAt).getTime()) < ISSUE_WINDOW_HOURS * 3600 * 1000;
+    && (Date.now() - serverDate(order.deliveredAt).getTime()) < ISSUE_WINDOW_HOURS * 3600 * 1000;
   const canCancel = order.status === 'PLACED' || pending;
 
   return `
