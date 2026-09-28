@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin &mdash; FreshCart</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="signboard">
+  <div class="wrap">
+    <a href="/" class="brand"><span class="crate">&#127811;</span>FreshCart</a>
+    <nav class="nav-links">
+      <a href="/products.html">Shop</a>
+      <a href="/orders.html" id="nav-orders" style="display:none">My Orders</a>
+      <span id="nav-auth-area"><a href="/login.html" id="nav-login">Login</a></span>
+      <a href="/cart.html" class="cart-pill">&#128722; Cart <span class="count" id="cart-count">0</span></a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="section-heading" style="margin-top:34px;">
+      <h2>Admin panel</h2>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="orders">Orders</button>
+      <button class="tab" data-tab="products">Products</button>
+      <button class="tab" data-tab="issues">Reported problems</button>
+      <button class="tab" data-tab="coupons">Coupons</button>
+    </div>
+    <div id="admin-error"></div>
+    <div id="admin-root"><div class="skeleton" style="height:220px;"></div></div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    FreshCart &mdash; a student full-stack demo project. Built with Spring Boot, MySQL, and vanilla JS by
+    <a href="https://github.com/suryaprasanth740" target="_blank" rel="noopener">Surya Prasanth</a>.
+  </div>
+</footer>
+
+<div id="toast"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/shop.js"></script>
+<script>
+// Next allowed status for each status (same rules as OrderService on the server).
+const NEXT_STATUS = {
+  PLACED: ['PACKED', 'CANCELLED'],
+  PACKED: ['OUT_FOR_DELIVERY', 'CANCELLED'],
+  OUT_FOR_DELIVERY: ['DELIVERED'],
+};
+let activeTab = 'orders';
+
+document.addEventListener('DOMContentLoaded', async () => {
+  let me;
+  try { me = await API.me(); } catch (e) { window.location.href = '/login.html?next=/admin.html'; return; }
+  if (me.role !== 'ADMIN') {
+    document.getElementById('admin-root').innerHTML = '<div class="alert alert-error">Admins only. Log in with the admin account.</div>';
+    return;
+  }
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
+    activeTab = t.dataset.tab;
+    render();
+  }));
+  render();
+});
+
+function showError(message) {
+  document.getElementById('admin-error').innerHTML = message ? `<div class="alert alert-error">${escapeHtml(message)}</div>` : '';
+}
+
+async function render() {
+  showError('');
+  const root = document.getElementById('admin-root');
+  try {
+    if (activeTab === 'orders') await renderOrders(root);
+    if (activeTab === 'products') await renderProducts(root);
+    if (activeTab === 'issues') await renderIssues(root);
+    if (activeTab === 'coupons') await renderCoupons(root);
+  } catch (e) {
+    root.innerHTML = '';
+    showError(e.message);
+  }
+}
+
+// ---------------- Orders ----------------
+async function renderOrders(root) {
+  const orders = await API.adminOrders();
+  if (!orders.length) { root.innerHTML = '<p>No orders yet.</p>'; return; }
+  root.innerHTML = `<div class="table-wrap"><table class="admin-table">
+    <thead><tr><th>#</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>If unavailable</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>${orders.map(o => `
+      <tr>
+        <td><b>${o.id}</b></td>
+        <td>${formatDateTime(o.createdAt)}</td>
+        <td>${escapeHtml(o.customerName || '')}<div class="muted small">${escapeHtml(o.customerEmail || '')}</div><div class="muted small">PIN ${escapeHtml(o.pincode || '-')}</div></td>
+        <td>${o.items.map(i => `${escapeHtml(i.productName)} &times; ${i.quantity}`).join('<br>')}</td>
+        <td>${formatRupees(o.totalAmount)}${Number(o.discount) > 0 ? `<div class="muted small">${escapeHtml(o.couponCode)} &minus;${formatRupees(o.discount)}</div>` : ''}</td>
+        <td>${escapeHtml(o.paymentMethod)}<div class="muted small">${escapeHtml(PAYMENT_LABELS[o.paymentStatus] || o.paymentStatus)}</div></td>
+        <td class="small">${escapeHtml(SUBSTITUTION_LABELS[o.substitutionPreference] || '-')}</td>
+        <td>${statusBadgeHtml(o.status)}</td>
+        <td class="actions">${(NEXT_STATUS[o.status] || []).map(s => `
+          <button class="btn btn-sm ${s === 'CANCELLED' ? 'btn-outline danger' : 'btn-primary'}" data-order="${o.id}" data-status="${s}">
+            ${s === 'CANCELLED' ? 'Cancel' : 'Mark ' + escapeHtml(STATUS_LABELS[s][0].toLowerCase())}</button>`).join('') || '<span class="muted small">&mdash;</span>'}
+        </td>
+      </tr>`).join('')}</tbody></table></div>`;
+  root.querySelectorAll('button[data-order]').forEach(btn => btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    try {
+      await API.adminSetStatus(Number(btn.dataset.order), btn.dataset.status);
+      showToast('Order updated');
+      await renderOrders(root);
+    } catch (e) { showError(e.message); btn.disabled = false; }
+  }));
+}
+
+// ---------------- Products ----------------
+async function renderProducts(root) {
+  const [products, categories] = await Promise.all([API.adminProducts(), API.categories()]);
+  const catOptions = (selected) => categories.map(c => `<option value="${c.id}" ${c.id === selected ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
+  const gstOptions = (selected) => [0, 5, 12, 18].map(g => `<option value="${g}" ${g === selected ? 'selected' : ''}>${g}%</option>`).join('');
+  const row = (p) => `
+    <tr data-id="${p ? p.id : ''}">
+      <td><input class="f-emoji" value="${p ? escapeHtml(p.imageEmoji || '') : ''}" maxlength="10" style="width:52px"></td>
+      <td><input class="f-name" value="${p ? escapeHtml(p.name) : ''}" maxlength="150" placeholder="Name">
+          <input class="f-unit" value="${p ? escapeHtml(p.unit || '') : ''}" maxlength="20" placeholder="Unit, e.g. 1 kg"></td>
+      <td><select class="f-cat">${catOptions(p && p.category ? p.category.id : null)}</select></td>
+      <td><input class="f-price" type="number" min="1" step="0.01" value="${p ? p.price : ''}" style="width:90px"></td>
+      <td><input class="f-stock" type="number" min="0" max="10000" value="${p ? p.stock : 0}" style="width:80px"></td>
+      <td><input class="f-expiry" type="date" value="${p && p.expiryDate ? p.expiryDate : ''}">
+          ${p ? expiryTagHtml(p) : ''}</td>
+      <td><select class="f-gst">${gstOptions(p ? p.gstPercent : 0)}</select></td>
+      <td><button class="btn btn-sm btn-primary f-save">${p ? 'Save' : 'Add'}</button></td>
+    </tr>`;
+  root.innerHTML = `
+    <p class="bill-note">Change the price to test the "price changed" warning in a customer's cart. Set an old expiry date to test expiry blocking.</p>
+    <div class="table-wrap"><table class="admin-table">
+      <thead><tr><th>Icon</th><th>Name / unit</th><th>Category</th><th>Price &#8377;</th><th>Stock</th><th>Best before</th><th>GST</th><th></th></tr></thead>
+      <tbody>${row(null)}${products.map(row).join('')}</tbody>
+    </table></div>`;
+  root.querySelectorAll('.f-save').forEach(btn => btn.addEventListener('click', async () => {
+    const tr = btn.closest('tr');
+    const val = (cls) => tr.querySelector(cls).value;
+    const payload = {
+      name: val('.f-name'), unit: val('.f-unit'), imageEmoji: val('.f-emoji'),
+      categoryId: Number(val('.f-cat')), price: val('.f-price') === '' ? null : Number(val('.f-price')),
+      stock: val('.f-stock') === '' ? null : Number(val('.f-stock')),
+      expiryDate: val('.f-expiry') || null, gstPercent: Number(val('.f-gst')),
+    };
+    const id = tr.dataset.id;
+    if (id) {
+      const existing = products.find(p => String(p.id) === id);
+      payload.description = existing.description;
+    }
+    btn.disabled = true;
+    try {
+      if (id) await API.adminUpdateProduct(Number(id), payload); else await API.adminCreateProduct(payload);
+      showToast(id ? 'Product saved' : 'Product added');
+      await renderProducts(root);
+    } catch (e) { showError(e.message); btn.disabled = false; }
+  }));
+}
+
+// ---------------- Reported problems ----------------
+async function renderIssues(root) {
+  const issues = await API.adminIssues();
+  if (!issues.length) { root.innerHTML = '<p>No problems reported. &#127881;</p>'; return; }
+  root.innerHTML = `<div class="table-wrap"><table class="admin-table">
+    <thead><tr><th>Date</th><th>Order</th><th>Item</th><th>Qty</th><th>Problem</th><th>Note</th><th>Refund</th></tr></thead>
+    <tbody>${issues.map(i => `<tr>
+      <td>${formatDateTime(i.createdAt)}</td><td>#${i.orderId}</td><td>${escapeHtml(i.productName)}</td><td>${i.quantity}</td>
+      <td>${escapeHtml(i.reason)}</td><td class="small">${escapeHtml(i.note || '')}</td><td>${formatRupees(i.refundAmount)}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+
+// ---------------- Coupons ----------------
+async function renderCoupons(root) {
+  const coupons = await API.adminCoupons();
+  const now = Date.now();
+  root.innerHTML = `<div class="table-wrap"><table class="admin-table">
+    <thead><tr><th>Code</th><th>Offer</th><th>Min order</th><th>Per customer</th><th>Expires</th><th>Active</th></tr></thead>
+    <tbody>${coupons.map(c => {
+      const expired = c.expiresAt && new Date(c.expiresAt).getTime() <= now;
+      return `<tr>
+        <td><b>${escapeHtml(c.code)}</b></td><td>${escapeHtml(c.description)}</td><td>${formatRupees(c.minOrder)}</td>
+        <td>${c.perUserLimit}</td>
+        <td>${c.expiresAt ? formatDateTime(c.expiresAt) : 'Never'} ${expired ? '<span class="expiry-tag danger">expired</span>' : ''}</td>
+        <td><label class="switch"><input type="checkbox" data-coupon="${c.id}" ${c.active ? 'checked' : ''}> ${c.active ? 'On' : 'Off'}</label></td>
+      </tr>`; }).join('')}</tbody></table></div>`;
+  root.querySelectorAll('input[data-coupon]').forEach(cb => cb.addEventListener('change', async () => {
+    try { await API.adminSetCouponActive(Number(cb.dataset.coupon), cb.checked); await renderCoupons(root); }
+    catch (e) { showError(e.message); }
+  }));
+}
+</script>
+</body>
+</html>
