@@ -1,25 +1,54 @@
 package com.suryaprasanth.grocery.config;
 
 import com.suryaprasanth.grocery.model.Category;
+import com.suryaprasanth.grocery.model.Coupon;
+import com.suryaprasanth.grocery.model.CouponType;
 import com.suryaprasanth.grocery.model.Product;
+import com.suryaprasanth.grocery.model.User;
 import com.suryaprasanth.grocery.repository.CategoryRepository;
+import com.suryaprasanth.grocery.repository.CouponRepository;
 import com.suryaprasanth.grocery.repository.ProductRepository;
+import com.suryaprasanth.grocery.repository.UserRepository;
+import com.suryaprasanth.grocery.util.PasswordUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.security.SecureRandom;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
 
+    private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
+
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
+    private final CouponRepository couponRepository;
+    private final UserRepository userRepository;
+    private final String adminEmail;
+    private final String adminPassword;
+    private final boolean refreshExpiredDemoStock;
 
-    public DataInitializer(CategoryRepository categoryRepository, ProductRepository productRepository) {
+    public DataInitializer(CategoryRepository categoryRepository, ProductRepository productRepository,
+                           CouponRepository couponRepository, UserRepository userRepository,
+                           @Value("${app.admin.email:admin@freshcart.com}") String adminEmail,
+                           @Value("${app.admin.password:}") String adminPassword,
+                           @Value("${app.demo.refresh-expired-stock:true}") boolean refreshExpiredDemoStock) {
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
+        this.couponRepository = couponRepository;
+        this.userRepository = userRepository;
+        this.adminEmail = adminEmail;
+        this.adminPassword = adminPassword;
+        this.refreshExpiredDemoStock = refreshExpiredDemoStock;
     }
 
     @Override
@@ -28,6 +57,103 @@ public class DataInitializer implements CommandLineRunner {
             seed();
         }
         backfillProductImages();
+        backfillShelfLifeAndGst();
+        if (couponRepository.count() == 0) {
+            seedCoupons();
+        }
+        ensureAdminAccount();
+    }
+
+    /**
+     * Shelf life (days) and GST rate for each seeded product. GST rates are approximate
+     * values for a demo. A shelf life of -1 means "does not expire".
+     */
+    private static final Map<String, int[]> SHELF_LIFE_AND_GST = Map.ofEntries(
+            Map.entry("Fresh Bananas", new int[]{5, 0}),
+            Map.entry("Red Apples", new int[]{20, 0}),
+            Map.entry("Tomatoes", new int[]{7, 0}),
+            Map.entry("Onions", new int[]{30, 0}),
+            Map.entry("Spinach Bunch", new int[]{3, 0}),
+            Map.entry("Full Cream Milk", new int[]{3, 0}),
+            Map.entry("Farm Eggs", new int[]{14, 0}),
+            Map.entry("Cheddar Cheese", new int[]{60, 12}),
+            Map.entry("Greek Yogurt", new int[]{10, 5}),
+            Map.entry("Whole Wheat Bread", new int[]{4, 0}),
+            Map.entry("Butter Croissants", new int[]{3, 18}),
+            Map.entry("Chocolate Muffins", new int[]{5, 18}),
+            Map.entry("Orange Juice", new int[]{7, 12}),
+            Map.entry("Filter Coffee Powder", new int[]{180, 5}),
+            Map.entry("Green Tea Bags", new int[]{365, 5}),
+            Map.entry("Potato Chips", new int[]{120, 12}),
+            Map.entry("Mixed Nuts", new int[]{180, 5}),
+            Map.entry("Digestive Biscuits", new int[]{180, 18}),
+            Map.entry("Basmati Rice", new int[]{365, 5}),
+            Map.entry("Toor Dal", new int[]{365, 5}),
+            Map.entry("Sunflower Cooking Oil", new int[]{270, 5}),
+            Map.entry("Iodized Salt", new int[]{-1, 0}));
+
+    /**
+     * Gives the seeded products an expiry date and GST rate if they don't have one yet.
+     * Demo helper: on the free live site nobody restocks, so milk would stay "expired"
+     * forever. When app.demo.refresh-expired-stock=true, an expired seeded product gets a
+     * fresh batch on start-up (like new stock arriving). Set it to false to test expiry.
+     */
+    private void backfillShelfLifeAndGst() {
+        LocalDate today = LocalDate.now();
+        for (Product p : productRepository.findAll()) {
+            int[] info = SHELF_LIFE_AND_GST.get(p.getName());
+            if (info == null) {
+                continue;
+            }
+            boolean changed = false;
+            boolean expired = p.getExpiryDate() != null && p.isExpired();
+            if (info[0] > 0 && (p.getExpiryDate() == null || (expired && refreshExpiredDemoStock))) {
+                p.setExpiryDate(today.plusDays(info[0]));
+                changed = true;
+            }
+            if (p.getGstPercent() == 0 && info[1] > 0) {
+                p.setGstPercent(info[1]);
+                changed = true;
+            }
+            if (changed) {
+                productRepository.save(p);
+            }
+        }
+    }
+
+    private void seedCoupons() {
+        LocalDateTime now = LocalDateTime.now();
+        couponRepository.save(new Coupon("FRESH50", "Flat Rs 50 off on orders above Rs 299",
+                CouponType.FLAT, new BigDecimal("50"), null, new BigDecimal("299"), now.plusYears(1), 1));
+        couponRepository.save(new Coupon("SAVE10", "10% off up to Rs 100 on orders above Rs 199",
+                CouponType.PERCENT, new BigDecimal("10"), new BigDecimal("100"), new BigDecimal("199"),
+                now.plusYears(1), 3));
+        couponRepository.save(new Coupon("BIG100", "Flat Rs 100 off on orders above Rs 999",
+                CouponType.FLAT, new BigDecimal("100"), null, new BigDecimal("999"), now.plusYears(1), 1));
+        // For testing: this one is already expired and must always be rejected.
+        couponRepository.save(new Coupon("OLD20", "Expired offer (for testing)",
+                CouponType.PERCENT, new BigDecimal("20"), new BigDecimal("80"), BigDecimal.ZERO,
+                now.minusDays(1), 1));
+    }
+
+    /** Creates the admin account once. The password comes from ADMIN_PASSWORD, or is random. */
+    private void ensureAdminAccount() {
+        if (userRepository.existsByEmailIgnoreCase(adminEmail)) {
+            return;
+        }
+        String password = adminPassword;
+        if (password == null || password.isBlank()) {
+            byte[] bytes = new byte[9];
+            new SecureRandom().nextBytes(bytes);
+            password = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+            log.warn("============================================================");
+            log.warn(" ADMIN_PASSWORD is not set. Created admin {} with password: {}", adminEmail, password);
+            log.warn(" Set ADMIN_PASSWORD in your environment to choose your own.");
+            log.warn("============================================================");
+        }
+        User admin = new User("FreshCart Admin", adminEmail.trim().toLowerCase(), PasswordUtil.hash(password));
+        admin.setRole("ADMIN");
+        userRepository.save(admin);
     }
 
     private void seed() {
