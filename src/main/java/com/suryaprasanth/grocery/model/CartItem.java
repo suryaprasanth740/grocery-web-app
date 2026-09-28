@@ -2,6 +2,7 @@ package com.suryaprasanth.grocery.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "cart_items", uniqueConstraints = {
@@ -25,6 +26,10 @@ public class CartItem {
     @Column(nullable = false)
     private Integer quantity;
 
+    /** Price when the item was put in the cart, so we can warn "price changed". */
+    @Column(name = "price_when_added", precision = 10, scale = 2)
+    private BigDecimal priceWhenAdded;
+
     public CartItem() {
     }
 
@@ -32,6 +37,7 @@ public class CartItem {
         this.user = user;
         this.product = product;
         this.quantity = quantity;
+        this.priceWhenAdded = product != null ? product.getPrice() : null;
     }
 
     public Long getId() {
@@ -64,5 +70,19 @@ public class CartItem {
 
     public void setQuantity(Integer quantity) {
         this.quantity = quantity;
+    }
+
+    public BigDecimal getPriceWhenAdded() {
+        return priceWhenAdded;
+    }
+
+    public void setPriceWhenAdded(BigDecimal priceWhenAdded) {
+        this.priceWhenAdded = priceWhenAdded;
+    }
+
+    /** True when the product price is different from the price the customer saw. */
+    public boolean isPriceChanged() {
+        return priceWhenAdded != null && product != null
+                && priceWhenAdded.compareTo(product.getPrice()) != 0;
     }
 }

@@ -22,6 +22,10 @@ public class User {
     @Column(name = "password_hash", nullable = false, length = 200)
     private String passwordHash;
 
+    /** "USER" for customers, "ADMIN" for staff who can use the admin panel. */
+    @Column(nullable = false, length = 10)
+    private String role = "USER";
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -72,5 +76,17 @@ public class User {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public boolean isAdmin() {
+        return "ADMIN".equals(role);
     }
 }
