@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop &mdash; FreshCart</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="signboard">
+  <div class="wrap">
+    <a href="/" class="brand"><span class="crate">&#127811;</span>FreshCart</a>
+    <nav class="nav-links">
+      <a href="/products.html">Shop</a>
+      <a href="/orders.html" id="nav-orders" style="display:none">My Orders</a>
+      <span id="nav-auth-area"><a href="/login.html" id="nav-login">Login</a></span>
+      <a href="/cart.html" class="cart-pill">&#128722; Cart <span class="count" id="cart-count">0</span></a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="section-heading" style="margin-top:34px;">
+      <h2 id="page-title">Full catalog</h2>
+      <span class="note" id="result-count"></span>
+    </div>
+
+    <div class="search-row" style="max-width:100%;margin-bottom:8px;">
+      <input type="text" id="search-input" placeholder="Search products...">
+      <button class="btn btn-primary" id="search-btn">Search</button>
+    </div>
+
+    <div class="category-row" id="category-row"></div>
+
+    <div class="grid" id="product-grid">
+      <div class="skeleton" style="height:220px;"></div>
+      <div class="skeleton" style="height:220px;"></div>
+      <div class="skeleton" style="height:220px;"></div>
+      <div class="skeleton" style="height:220px;"></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    FreshCart &mdash; a student full-stack demo project. Built with Spring Boot, MySQL, and vanilla JS by
+    <a href="https://github.com/suryaprasanth740" target="_blank" rel="noopener">Surya Prasanth</a>.
+  </div>
+</footer>
+
+<div id="toast"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/shop.js"></script>
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+let activeCategoryId = urlParams.get('categoryId') ? Number(urlParams.get('categoryId')) : null;
+let activeSearch = urlParams.get('search') || '';
+
+document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('search-input').value = activeSearch;
+  document.getElementById('search-btn').addEventListener('click', runSearch);
+  document.getElementById('search-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') runSearch();
+  });
+
+  function runSearch() {
+    activeSearch = document.getElementById('search-input').value.trim();
+    activeCategoryId = null;
+    loadProducts();
+    renderCategories();
+  }
+
+  try {
+    const categories = await API.categories();
+    window.__categories = categories;
+    renderCategories();
+  } catch (e) {
+    document.getElementById('category-row').innerHTML = '';
+  }
+
+  loadProducts();
+});
+
+function renderCategories() {
+  const categories = window.__categories || [];
+  const row = document.getElementById('category-row');
+  const allChip = `<button class="category-chip ${!activeCategoryId ? 'active' : ''}" data-cat=""><span class="emoji">&#128722;</span><span>All</span></button>`;
+  const chips = categories.map(c => `
+    <button class="category-chip ${activeCategoryId === c.id ? 'active' : ''}" data-cat="${c.id}">
+      <span class="emoji">${c.icon || '\u{1F6D2}'}</span><span>${escapeHtml(c.name)}</span>
+    </button>
+  `).join('');
+  row.innerHTML = allChip + chips;
+  row.querySelectorAll('.category-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const cat = chip.dataset.cat;
+      activeCategoryId = cat ? Number(cat) : null;
+      activeSearch = '';
+      document.getElementById('search-input').value = '';
+      loadProducts();
+      renderCategories();
+    });
+  });
+}
+
+async function loadProducts() {
+  const grid = document.getElementById('product-grid');
+  grid.innerHTML = '<div class="skeleton" style="height:220px;"></div><div class="skeleton" style="height:220px;"></div>';
+
+  const params = {};
+  if (activeSearch) params.search = activeSearch;
+  else if (activeCategoryId) params.categoryId = activeCategoryId;
+
+  document.getElementById('page-title').textContent = activeSearch
+    ? `Results for "${activeSearch}"`
+    : (activeCategoryId && window.__categories
+        ? (window.__categories.find(c => c.id === activeCategoryId)?.name || 'Shop')
+        : 'Full catalog');
+
+  try {
+    const products = await API.products(params);
+    document.getElementById('result-count').textContent = `${products.length} item${products.length === 1 ? '' : 's'}`;
+    if (products.length === 0) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+        <div class="big-emoji">&#128269;</div>
+        <h3>No products found</h3>
+        <p>Try a different search term or category.</p>
+      </div>`;
+      return;
+    }
+    grid.innerHTML = products.map(productCardHtml).join('');
+    attachAddToCartHandlers(grid);
+  } catch (e) {
+    grid.innerHTML = '<p>Could not load products right now.</p>';
+  }
+}
+
+// productCardHtml() and attachAddToCartHandlers() live in /js/shop.js
+</script>
+</body>
+</html>
