@@ -64,8 +64,14 @@ function formatDate(isoDate) {
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/** The server stores times in UTC without a zone ("2026-09-28T13:08:28"). Read them as UTC. */
+function serverDate(iso) {
+  if (!iso) return null;
+  return new Date(/(Z|[+-]\d\d:?\d\d)$/.test(iso) ? iso : iso + 'Z');
+}
+
 function formatDateTime(iso) {
-  return new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+  return serverDate(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 // ---------- Order status ----------
