@@ -5,6 +5,7 @@ import com.suryaprasanth.grocery.model.Coupon;
 import com.suryaprasanth.grocery.model.CouponType;
 import com.suryaprasanth.grocery.model.Product;
 import com.suryaprasanth.grocery.model.User;
+import com.suryaprasanth.grocery.util.EmailUtil;
 import com.suryaprasanth.grocery.repository.CategoryRepository;
 import com.suryaprasanth.grocery.repository.CouponRepository;
 import com.suryaprasanth.grocery.repository.ProductRepository;
@@ -62,6 +63,22 @@ public class DataInitializer implements CommandLineRunner {
             seedCoupons();
         }
         ensureAdminAccount();
+        backfillEmailKeys();
+    }
+
+    /** Accounts made before the one-account-per-Gmail rule get their email key here. */
+    private void backfillEmailKeys() {
+        for (User user : userRepository.findByEmailKeyIsNull()) {
+            String key = EmailUtil.canonical(user.getEmail());
+            if (userRepository.existsByEmailKey(key)) {
+                // An older duplicate (e.g. s.urya@gmail.com next to surya@gmail.com). Keep it
+                // so its orders are not lost; it can still log in with its exact email.
+                log.warn("User {} shares an inbox with another account; left without email key", user.getId());
+                continue;
+            }
+            user.setEmailKey(key);
+            userRepository.saveAndFlush(user);
+        }
     }
 
     /**

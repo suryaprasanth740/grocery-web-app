@@ -4,6 +4,7 @@ import com.suryaprasanth.grocery.model.Product;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -94,5 +95,58 @@ class SecurityAndAdminTest extends ApiTestSupport {
                 Map.of("name", "A", "email", email, "password", "secret123"))));
         assertEquals(409, status(call("POST", "/api/auth/register", new MockHttpSession(),
                 Map.of("name", "B", "email", email.toUpperCase(), "password", "secret123"))));
+    }
+
+    @Test
+    @DisplayName("One Gmail inbox = one account (dots, +alias and googlemail.com are the same inbox)")
+    void oneAccountPerGmail() throws Exception {
+        String name = "fc" + UUID.randomUUID().toString().substring(0, 8).replaceAll("[^a-z0-9]", "");
+        String first = name.substring(0, 3) + "." + name.substring(3) + "@gmail.com";   // fc1.23456@gmail.com
+        assertEquals(201, status(call("POST", "/api/auth/register", new MockHttpSession(),
+                Map.of("name", "First", "email", first, "password", "secret123"))));
+
+        for (String sameInbox : new String[]{
+                name + "@gmail.com",                      // without the dot
+                name.toUpperCase() + "+offers@gmail.com", // capitals and +alias
+                name.charAt(0) + "." + name.substring(1) + "@googlemail.com"}) {
+            MvcResult r = call("POST", "/api/auth/register", new MockHttpSession(),
+                    Map.of("name", "Second", "email", sameInbox, "password", "secret123"));
+            assertEquals(409, status(r), sameInbox);
+            assertTrue(body(r).get("message").asText().contains("already exists"));
+        }
+
+        // The same person can log in with any form of their Gmail address.
+        assertEquals(200, status(call("POST", "/api/auth/login", new MockHttpSession(),
+                Map.of("email", name + "+x@gmail.com", "password", "secret123"))));
+
+        // No real name part.
+        assertEquals(400, status(call("POST", "/api/auth/register", new MockHttpSession(),
+                Map.of("name", "X", "email", "+" + name + "@gmail.com", "password", "secret123"))));
+    }
+
+    @Test
+    @DisplayName("Other email providers: dots are NOT ignored (they can be different people)")
+    void otherProvidersKeepDots() throws Exception {
+        String name = "ot" + UUID.randomUUID().toString().substring(0, 8).replaceAll("[^a-z0-9]", "");
+        assertEquals(201, status(call("POST", "/api/auth/register", new MockHttpSession(),
+                Map.of("name", "A", "email", name + "@test.local", "password", "secret123"))));
+        assertEquals(201, status(call("POST", "/api/auth/register", new MockHttpSession(),
+                Map.of("name", "B", "email", name.charAt(0) + "." + name.substring(1) + "@test.local",
+                        "password", "secret123"))));
+    }
+
+    @Test
+    @DisplayName("Wrong-password lock can't be dodged by adding dots to a Gmail address")
+    void lockoutSharedAcrossGmailForms() throws Exception {
+        String name = "lk" + UUID.randomUUID().toString().substring(0, 8).replaceAll("[^a-z0-9]", "");
+        call("POST", "/api/auth/register", new MockHttpSession(),
+                Map.of("name", "Lock", "email", name + "@gmail.com", "password", "right-pass"));
+        for (int i = 0; i < 5; i++) {
+            String form = name.substring(0, i + 1) + "." + name.substring(i + 1) + "@gmail.com";
+            assertEquals(401, status(call("POST", "/api/auth/login", new MockHttpSession(),
+                    Map.of("email", form, "password", "wrong"))));
+        }
+        assertEquals(429, status(call("POST", "/api/auth/login", new MockHttpSession(),
+                Map.of("email", name + "+new@gmail.com", "password", "right-pass"))));
     }
 }
