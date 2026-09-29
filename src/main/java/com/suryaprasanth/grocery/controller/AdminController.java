@@ -8,6 +8,7 @@ import com.suryaprasanth.grocery.service.OrderService;
 import com.suryaprasanth.grocery.util.SessionUtil;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -64,7 +65,7 @@ public class AdminController {
     @GetMapping("/products")
     public List<Product> products(HttpSession session) {
         SessionUtil.requireAdmin(session, userRepository);
-        return productRepository.findAll();
+        return productRepository.findAll(Sort.by("id"));
     }
 
     @PostMapping("/products")
@@ -121,7 +122,7 @@ public class AdminController {
     @GetMapping("/coupons")
     public List<Coupon> coupons(HttpSession session) {
         SessionUtil.requireAdmin(session, userRepository);
-        return couponRepository.findAll();
+        return couponRepository.findAll(Sort.by("id"));
     }
 
     @PutMapping("/coupons/{id}/active")

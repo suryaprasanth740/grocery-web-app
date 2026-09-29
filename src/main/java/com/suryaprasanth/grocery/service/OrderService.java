@@ -64,7 +64,7 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public Bill quote(User user, String couponCode) {
-        List<CartItem> items = cartItemRepository.findByUserId(user.getId());
+        List<CartItem> items = cartItemRepository.findByUserIdOrderByIdAsc(user.getId());
         return billingService.buildBill(user, items, couponCode, false);
     }
 
@@ -91,7 +91,7 @@ public class OrderService {
         }
 
         // 3. Build the bill on the server. Never trust prices sent by the browser.
-        List<CartItem> items = cartItemRepository.findByUserId(user.getId());
+        List<CartItem> items = cartItemRepository.findByUserIdOrderByIdAsc(user.getId());
         if (items.isEmpty()) {
             throw error(HttpStatus.BAD_REQUEST, "Your cart is empty");
         }

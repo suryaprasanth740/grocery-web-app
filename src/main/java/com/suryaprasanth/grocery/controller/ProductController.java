@@ -2,6 +2,7 @@ package com.suryaprasanth.grocery.controller;
 
 import com.suryaprasanth.grocery.model.Product;
 import com.suryaprasanth.grocery.repository.ProductRepository;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -22,12 +23,12 @@ public class ProductController {
     public List<Product> list(@RequestParam(required = false) Long categoryId,
                                @RequestParam(required = false) String search) {
         if (search != null && !search.isBlank()) {
-            return productRepository.findByNameContainingIgnoreCase(search.trim());
+            return productRepository.findByNameContainingIgnoreCaseOrderByIdAsc(search.trim());
         }
         if (categoryId != null) {
-            return productRepository.findByCategoryId(categoryId);
+            return productRepository.findByCategoryIdOrderByIdAsc(categoryId);
         }
-        return productRepository.findAll();
+        return productRepository.findAll(Sort.by("id"));
     }
 
     @GetMapping("/{id}")

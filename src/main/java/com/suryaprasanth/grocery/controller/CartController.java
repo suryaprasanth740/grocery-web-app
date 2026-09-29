@@ -37,7 +37,7 @@ public class CartController {
     @GetMapping
     public List<CartItem> viewCart(HttpSession session) {
         User user = SessionUtil.requireLoggedInUser(session, userRepository);
-        return cartItemRepository.findByUserId(user.getId());
+        return cartItemRepository.findByUserIdOrderByIdAsc(user.getId());
     }
 
     @PostMapping("/add")
@@ -53,7 +53,7 @@ public class CartController {
         item.setQuantity(newQuantity);
         cartItemRepository.save(item);
 
-        return cartItemRepository.findByUserId(user.getId());
+        return cartItemRepository.findByUserIdOrderByIdAsc(user.getId());
     }
 
     @PutMapping("/update")
@@ -67,14 +67,14 @@ public class CartController {
         }
         item.setQuantity(request.getQuantity());
         cartItemRepository.save(item);
-        return cartItemRepository.findByUserId(user.getId());
+        return cartItemRepository.findByUserIdOrderByIdAsc(user.getId());
     }
 
     /** The customer saw the new price and accepts it. */
     @PostMapping("/accept-prices")
     public List<CartItem> acceptNewPrices(HttpSession session) {
         User user = SessionUtil.requireLoggedInUser(session, userRepository);
-        List<CartItem> items = cartItemRepository.findByUserId(user.getId());
+        List<CartItem> items = cartItemRepository.findByUserIdOrderByIdAsc(user.getId());
         for (CartItem item : items) {
             item.setPriceWhenAdded(item.getProduct().getPrice());
         }
@@ -88,7 +88,7 @@ public class CartController {
         CartItem item = cartItemRepository.findByUserIdAndProductId(user.getId(), productId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not in cart"));
         cartItemRepository.delete(item);
-        return cartItemRepository.findByUserId(user.getId());
+        return cartItemRepository.findByUserIdOrderByIdAsc(user.getId());
     }
 
     @DeleteMapping("/clear")
