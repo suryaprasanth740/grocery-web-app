@@ -14,7 +14,7 @@ import java.util.List;
  */
 public record RecipeView(String id, String type, String name, String emoji, String description,
                          String time, int baseServings, int servings, List<Line> lines,
-                         BigDecimal estimatedTotal, int missingCount) {
+                         BigDecimal estimatedTotal, int missingCount, PhotoInfo photo) {
 
     /**
      * @param needed   e.g. "300 g" (already scaled for the number of people)

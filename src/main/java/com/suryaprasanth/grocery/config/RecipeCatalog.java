@@ -3,6 +3,7 @@ package com.suryaprasanth.grocery.config;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -140,6 +141,52 @@ public class RecipeCatalog {
                     need("Agarbatti", 1, "pcs"),
                     need("Camphor", 50, "g")))
     );
+
+    /**
+     * Real photos from Wikimedia Commons (all CC BY-SA 4.0). The licence asks us to credit
+     * the photographer and link the licence, so the recipe page shows "Photo: name, CC BY-SA 4.0".
+     */
+    public record Photo(String url, String author, String sourcePage) {
+        public static final String LICENSE = "CC BY-SA 4.0";
+        public static final String LICENSE_URL = "https://creativecommons.org/licenses/by-sa/4.0/";
+    }
+
+    private static final Map<String, Photo> PHOTOS = Map.ofEntries(
+            Map.entry("sambar", new Photo(
+                    "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/38/Indian_Sambar.jpg/500px-Indian_Sambar.jpg",
+                    "Samphotography", "https://commons.wikimedia.org/wiki/File:Indian_Sambar.jpg")),
+            Map.entry("veg-pulao", new Photo(
+                    "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/82/VEGETABLE_PULAO_~_An_Indian_cuisine_made_from_fried_rice_mixed_with_fried_vegetables.jpg/500px-VEGETABLE_PULAO_~_An_Indian_cuisine_made_from_fried_rice_mixed_with_fried_vegetables.jpg",
+                    "Jagisnowjughead", "https://commons.wikimedia.org/wiki/File:VEGETABLE_PULAO_~_An_Indian_cuisine_made_from_fried_rice_mixed_with_fried_vegetables.jpg")),
+            Map.entry("palak-paneer", new Photo(
+                    "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8d/Palak_Paneer_%28Cottage_cheese_in_spinach_gravy%29.jpg/500px-Palak_Paneer_%28Cottage_cheese_in_spinach_gravy%29.jpg",
+                    "DreamyFlutura11", "https://commons.wikimedia.org/wiki/File:Palak_Paneer_%28Cottage_cheese_in_spinach_gravy%29.jpg")),
+            Map.entry("masala-omelette", new Photo(
+                    "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/57/Masala_omelette_with_bread_toasties.jpg/500px-Masala_omelette_with_bread_toasties.jpg",
+                    "Lillottama", "https://commons.wikimedia.org/wiki/File:Masala_omelette_with_bread_toasties.jpg")),
+            Map.entry("rava-upma", new Photo(
+                    "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/09/Upma_South_India.JPG/500px-Upma_South_India.JPG",
+                    "Intodustin", "https://commons.wikimedia.org/wiki/File:Upma_South_India.JPG")),
+            Map.entry("fruit-yogurt-bowl", new Photo(
+                    "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d1/Yogurt_fruit_bowl.jpg/500px-Yogurt_fruit_bowl.jpg",
+                    "Jumbocombo0811", "https://commons.wikimedia.org/wiki/File:Yogurt_fruit_bowl.jpg")),
+            Map.entry("pongal-kit", new Photo(
+                    "https://upload.wikimedia.org/wikipedia/commons/4/43/Pongal_Pot.jpg",
+                    "Pranathi Gubbala", "https://commons.wikimedia.org/wiki/File:Pongal_Pot.jpg")),
+            Map.entry("diwali-kit", new Photo(
+                    "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3a/Diwali_Diya_4.jpg/500px-Diwali_Diya_4.jpg",
+                    "Slyronit", "https://commons.wikimedia.org/wiki/File:Diwali_Diya_4.jpg")),
+            Map.entry("ugadi-kit", new Photo(
+                    "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/49/Ugadi_festival.jpg/500px-Ugadi_festival.jpg",
+                    "Pragnya Aindleni", "https://commons.wikimedia.org/wiki/File:Ugadi_festival.jpg")),
+            Map.entry("ganesh-kit", new Photo(
+                    "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d5/Puran_Modak_by_Dr._Raju_Kasambe_DSCN8818_%287%29_01.jpg/500px-Puran_Modak_by_Dr._Raju_Kasambe_DSCN8818_%287%29_01.jpg",
+                    "Dr. Raju Kasambe", "https://commons.wikimedia.org/wiki/File:Puran_Modak_by_Dr._Raju_Kasambe_DSCN8818_%287%29_01.jpg")));
+
+    /** The photo for a recipe or kit, or null (the page then shows the emoji). */
+    public Photo photoFor(String id) {
+        return PHOTOS.get(id);
+    }
 
     public List<Recipe> all() {
         return recipes;

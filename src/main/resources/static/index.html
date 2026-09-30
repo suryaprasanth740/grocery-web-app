@@ -169,7 +169,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const kits = (await API.recipes()).filter(r => r.type === 'KIT');
     document.getElementById('kits-strip').innerHTML = kits.map(k => `
       <a class="mini-card" href="/recipes.html#${encodeURIComponent(k.id)}" style="width:260px;">
-        <div class="thumb" style="background:linear-gradient(135deg,#F4F0FF,#FFF0F6);font-size:1.7rem;">${escapeHtml(k.emoji)}</div>
+        <div class="thumb" style="background:linear-gradient(135deg,#F4F0FF,#FFF0F6);font-size:1.7rem;width:56px;height:56px;">${k.photo
+          ? `<img src="${escapeHtml(k.photo.url)}" alt="" loading="lazy" onerror="this.parentNode.textContent='${escapeHtml(k.emoji)}'">`
+          : escapeHtml(k.emoji)}</div>
         <div class="info"><h4>${escapeHtml(k.name)}</h4><div class="meta">${k.ingredientCount} items &middot; about ${formatRupees(k.estimatedTotal)}</div></div>
       </a>`).join('');
   } catch (e) { /* the kits strip is optional */ }
