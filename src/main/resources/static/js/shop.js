@@ -122,3 +122,46 @@ function billRowsHtml(b) {
     ${Number(b.gstIncluded || 0) > 0 ? `<div class="bill-note">Includes GST of ${formatRupees(b.gstIncluded)}. No hidden charges.</div>` : `<div class="bill-note">No hidden charges.</div>`}
   `;
 }
+
+// ---------- Smart shopping helpers (Quick List, Recipes & Kits, Budget) ----------
+
+/** Small square picture of a product: its photo, or its emoji if there is no photo. */
+function thumbHtml(p) {
+  if (!p) return `<div class="thumb">\u{2753}</div>`;
+  const emoji = escapeHtml(p.imageEmoji || '\u{1F6D2}');
+  if (p.imageUrl) {
+    return `<div class="thumb"><img src="${escapeHtml(p.imageUrl)}" alt="" loading="lazy"
+      onerror="this.parentNode.textContent='${emoji}'"></div>`;
+  }
+  return `<div class="thumb">${emoji}</div>`;
+}
+
+function goToLogin() {
+  window.location.href = '/login.html?next=' + encodeURIComponent(window.location.pathname + window.location.hash);
+}
+
+/**
+ * Adds many items in one request and tells the customer what happened.
+ * items: [{ productId, quantity }]. Returns the server result, or null if not logged in.
+ */
+async function addManyToCart(items) {
+  try {
+    const result = await API.addMany(items);
+    refreshCartCount();
+    const added = result.added.length;
+    const skipped = result.skipped.length;
+    if (skipped === 0) {
+      showToast(`Added ${added} item${added === 1 ? '' : 's'} to your cart`);
+    } else {
+      showToast(`Added ${added}, skipped ${skipped}: ${result.skipped[0]}`);
+    }
+    return result;
+  } catch (e) {
+    if (e.status === 401) {
+      goToLogin();
+      return null;
+    }
+    showToast(e.message);
+    return null;
+  }
+}

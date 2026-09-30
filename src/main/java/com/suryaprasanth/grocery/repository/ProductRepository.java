@@ -15,6 +15,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findByNameContainingIgnoreCaseOrderByIdAsc(String keyword);
 
+    boolean existsByNameIgnoreCase(String name);
+
     /**
      * Stock locking: reduce stock ONLY if enough is left, in a single atomic SQL UPDATE.
      * Returns 1 if the stock was reserved, 0 if not enough stock (someone else bought it).

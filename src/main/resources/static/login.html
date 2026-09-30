@@ -13,6 +13,9 @@
     <a href="/" class="brand"><span class="crate">&#127811;</span>FreshCart</a>
     <nav class="nav-links">
       <a href="/products.html">Shop</a>
+      <a href="/recipes.html">Recipes &amp; Kits</a>
+      <a href="/list.html">Quick List</a>
+      <a href="/budget.html">Budget</a>
       <a href="/cart.html" class="cart-pill">&#128722; Cart <span class="count" id="cart-count">0</span></a>
     </nav>
   </div>
@@ -42,7 +45,7 @@
 
 <footer>
   <div class="wrap">
-    FreshCart &mdash; a student full-stack demo project. Built with Spring Boot, MySQL, and vanilla JS by
+    FreshCart &mdash; a student full-stack demo project. Built with Spring Boot, PostgreSQL, and vanilla JS by
     <a href="https://github.com/suryaprasanth740" target="_blank" rel="noopener">Surya Prasanth</a>.
   </div>
 </footer>
@@ -63,7 +66,9 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
       email: document.getElementById('email').value.trim(),
       password: document.getElementById('password').value,
     });
-    const next = new URLSearchParams(window.location.search).get('next') || '/index.html';
+    // Only go back to a page on THIS site ("/cart.html"), never to "//evil.com" (open redirect).
+    const wanted = new URLSearchParams(window.location.search).get('next') || '';
+    const next = /^\/(?!\/)/.test(wanted) && !wanted.includes('\\') ? wanted : '/index.html';
     window.location.href = next;
   } catch (err) {
     errorBox.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;

@@ -106,6 +106,16 @@ const API = {
   checkPincode(pincode) { return this.get('/api/delivery/check?pincode=' + encodeURIComponent(pincode)); },
   coupons() { return this.get('/api/coupons'); },
 
+  // Smart shopping
+  parseList(text) { return this.post('/api/smart-list/parse', { text }); },
+  addMany(items) { return this.post('/api/cart/add-many', { items }); },
+  swapInCart(fromProductId, toProductId) { return this.post('/api/cart/swap', { fromProductId, toProductId }); },
+  recipes() { return this.get('/api/recipes'); },
+  recipe(id, servings) { return this.get(`/api/recipes/${encodeURIComponent(id)}?servings=${servings}`); },
+  budget() { return this.get('/api/budget'); },
+  setBudget(amount) { return this.put('/api/budget', { amount }); },
+  reorder() { return this.get('/api/reorder'); },
+
   // Admin (only works for an ADMIN login)
   adminOrders() { return this.get('/api/admin/orders'); },
   adminSetStatus(id, status) { return this.put(`/api/admin/orders/${id}/status`, { status }); },

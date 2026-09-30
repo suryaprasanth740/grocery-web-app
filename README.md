@@ -42,6 +42,20 @@ fixes for the gaps I found. Every rule below has an automated test in `src/test/
 | Brute-force login | Account locked for 15 minutes after 5 wrong passwords |
 | Seeing another customer's order by changing the URL | Every order API checks the owner (403) |
 
+## Smart shopping features (not common in quick-commerce apps)
+
+| Feature | What it does | Where in the code |
+|---|---|---|
+| **Paste your list → cart** (`/list.html`) | Reads a list written the normal way ("2 kg tomato, 1 litre milk, atta 5kg, dozen eggs") and matches each line to a product with the right number of packs. Understands Hindi, Kannada, Tamil and Telugu words in English letters (doodh, haalu, thakkali, akki...), plurals and small spelling mistakes. | `ShoppingListService`, `UnitUtil` |
+| **Recipe → cart** (`/recipes.html`) | Pick a dish and the number of people. Every ingredient is scaled and rounded to real pack sizes (200 g dal for 4 people → 1.2 kg for 24 → two 1 kg packs). Things usually at home (salt, oil) can be skipped. | `RecipeCatalog`, `RecipeService` |
+| **Festival kits** | Pongal, Diwali, Ugadi and Ganesh Chaturthi kits: pooja items and sweet-making basics in one click. | `RecipeCatalog` |
+| **Budget mode** (`/budget.html`, cart page) | Set a monthly budget. Shows how much is spent this month (Indian time, cancelled orders and refunds not counted), warns **before checkout** if the cart goes over, and offers one-click cheaper swaps. | `BudgetService` |
+| **Running low?** | Learns how often you buy each item from your own orders (milk every 3 days) and reminds you when it's due. | `ReorderService` |
+
+New API endpoints: `POST /api/smart-list/parse`, `GET /api/recipes`, `GET /api/recipes/{id}?servings=6`,
+`GET/PUT /api/budget`, `GET /api/reorder`, `POST /api/cart/add-many`, `POST /api/cart/swap`.
+All of them are covered by `SmartShoppingTest`.
+
 ## Tech stack
 
 | Layer | Choice |

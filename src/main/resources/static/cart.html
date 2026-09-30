@@ -13,6 +13,9 @@
     <a href="/" class="brand"><span class="crate">&#127811;</span>FreshCart</a>
     <nav class="nav-links">
       <a href="/products.html">Shop</a>
+      <a href="/recipes.html">Recipes &amp; Kits</a>
+      <a href="/list.html">Quick List</a>
+      <a href="/budget.html">Budget</a>
       <a href="/orders.html" id="nav-orders" style="display:none">My Orders</a>
       <span id="nav-auth-area"><a href="/login.html" id="nav-login">Login</a></span>
       <a href="/cart.html" class="cart-pill">&#128722; Cart <span class="count" id="cart-count">0</span></a>
@@ -34,7 +37,7 @@
 
 <footer>
   <div class="wrap">
-    FreshCart &mdash; a student full-stack demo project. Built with Spring Boot, MySQL, and vanilla JS by
+    FreshCart &mdash; a student full-stack demo project. Built with Spring Boot, PostgreSQL, and vanilla JS by
     <a href="https://github.com/suryaprasanth740" target="_blank" rel="noopener">Surya Prasanth</a>.
   </div>
 </footer>
@@ -56,10 +59,11 @@ async function loadCart() {
     return;
   }
 
-  let items, bill, coupons = [];
+  let items, bill, coupons = [], budget = null;
   try {
     [items, bill] = await Promise.all([API.cart(), API.quote()]);
     coupons = await API.coupons().catch(() => []);
+    budget = await API.budget().catch(() => null);
   } catch (e) {
     root.innerHTML = `<p>Could not load your cart right now.</p>`;
     return;
@@ -99,6 +103,7 @@ async function loadCart() {
         ${items.map(cartItemHtml).join('')}
       </div>
       <aside class="cart-summary">
+        ${budgetBoxHtml(budget)}
         <h3 style="font-size:1.1rem;margin-bottom:16px;">Bill details</h3>
         ${addMore > 0 ? `
           <div class="free-delivery">
@@ -118,6 +123,18 @@ async function loadCart() {
     </div>
   `;
   attachCartHandlers();
+  document.querySelectorAll('.cart-summary button[data-swap-from]').forEach(btn => btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    try {
+      await API.swapInCart(Number(btn.dataset.swapFrom), Number(btn.dataset.swapTo));
+      showToast('Swapped to the cheaper option');
+      await loadCart();
+      refreshCartCount();
+    } catch (e) {
+      showToast(e.message);
+      btn.disabled = false;
+    }
+  }));
   const acceptBtn = document.getElementById('accept-prices-btn');
   if (acceptBtn) {
     acceptBtn.addEventListener('click', async () => {
@@ -127,11 +144,33 @@ async function loadCart() {
   }
 }
 
+/** Budget mode box in the bill: warns before checkout and offers cheaper swaps. */
+function budgetBoxHtml(b) {
+  if (!b) return '';
+  const swaps = b.swaps.map(w => `
+    <div class="swap-row" style="padding:8px 0;">
+      <div class="info small">${escapeHtml(w.fromName)} &rarr; <b>${escapeHtml(w.to.name)}</b><div class="save">save ${formatRupees(w.saving)}</div></div>
+      <button class="btn btn-sm btn-outline" data-swap-from="${w.fromProductId}" data-swap-to="${w.to.id}">Swap</button>
+    </div>`).join('');
+  if (b.status === 'NO_BUDGET') {
+    return swaps ? `<div class="offers" style="margin:0 0 16px;border:none;padding:0;"><div class="offers-title">&#128176; Cheaper swaps</div>${swaps}</div>` : '';
+  }
+  const tone = b.status === 'OVER' ? 'over' : b.status === 'NEAR' ? 'near' : 'ok';
+  const msg = b.status === 'OVER'
+    ? `This cart takes you <b>${formatRupees(-Number(b.afterCart))}</b> over your ${escapeHtml(b.month.split(' ')[0])} budget.`
+    : `After this order: <b>${formatRupees(b.afterCart)}</b> left of your ${formatRupees(b.budget)} budget.`;
+  return `
+    <div style="margin-bottom:16px;">
+      <div class="budget-banner ${tone}"><span>&#128176;</span><span>${msg} <a href="/budget.html" style="text-decoration:underline;">Details</a></span></div>
+      ${swaps}
+    </div>`;
+}
+
 function cartItemHtml(item) {
   const p = item.product;
   return `
     <div class="cart-item${p.expired ? ' is-problem' : ''}" data-product-id="${p.id}">
-      <div class="emoji">${p.imageEmoji || '\u{1F6D2}'}</div>
+      ${thumbHtml(p).replace('class="thumb"', 'class="thumb" style="width:56px;height:56px;"')}
       <div class="info">
         <h4>${escapeHtml(p.name)}</h4>
         <div class="unit">${escapeHtml(p.unit || '')} &middot; ${formatRupees(p.price)} each

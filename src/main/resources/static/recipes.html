@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recipes &amp; Festival Kits &mdash; FreshCart</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="signboard">
+  <div class="wrap">
+    <a href="/" class="brand"><span class="crate">&#127811;</span>FreshCart</a>
+    <nav class="nav-links">
+      <a href="/products.html">Shop</a>
+      <a href="/recipes.html">Recipes &amp; Kits</a>
+      <a href="/list.html">Quick List</a>
+      <a href="/budget.html">Budget</a>
+      <a href="/orders.html" id="nav-orders" style="display:none">My Orders</a>
+      <span id="nav-auth-area"><a href="/login.html" id="nav-login">Login</a></span>
+      <a href="/cart.html" class="cart-pill">&#128722; Cart <span class="count" id="cart-count">0</span></a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="page-hero">
+    <div class="wrap">
+      <span class="eyebrow">&#127859; Cook it, don't search it</span>
+      <h1>Recipes &amp; Festival Kits</h1>
+      <p>Pick a dish or a festival, choose how many people, and get every ingredient in the right quantity &mdash;
+        rounded to real pack sizes. Skip what you already have at home.</p>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <div class="chip-row" id="filters" style="position:relative;z-index:2;margin-bottom:18px;">
+      <button class="chip active" data-filter="ALL">All</button>
+      <button class="chip" data-filter="RECIPE">&#127859; Recipes</button>
+      <button class="chip" data-filter="KIT">&#129684; Festival kits</button>
+    </div>
+    <div class="recipe-grid" id="recipe-grid">
+      <div class="skeleton" style="height:260px;"></div>
+      <div class="skeleton" style="height:260px;"></div>
+      <div class="skeleton" style="height:260px;"></div>
+    </div>
+  </div>
+</main>
+
+<div class="drawer-backdrop" id="backdrop"></div>
+<aside class="drawer" id="drawer" aria-hidden="true" role="dialog" aria-labelledby="d-name">
+  <div class="drawer-head">
+    <div class="art" id="d-emoji"></div>
+    <div>
+      <h2 id="d-name"></h2>
+      <div class="small muted" id="d-desc"></div>
+    </div>
+    <button class="close" id="d-close" aria-label="Close">&times;</button>
+  </div>
+  <div class="drawer-body">
+    <div class="people-row">
+      <div class="lbl">How many people?<small id="d-base"></small></div>
+      <div class="stepper big">
+        <button id="d-minus" aria-label="Fewer people">&minus;</button><span id="d-people">4</span><button id="d-plus" aria-label="More people">+</button>
+      </div>
+    </div>
+    <div id="d-lines"></div>
+    <p class="small muted" style="margin-top:10px;">&#128161; Items marked <b>usually at home</b> are unticked. Tick them if you've run out.</p>
+  </div>
+  <div class="drawer-foot">
+    <div class="sticky-total" style="border:none;margin:0;padding:0;">
+      <div class="sum"><span id="d-total">&#8377;0.00</span><small id="d-count"></small></div>
+      <button class="btn btn-primary" id="d-add">Add to cart</button>
+    </div>
+  </div>
+</aside>
+
+<footer>
+  <div class="wrap">
+    FreshCart &mdash; a student full-stack demo project. Built with Spring Boot, PostgreSQL, and vanilla JS by
+    <a href="https://github.com/suryaprasanth740" target="_blank" rel="noopener">Surya Prasanth</a>.
+  </div>
+</footer>
+
+<div id="toast"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/shop.js"></script>
+<script>
+let allRecipes = [];
+let current = null;          // the open recipe (server view)
+let picked = {};             // ingredient name -> true/false (ticked)
+let loadToken = 0;           // ignores slow answers when the people count changes quickly
+
+document.addEventListener('DOMContentLoaded', async () => {
+  document.querySelectorAll('#filters .chip').forEach(chip => chip.addEventListener('click', () => {
+    document.querySelectorAll('#filters .chip').forEach(c => c.classList.toggle('active', c === chip));
+    renderGrid(chip.dataset.filter);
+  }));
+  document.getElementById('d-close').addEventListener('click', closeDrawer);
+  document.getElementById('backdrop').addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+  document.getElementById('d-minus').addEventListener('click', () => changePeople(-1));
+  document.getElementById('d-plus').addEventListener('click', () => changePeople(1));
+  document.getElementById('d-add').addEventListener('click', addRecipeToCart);
+
+  try {
+    allRecipes = await API.recipes();
+    renderGrid('ALL');
+    const fromLink = window.location.hash.slice(1);
+    if (fromLink && allRecipes.some(r => r.id === fromLink)) openRecipe(fromLink);
+  } catch (e) {
+    document.getElementById('recipe-grid').innerHTML = '<p>Could not load recipes right now.</p>';
+  }
+});
+
+function renderGrid(filter) {
+  const list = allRecipes.filter(r => filter === 'ALL' || r.type === filter);
+  const grid = document.getElementById('recipe-grid');
+  grid.innerHTML = list.map(r => `
+    <button class="recipe-card ${r.type === 'KIT' ? 'kit' : ''}" data-id="${escapeHtml(r.id)}">
+      <div class="art">
+        ${r.type === 'KIT' ? '<span class="tag kit">Festival kit</span>' : '<span class="tag">Recipe</span>'}
+        ${escapeHtml(r.emoji)}
+      </div>
+      <div class="body">
+        <h3>${escapeHtml(r.name)}</h3>
+        <div class="desc">${escapeHtml(r.description)}</div>
+        <div class="facts">
+          ${r.type === 'KIT' ? '' : `<span>&#9201; ${escapeHtml(r.time)}</span>`}
+          <span>&#128101; for ${r.baseServings}</span>
+          <span>&#129530; ${r.ingredientCount} items</span>
+        </div>
+        <div class="foot">
+          <span class="from">about <b>${formatRupees(r.estimatedTotal)}</b></span>
+          <span class="btn btn-sm btn-primary">View &amp; add</span>
+        </div>
+      </div>
+    </button>`).join('');
+  grid.querySelectorAll('.recipe-card').forEach(card =>
+    card.addEventListener('click', () => openRecipe(card.dataset.id)));
+}
+
+async function openRecipe(id) {
+  const summary = allRecipes.find(r => r.id === id);
+  picked = {};
+  current = null;
+  document.getElementById('d-emoji').textContent = summary.emoji;
+  document.getElementById('d-name').textContent = summary.name;
+  document.getElementById('d-desc').textContent = summary.description;
+  document.getElementById('d-base').textContent = summary.type === 'KIT'
+    ? 'Quantities are for a family of ' + summary.baseServings
+    : 'Recipe is written for ' + summary.baseServings;
+  document.getElementById('d-lines').innerHTML = '<div class="skeleton" style="height:240px;"></div>';
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawer').setAttribute('aria-hidden', 'false');
+  document.getElementById('backdrop').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  history.replaceState(null, '', '#' + id);
+  await loadRecipe(id, summary.baseServings);
+}
+
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer').setAttribute('aria-hidden', 'true');
+  document.getElementById('backdrop').classList.remove('open');
+  document.body.style.overflow = '';
+  history.replaceState(null, '', window.location.pathname);
+}
+
+async function loadRecipe(id, people) {
+  const token = ++loadToken;
+  document.getElementById('d-people').textContent = people;
+  try {
+    const view = await API.recipe(id, people);
+    if (token !== loadToken) return; // a newer request is on its way
+    current = view;
+    view.lines.forEach(l => {
+      if (!(l.ingredient in picked)) picked[l.ingredient] = l.available && !l.pantryStaple;
+      if (!l.available) picked[l.ingredient] = false;
+    });
+    renderLines();
+  } catch (e) {
+    showToast(e.message);
+  }
+}
+
+function changePeople(delta) {
+  if (!current) return;
+  const next = Math.min(50, Math.max(1, current.servings + delta));
+  if (next !== current.servings) {
+    current.servings = next;
+    loadRecipe(current.id, next);
+  }
+}
+
+function renderLines() {
+  const box = document.getElementById('d-lines');
+  box.innerHTML = current.lines.map((l, i) => {
+    const p = l.product;
+    const on = picked[l.ingredient];
+    let right;
+    if (!p) right = '<span class="tag danger">Not sold yet</span>';
+    else if (!l.available) right = '<span class="tag danger">Out of stock</span>';
+    else right = `${formatRupees(l.lineTotal)}<small>${l.packs} &times; ${escapeHtml(p.unit || 'pack')}</small>`;
+    return `
+      <label class="ing-row ${l.available ? '' : 'unavailable'} ${on ? '' : 'off'}">
+        <input type="checkbox" data-i="${i}" ${on ? 'checked' : ''} ${l.available ? '' : 'disabled'}>
+        ${thumbHtml(p)}
+        <div>
+          <div class="name">${escapeHtml(l.ingredient)} ${l.pantryStaple ? '<span class="tag">usually at home</span>' : ''}</div>
+          <div class="need">Needed: ${escapeHtml(l.needed)}</div>
+        </div>
+        <div class="amt">${right}</div>
+      </label>`;
+  }).join('');
+  box.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', () => {
+    picked[current.lines[Number(cb.dataset.i)].ingredient] = cb.checked;
+    renderLines();
+  }));
+
+  const chosen = current.lines.filter(l => picked[l.ingredient] && l.available);
+  const total = chosen.reduce((s, l) => s + Number(l.lineTotal), 0);
+  document.getElementById('d-total').textContent = formatRupees(total);
+  document.getElementById('d-count').textContent =
+    `${chosen.length} of ${current.lines.length} items for ${current.servings} ${current.servings === 1 ? 'person' : 'people'}`;
+  const btn = document.getElementById('d-add');
+  btn.disabled = chosen.length === 0;
+  btn.textContent = chosen.length ? `Add ${chosen.length} items to cart` : 'Add to cart';
+}
+
+async function addRecipeToCart() {
+  if (!current) return;
+  const chosen = current.lines.filter(l => picked[l.ingredient] && l.available);
+  if (!chosen.length) return;
+  const btn = document.getElementById('d-add');
+  btn.disabled = true;
+  const result = await addManyToCart(chosen.map(l => ({ productId: l.product.id, quantity: l.packs })));
+  btn.disabled = false;
+  if (result && result.added.length) closeDrawer();
+}
+</script>
+</body>
+</html>
