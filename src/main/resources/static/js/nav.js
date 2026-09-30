@@ -1,7 +1,15 @@
 // Shared navbar behaviour: shows login state and keeps the cart badge in sync.
 // Every page includes a <header class="signboard"> with these element ids already in the markup.
 
+function markActiveNavLink() {
+  const here = window.location.pathname === '/' ? '/index.html' : window.location.pathname;
+  document.querySelectorAll('.nav-links a[href]').forEach(a => {
+    if (a.getAttribute('href') === here) a.classList.add('active');
+  });
+}
+
 async function initNav() {
+  markActiveNavLink();
   const authArea = document.getElementById('nav-auth-area');
   const ordersLink = document.getElementById('nav-orders');
 

@@ -3,6 +3,7 @@ package com.suryaprasanth.grocery.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.suryaprasanth.grocery.util.EmailUtil;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -38,6 +39,11 @@ public class User {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    /** Budget mode: how much the customer wants to spend on groceries per month. Null = not set. */
+    @JsonIgnore
+    @Column(name = "monthly_budget", precision = 10, scale = 2)
+    private BigDecimal monthlyBudget;
 
     public User() {
     }
@@ -104,6 +110,14 @@ public class User {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public BigDecimal getMonthlyBudget() {
+        return monthlyBudget;
+    }
+
+    public void setMonthlyBudget(BigDecimal monthlyBudget) {
+        this.monthlyBudget = monthlyBudget;
     }
 
     public boolean isAdmin() {

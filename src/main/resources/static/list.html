@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quick List &mdash; FreshCart</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="signboard">
+  <div class="wrap">
+    <a href="/" class="brand"><span class="crate">&#127811;</span>FreshCart</a>
+    <nav class="nav-links">
+      <a href="/products.html">Shop</a>
+      <a href="/recipes.html">Recipes &amp; Kits</a>
+      <a href="/list.html">Quick List</a>
+      <a href="/budget.html">Budget</a>
+      <a href="/orders.html" id="nav-orders" style="display:none">My Orders</a>
+      <span id="nav-auth-area"><a href="/login.html" id="nav-login">Login</a></span>
+      <a href="/cart.html" class="cart-pill">&#128722; Cart <span class="count" id="cart-count">0</span></a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="page-hero">
+    <div class="wrap">
+      <span class="eyebrow">&#9889; Only on FreshCart</span>
+      <h1>Paste your list. Get a full cart.</h1>
+      <p>Type or paste your shopping list the way you already write it &mdash; &ldquo;2 kg tomato, 1 litre milk, atta 5kg&rdquo;.
+        Hindi, Kannada, Tamil and Telugu words work too. No more searching one item at a time.</p>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <div class="tool-layout">
+      <div class="panel">
+        <h2>Your list</h2>
+        <p class="panel-sub">One item per line, or separate with commas.</p>
+        <textarea id="list-text" class="list-input" maxlength="2000"
+          placeholder="2 kg tomatoes&#10;1 litre milk&#10;atta 5kg&#10;dozen eggs&#10;thakkali&#10;500 g paneer"></textarea>
+        <button class="btn btn-primary btn-block" id="read-btn" style="margin-top:12px;">&#10024; Read my list</button>
+
+        <div class="examples">
+          <div class="label">Try an example</div>
+          <div class="chip-row">
+            <button class="chip" data-example="weekly">Weekly basics</button>
+            <button class="chip" data-example="kannada">Kannada words</button>
+            <button class="chip" data-example="tamil">Tamil words</button>
+            <button class="chip" data-example="hindi">Hindi words</button>
+          </div>
+        </div>
+        <p class="lang-note">Understands quantities like <b>2 kg</b>, <b>500 g</b>, <b>1 litre</b>, <b>half kg</b>, <b>dozen</b>, <b>2 packets</b> &mdash; and small spelling mistakes.</p>
+      </div>
+
+      <div class="panel" id="results-panel">
+        <div class="placeholder-art" id="placeholder">
+          <div class="big">&#128221;</div>
+          <h3>Your cart will appear here</h3>
+          <p>Write your list on the left and press <b>Read my list</b>.<br>You can check every item before anything is added.</p>
+        </div>
+        <div id="results" style="display:none;">
+          <h2>We found <span id="found-count">0</span> of <span id="line-count">0</span> items</h2>
+          <p class="panel-sub">Untick anything you don't want, change the product or the quantity, then add everything at once.</p>
+          <div id="result-rows"></div>
+          <div class="sticky-total">
+            <div class="sum"><span id="sum-value">&#8377;0.00</span><small id="sum-note">0 items selected</small></div>
+            <button class="btn btn-primary" id="add-all-btn">Add to cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    FreshCart &mdash; a student full-stack demo project. Built with Spring Boot, PostgreSQL, and vanilla JS by
+    <a href="https://github.com/suryaprasanth740" target="_blank" rel="noopener">Surya Prasanth</a>.
+  </div>
+</footer>
+
+<div id="toast"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/shop.js"></script>
+<script>
+const EXAMPLES = {
+  weekly: '2 kg tomatoes\n1 kg onions\n1 litre milk\ndozen eggs\nbread\natta 5kg\n1 kg toor dal\nsugar',
+  kannada: 'eerulli 1 kg\nhaalu 2 packet\nakki 2 kg\nmotte 12\nbele\nmosaru\nkottambari',
+  tamil: 'thakkali 1 kg\nvengayam\npaal 1 litre\narisi 2 kg\nparuppu\nthayir\nmilagai',
+  hindi: 'aloo 2 kg\npyaaz 1 kg\ndoodh 2 packet\nanda 6\natta 5kg\nchini 1 kg\ndahi',
+};
+
+let lines = []; // [{ input, product, quantity, requested, confidence, options, note, checked }]
+let justAdded = false; // after "Add to cart" the button becomes "Go to cart"
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('read-btn').addEventListener('click', readList);
+  document.getElementById('add-all-btn').addEventListener('click', addAll);
+  document.querySelectorAll('[data-example]').forEach(chip => chip.addEventListener('click', () => {
+    document.getElementById('list-text').value = EXAMPLES[chip.dataset.example];
+    readList();
+  }));
+  document.getElementById('list-text').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) readList();
+  });
+});
+
+async function readList() {
+  const text = document.getElementById('list-text').value.trim();
+  if (!text) {
+    showToast('Type or paste your shopping list first');
+    return;
+  }
+  const btn = document.getElementById('read-btn');
+  btn.disabled = true;
+  btn.textContent = 'Reading your list...';
+  try {
+    const result = await API.parseList(text);
+    lines = result.map(l => ({ ...l, checked: !!l.product && isBuyable(l.product) }));
+    renderResults();
+  } catch (e) {
+    showToast(e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '&#10024; Read my list';
+  }
+}
+
+function isBuyable(p) {
+  return p && p.stock > 0 && !p.expired;
+}
+
+function renderResults() {
+  document.getElementById('placeholder').style.display = 'none';
+  document.getElementById('results').style.display = '';
+  document.getElementById('found-count').textContent = lines.filter(l => l.product).length;
+  document.getElementById('line-count').textContent = lines.length;
+
+  const rows = document.getElementById('result-rows');
+  rows.innerHTML = lines.map((l, i) => {
+    if (!l.product) {
+      return `
+        <div class="result-row unmatched">
+          <input type="checkbox" disabled>
+          ${thumbHtml(null)}
+          <div>
+            <div class="said">You wrote <b>&ldquo;${escapeHtml(l.input)}&rdquo;</b></div>
+            <div class="small">${escapeHtml(l.note || 'Not found')}</div>
+          </div>
+          <span></span><span></span>
+        </div>`;
+    }
+    const p = l.product;
+    const options = (l.options || []).map(o =>
+      `<option value="${o.id}" ${o.id === p.id ? 'selected' : ''}>${escapeHtml(o.name)} (${escapeHtml(o.unit || '')})</option>`).join('');
+    const tags = [];
+    if (l.confidence === 'LOW') tags.push('<span class="tag warn">Please check</span>');
+    if (!isBuyable(p)) tags.push(`<span class="tag danger">${escapeHtml(l.note || 'Unavailable')}</span>`);
+    return `
+      <div class="result-row ${l.checked ? '' : 'off'}" data-i="${i}">
+        <input type="checkbox" class="pick" ${l.checked ? 'checked' : ''} ${isBuyable(p) ? '' : 'disabled'} aria-label="Include ${escapeHtml(p.name)}">
+        ${thumbHtml(p)}
+        <div style="min-width:0;">
+          <div class="said">You wrote <b>&ldquo;${escapeHtml(l.input)}&rdquo;</b> ${tags.join(' ')}</div>
+          <select class="product-pick" aria-label="Product">${options}</select>
+          <div class="small muted">${formatRupees(p.price)} / ${escapeHtml(p.unit || 'pack')}${l.requested ? ` &middot; you asked for ${escapeHtml(l.requested)}` : ''}</div>
+        </div>
+        <div class="stepper">
+          <button class="minus" aria-label="Less">&minus;</button><span>${l.quantity}</span><button class="plus" aria-label="More">+</button>
+        </div>
+        <div class="line-price">${formatRupees(p.price * l.quantity)}</div>
+      </div>`;
+  }).join('');
+
+  rows.querySelectorAll('.result-row[data-i]').forEach(row => {
+    const l = lines[Number(row.dataset.i)];
+    row.querySelector('.pick').addEventListener('change', e => { l.checked = e.target.checked; renderResults(); });
+    row.querySelector('.minus').addEventListener('click', () => { l.quantity = Math.max(1, l.quantity - 1); renderResults(); });
+    row.querySelector('.plus').addEventListener('click', () => { l.quantity = Math.min(20, l.quantity + 1); renderResults(); });
+    row.querySelector('.product-pick').addEventListener('change', e => {
+      l.product = l.options.find(o => o.id === Number(e.target.value));
+      l.confidence = 'HIGH';
+      l.checked = isBuyable(l.product);
+      renderResults();
+    });
+  });
+  updateTotal();
+}
+
+function updateTotal() {
+  const picked = lines.filter(l => l.checked && l.product);
+  const total = picked.reduce((sum, l) => sum + l.product.price * l.quantity, 0);
+  document.getElementById('sum-value').textContent = formatRupees(total);
+  document.getElementById('sum-note').textContent = `${picked.length} item${picked.length === 1 ? '' : 's'} selected`;
+  const btn = document.getElementById('add-all-btn');
+  justAdded = false;
+  btn.disabled = picked.length === 0;
+  btn.textContent = picked.length ? `Add ${picked.length} item${picked.length === 1 ? '' : 's'} to cart` : 'Add to cart';
+}
+
+async function addAll() {
+  if (justAdded) {
+    window.location.href = '/cart.html';
+    return;
+  }
+  const picked = lines.filter(l => l.checked && l.product);
+  if (!picked.length) return;
+  const btn = document.getElementById('add-all-btn');
+  btn.disabled = true;
+  const result = await addManyToCart(picked.map(l => ({ productId: l.product.id, quantity: l.quantity })));
+  btn.disabled = false;
+  if (result && result.added.length) {
+    btn.textContent = 'Added ✓  Go to cart →';
+    justAdded = true;
+  }
+}
+</script>
+</body>
+</html>

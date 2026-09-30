@@ -13,6 +13,9 @@
     <a href="/" class="brand"><span class="crate">&#127811;</span>FreshCart</a>
     <nav class="nav-links">
       <a href="/products.html">Shop</a>
+      <a href="/recipes.html">Recipes &amp; Kits</a>
+      <a href="/list.html">Quick List</a>
+      <a href="/budget.html">Budget</a>
       <a href="/orders.html" id="nav-orders" style="display:none">My Orders</a>
       <span id="nav-auth-area"><a href="/login.html" id="nav-login">Login</a></span>
       <a href="/cart.html" class="cart-pill">&#128722; Cart <span class="count" id="cart-count">0</span></a>
@@ -35,6 +38,7 @@
         <input type="text" id="hero-search" placeholder="Search for tomatoes, milk, rice...">
         <button class="btn btn-primary" id="hero-search-btn">Search</button>
       </div>
+      <a href="/list.html" class="hero-link">&#128221; Have a long list? Paste it all at once &rarr;</a>
     </div>
   </section>
 
@@ -49,6 +53,52 @@
       <div class="skeleton" style="width:140px;height:44px;border-radius:999px;"></div>
     </div>
 
+    <div id="running-low" style="display:none;">
+      <div class="section-heading">
+        <h2>&#9200; Running low?</h2>
+        <span class="note"><a href="/budget.html">See all &rarr;</a></span>
+      </div>
+      <div class="strip" id="running-low-strip"></div>
+    </div>
+
+    <div class="section-heading">
+      <h2>Only on FreshCart <span class="tag new" style="vertical-align:middle;">New</span></h2>
+      <span class="note">Smart tools that save you time and money</span>
+    </div>
+    <div class="feature-grid">
+      <a class="feature-card" href="/list.html">
+        <div class="icon">&#128221;</div>
+        <h3>Paste your list &rarr; cart</h3>
+        <p>Write &ldquo;2 kg tomato, 1 litre milk, atta 5kg&rdquo; &mdash; even in Kannada, Tamil or Hindi words &mdash; and the whole cart fills in one go.</p>
+        <span class="go">Try Quick List &rarr;</span>
+      </a>
+      <a class="feature-card" href="/recipes.html">
+        <div class="icon" style="background:#E6F6EF;">&#127859;</div>
+        <h3>Recipe &rarr; cart</h3>
+        <p>Choose a dish and how many people. Get every ingredient in real pack sizes, and skip what you already have.</p>
+        <span class="go">Browse recipes &rarr;</span>
+      </a>
+      <a class="feature-card" href="/recipes.html#pongal-kit">
+        <div class="icon" style="background:#F4F0FF;">&#129684;</div>
+        <h3>Festival kits</h3>
+        <p>Pongal, Diwali, Ugadi and Ganesh Chaturthi &mdash; diyas, flowers and sweet-making basics in one click.</p>
+        <span class="go">See kits &rarr;</span>
+      </a>
+      <a class="feature-card" href="/budget.html">
+        <div class="icon" style="background:#E8F0FE;">&#128176;</div>
+        <h3>Budget mode</h3>
+        <p>Set a monthly limit. Get warned <b>before</b> checkout, cheaper swaps, and &ldquo;running low&rdquo; reminders.</p>
+        <span class="go">Set my budget &rarr;</span>
+      </a>
+    </div>
+
+    <div class="trust-bar">
+      <div><b>&#8377;0 hidden fees</b><span>Every rupee shown in the bill</span></div>
+      <div><b>48-hour refunds</b><span>Report a missing item, refund approved instantly</span></div>
+      <div><b>Fresh-date guarantee</b><span>Expired items can never be sold</span></div>
+      <div><b>UPI or cash</b><span>Pay the way you like</span></div>
+    </div>
+
     <div class="section-heading">
       <h2>Today&rsquo;s picks</h2>
       <span class="note"><a href="/products.html" style="text-decoration:underline;">See full catalog &rarr;</a></span>
@@ -59,12 +109,17 @@
       <div class="skeleton" style="height:220px;"></div>
       <div class="skeleton" style="height:220px;"></div>
     </div>
+    <div class="section-heading" style="margin-top:0;">
+      <h2>&#129684; Festival kits</h2>
+      <span class="note"><a href="/recipes.html">All recipes &amp; kits &rarr;</a></span>
+    </div>
+    <div class="strip" id="kits-strip" style="padding-bottom:48px;"></div>
   </div>
 </main>
 
 <footer>
   <div class="wrap">
-    FreshCart &mdash; a student full-stack demo project. Built with Spring Boot, MySQL, and vanilla JS by
+    FreshCart &mdash; a student full-stack demo project. Built with Spring Boot, PostgreSQL, and vanilla JS by
     <a href="https://github.com/suryaprasanth740" target="_blank" rel="noopener">Surya Prasanth</a>.
   </div>
 </footer>
@@ -107,6 +162,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('featured-grid').innerHTML = '<p>Could not load products right now.</p>';
   }
 });
+
+// Festival kits strip
+(async () => {
+  try {
+    const kits = (await API.recipes()).filter(r => r.type === 'KIT');
+    document.getElementById('kits-strip').innerHTML = kits.map(k => `
+      <a class="mini-card" href="/recipes.html#${encodeURIComponent(k.id)}" style="width:260px;">
+        <div class="thumb" style="background:linear-gradient(135deg,#F4F0FF,#FFF0F6);font-size:1.7rem;">${escapeHtml(k.emoji)}</div>
+        <div class="info"><h4>${escapeHtml(k.name)}</h4><div class="meta">${k.ingredientCount} items &middot; about ${formatRupees(k.estimatedTotal)}</div></div>
+      </a>`).join('');
+  } catch (e) { /* the kits strip is optional */ }
+})();
+
+// "Running low?" strip for logged-in customers who have ordered before
+(async () => {
+  try {
+    const list = (await API.reorder()).filter(r => r.status === 'DUE' || r.status === 'SOON');
+    if (!list.length) return;
+    document.getElementById('running-low').style.display = '';
+    const strip = document.getElementById('running-low-strip');
+    strip.innerHTML = list.slice(0, 8).map(r => `
+      <div class="mini-card">
+        ${thumbHtml(r.product)}
+        <div class="info">
+          <h4>${escapeHtml(r.product.name)}</h4>
+          <div class="meta">${r.daysLeft <= 0 ? 'Probably run out' : r.daysLeft === 1 ? 'Runs out tomorrow' : 'Runs out in ' + r.daysLeft + ' days'}</div>
+        </div>
+        <button class="add-to-cart-btn" data-id="${r.product.id}" data-qty="${r.typicalQuantity}">Add</button>
+      </div>`).join('');
+    strip.querySelectorAll('button[data-id]').forEach(btn => btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      await addManyToCart([{ productId: Number(btn.dataset.id), quantity: Number(btn.dataset.qty) }]);
+      btn.disabled = false;
+    }));
+  } catch (e) { /* not logged in: nothing to show */ }
+})();
 
 // productCardHtml() and attachAddToCartHandlers() live in /js/shop.js
 </script>

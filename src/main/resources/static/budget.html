@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Budget &amp; Running Low &mdash; FreshCart</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="signboard">
+  <div class="wrap">
+    <a href="/" class="brand"><span class="crate">&#127811;</span>FreshCart</a>
+    <nav class="nav-links">
+      <a href="/products.html">Shop</a>
+      <a href="/recipes.html">Recipes &amp; Kits</a>
+      <a href="/list.html">Quick List</a>
+      <a href="/budget.html">Budget</a>
+      <a href="/orders.html" id="nav-orders" style="display:none">My Orders</a>
+      <span id="nav-auth-area"><a href="/login.html" id="nav-login">Login</a></span>
+      <a href="/cart.html" class="cart-pill">&#128722; Cart <span class="count" id="cart-count">0</span></a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="page-hero">
+    <div class="wrap">
+      <span class="eyebrow">&#128176; Spend smart</span>
+      <h1>Budget &amp; Running Low</h1>
+      <p>Set a monthly grocery budget and FreshCart warns you <b>before</b> you go over, suggests cheaper swaps,
+        and learns how often you buy things so you never run out of milk again.</p>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <div id="login-needed" class="panel login-prompt" style="display:none;position:relative;z-index:2;margin-bottom:60px;">
+      <div class="big">&#128274;</div>
+      <h2>Log in to use Budget mode</h2>
+      <p class="muted">Your budget and reminders are worked out from your own orders.</p>
+      <a class="btn btn-primary" href="/login.html?next=/budget.html">Log in</a>
+      <a class="btn btn-outline" href="/register.html" style="margin-left:8px;">Create account</a>
+    </div>
+
+    <div id="content" class="tool-layout wide-left" style="display:none;">
+      <div>
+        <div class="panel">
+          <div class="meter-card">
+            <div class="ring" id="ring"><div class="val"><b id="ring-pct">&ndash;</b><span id="ring-label">used</span></div></div>
+            <div>
+              <div class="small muted" id="month-label"></div>
+              <div class="big-number" id="spent-big">&#8377;0</div>
+              <div class="muted" id="spent-sub">spent this month</div>
+              <div class="stat-row">
+                <div class="stat"><div class="k">Budget</div><div class="v" id="s-budget">&ndash;</div></div>
+                <div class="stat"><div class="k">Left</div><div class="v" id="s-left">&ndash;</div></div>
+                <div class="stat"><div class="k">Orders</div><div class="v" id="s-orders">0</div></div>
+              </div>
+            </div>
+          </div>
+          <div id="banner" style="margin-top:16px;"></div>
+        </div>
+
+        <div class="panel">
+          <h2>&#128260; Cheaper swaps for your cart</h2>
+          <p class="panel-sub">Same kind of product, lower price. One click swaps it in your cart.</p>
+          <div id="swaps"></div>
+        </div>
+
+        <div class="panel">
+          <h2>&#128202; Where your money went</h2>
+          <p class="panel-sub">This month, by category.</p>
+          <div id="categories"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel">
+          <h2>Monthly budget</h2>
+          <p class="panel-sub">How much do you want to spend on groceries each month?</p>
+          <div class="inline-row">
+            <input type="number" id="budget-input" min="100" max="500000" step="100" placeholder="e.g. 6000" inputmode="numeric">
+            <button class="btn btn-primary" id="save-budget">Save</button>
+          </div>
+          <div class="chip-row" style="margin-top:10px;">
+            <button class="chip" data-amount="3000">&#8377;3,000</button>
+            <button class="chip" data-amount="5000">&#8377;5,000</button>
+            <button class="chip" data-amount="8000">&#8377;8,000</button>
+            <button class="chip" data-amount="12000">&#8377;12,000</button>
+          </div>
+          <button class="linklike small" id="turn-off" style="margin-top:12px;background:none;border:none;color:var(--accent);font-weight:700;padding:0;display:none;">Turn off budget mode</button>
+        </div>
+
+        <div class="panel">
+          <h2>&#9200; Running low?</h2>
+          <p class="panel-sub">Learned from how often you order each item.</p>
+          <div id="reorder"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    FreshCart &mdash; a student full-stack demo project. Built with Spring Boot, PostgreSQL, and vanilla JS by
+    <a href="https://github.com/suryaprasanth740" target="_blank" rel="noopener">Surya Prasanth</a>.
+  </div>
+</footer>
+
+<div id="toast"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/shop.js"></script>
+<script>
+
+document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('save-budget').addEventListener('click', () =>
+    saveBudget(document.getElementById('budget-input').value));
+  document.getElementById('budget-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveBudget(e.target.value);
+  });
+  document.querySelectorAll('[data-amount]').forEach(chip =>
+    chip.addEventListener('click', () => saveBudget(chip.dataset.amount)));
+  document.getElementById('turn-off').addEventListener('click', () => saveBudget(null));
+
+  try {
+    const [summary, reorder] = await Promise.all([API.budget(), API.reorder()]);
+    document.getElementById('content').style.display = '';
+    renderSummary(summary);
+    renderReorder(reorder);
+  } catch (e) {
+    if (e.status === 401) {
+      document.getElementById('login-needed').style.display = '';
+    } else {
+      showToast(e.message);
+    }
+  }
+});
+
+async function saveBudget(value) {
+  const amount = value === null || value === '' ? null : Number(value);
+  if (amount !== null && (isNaN(amount) || amount < 100)) {
+    showToast('Enter a budget of at least ₹100');
+    return;
+  }
+  try {
+    const summary = await API.setBudget(amount);
+    renderSummary(summary);
+    showToast(amount ? 'Budget saved' : 'Budget mode turned off');
+  } catch (e) {
+    showToast(e.message);
+  }
+}
+
+function renderSummary(s) {
+  const hasBudget = s.status !== 'NO_BUDGET';
+  const pct = hasBudget ? Math.min(100, s.percentUsed) : 0;
+  // Ring shows the part of the budget already used (orders) this month.
+  const ringColor = hasBudget && s.percentUsed >= 100 ? 'var(--accent)' : hasBudget && s.percentUsed >= 80 ? '#E8A317' : 'var(--success)';
+  document.getElementById('ring').style.background = hasBudget
+    ? `conic-gradient(${ringColor} ${pct * 3.6}deg, var(--bg) 0deg)` : 'var(--bg)';
+  document.getElementById('ring-pct').textContent = hasBudget ? s.percentUsed + '%' : '–';
+  document.getElementById('ring-label').textContent = hasBudget ? 'of budget used' : 'no budget set';
+
+  document.getElementById('month-label').textContent = s.month;
+  document.getElementById('spent-big').textContent = formatRupees(s.spent);
+  document.getElementById('s-budget').textContent = hasBudget ? formatRupees(s.budget) : 'Not set';
+  const left = document.getElementById('s-left');
+  left.textContent = hasBudget ? formatRupees(s.remaining) : '–';
+  left.className = 'v ' + (hasBudget ? (Number(s.remaining) < 0 ? 'bad' : 'good') : '');
+  document.getElementById('s-orders').textContent = s.ordersThisMonth;
+  document.getElementById('budget-input').value = hasBudget ? Number(s.budget) : '';
+  document.getElementById('turn-off').style.display = hasBudget ? '' : 'none';
+
+  // Banner about the CURRENT cart
+  const banner = document.getElementById('banner');
+  const cart = Number(s.cartTotal);
+  if (!hasBudget) {
+    banner.innerHTML = `<div class="budget-banner near">&#128161; Set a monthly budget on the right to get warnings before you overspend.</div>`;
+  } else if (cart === 0) {
+    banner.innerHTML = `<div class="budget-banner ok">&#9989; Your cart is empty. ${formatRupees(s.remaining)} left to spend this month.</div>`;
+  } else if (s.status === 'OVER') {
+    banner.innerHTML = `<div class="budget-banner over">&#9888;&#65039; Your cart (${formatRupees(cart)}) is ${formatRupees(-Number(s.afterCart))} over your budget. Try the swaps below or remove something.</div>`;
+  } else if (s.status === 'NEAR') {
+    banner.innerHTML = `<div class="budget-banner near">&#9888;&#65039; After this cart (${formatRupees(cart)}) you'll have only ${formatRupees(s.afterCart)} left this month.</div>`;
+  } else {
+    banner.innerHTML = `<div class="budget-banner ok">&#9989; Your cart (${formatRupees(cart)}) fits your budget. ${formatRupees(s.afterCart)} will be left.</div>`;
+  }
+
+  // Swaps
+  const swaps = document.getElementById('swaps');
+  if (!s.swaps.length) {
+    swaps.innerHTML = `<p class="muted small">No cheaper swaps for what's in your cart right now.</p>`;
+  } else {
+    swaps.innerHTML = `
+      <div class="budget-banner ok" style="margin-bottom:8px;">Save up to ${formatRupees(s.possibleSaving)} on this cart</div>
+      ${s.swaps.map(w => `
+        <div class="swap-row">
+          ${thumbHtml(w.to)}
+          <div class="info"><span class="muted">${escapeHtml(w.fromName)} &rarr;</span> <b>${escapeHtml(w.to.name)}</b>
+            <div class="small muted">${w.quantity} &times; ${formatRupees(w.to.price)} / ${escapeHtml(w.to.unit || '')}</div></div>
+          <span class="save">save ${formatRupees(w.saving)}</span>
+          <button class="btn btn-sm btn-primary" data-from="${w.fromProductId}" data-to="${w.to.id}">Swap</button>
+        </div>`).join('')}`;
+    swaps.querySelectorAll('button[data-from]').forEach(btn => btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        await API.swapInCart(Number(btn.dataset.from), Number(btn.dataset.to));
+        showToast('Swapped in your cart');
+        refreshCartCount();
+        renderSummary(await API.budget());
+      } catch (e) {
+        showToast(e.message);
+        btn.disabled = false;
+      }
+    }));
+  }
+
+  // Categories
+  const cats = document.getElementById('categories');
+  if (!s.byCategory.length) {
+    cats.innerHTML = `<p class="muted small">No orders yet this month.</p>`;
+  } else {
+    const max = Math.max(...s.byCategory.map(c => Number(c.amount)));
+    cats.innerHTML = s.byCategory.map(c => `
+      <div class="bar-row">
+        <span>${escapeHtml(c.category)}</span>
+        <div class="bar"><span style="width:${Math.max(4, Number(c.amount) / max * 100)}%"></span></div>
+        <span class="amt">${formatRupees(c.amount)}</span>
+      </div>`).join('');
+  }
+}
+
+const REORDER_TAGS = {
+  DUE: ['Probably run out', 'danger'],
+  SOON: ['Running low', 'warn'],
+  LATER: ['Stocked', 'ok'],
+  BOUGHT_ONCE: ['Bought before', 'info'],
+};
+
+function days(n) {
+  return n === 1 ? '1 day' : n + ' days';
+}
+
+function renderReorder(list) {
+  const box = document.getElementById('reorder');
+  if (!list.length) {
+    box.innerHTML = `<p class="muted small">Order a few times and FreshCart will learn your routine &mdash;
+      for example &ldquo;you buy milk every 3 days&rdquo; &mdash; and remind you here before you run out.</p>`;
+    return;
+  }
+  box.innerHTML = list.slice(0, 8).map(r => {
+    const [label, tone] = REORDER_TAGS[r.status] || ['', 'info'];
+    let meta;
+    if (r.everyDays) {
+      const when = r.daysLeft <= 0 ? `was due ${r.daysLeft === 0 ? 'today' : days(-r.daysLeft) + ' ago'}`
+        : `next in ${days(r.daysLeft)}`;
+      meta = `Every ${r.everyDays === 1 ? 'day' : '~' + days(r.everyDays)} &middot; ${when}`;
+    } else {
+      meta = `Last bought ${formatDate(r.lastBought)}`;
+    }
+    const canBuy = r.product.stock > 0 && !r.product.expired;
+    return `
+      <div class="reorder-row">
+        ${thumbHtml(r.product)}
+        <div class="info">
+          <h4>${escapeHtml(r.product.name)}</h4>
+          <div class="meta">${meta}</div>
+          <span class="tag ${tone}" style="margin-top:4px;">${label}</span>
+        </div>
+        <button class="btn btn-sm ${r.status === 'DUE' || r.status === 'SOON' ? 'btn-primary' : 'btn-outline'}"
+          data-id="${r.product.id}" data-qty="${r.typicalQuantity}" ${canBuy ? '' : 'disabled'}>
+          ${canBuy ? 'Add ' + r.typicalQuantity : 'Out of stock'}
+        </button>
+      </div>`;
+  }).join('');
+  box.querySelectorAll('button[data-id]').forEach(btn => btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    await addManyToCart([{ productId: Number(btn.dataset.id), quantity: Number(btn.dataset.qty) }]);
+    btn.disabled = false;
+    try { renderSummary(await API.budget()); } catch (e) { /* ignore */ }
+  }));
+}
+</script>
+</body>
+</html>
