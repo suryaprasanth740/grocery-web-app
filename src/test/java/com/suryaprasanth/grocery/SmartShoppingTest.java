@@ -115,6 +115,10 @@ class SmartShoppingTest extends ApiTestSupport {
             hasKit |= "KIT".equals(r.get("type").asText());
         }
         assertTrue(hasKit, "festival kits are listed");
+        for (JsonNode r : list) {
+            assertTrue(r.get("photo").get("url").asText().startsWith("https://"), r.get("id") + " has a photo");
+            assertFalse(r.get("photo").get("author").asText().isBlank(), "photo credit is shown");
+        }
 
         JsonNode forFour = body(call("GET", "/api/recipes/sambar?servings=4", null, null));
         JsonNode dal = findLine(forFour, "Toor Dal");

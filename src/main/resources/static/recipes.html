@@ -65,6 +65,7 @@
       </div>
     </div>
     <div id="d-lines"></div>
+    <p class="photo-credit" id="d-credit"></p>
     <p class="small muted" style="margin-top:10px;">&#128161; Items marked <b>usually at home</b> are unticked. Tick them if you've run out.</p>
   </div>
   <div class="drawer-foot">
@@ -121,8 +122,9 @@ function renderGrid(filter) {
   grid.innerHTML = list.map(r => `
     <button class="recipe-card ${r.type === 'KIT' ? 'kit' : ''}" data-id="${escapeHtml(r.id)}">
       <div class="art">
-        ${r.type === 'KIT' ? '<span class="tag kit">Festival kit</span>' : '<span class="tag">Recipe</span>'}
         ${escapeHtml(r.emoji)}
+        ${r.photo ? `<img src="${escapeHtml(r.photo.url)}" alt="${escapeHtml(r.name)}" loading="lazy" onerror="this.remove()">` : ''}
+        ${r.type === 'KIT' ? '<span class="tag kit">Festival kit</span>' : '<span class="tag">Recipe</span>'}
       </div>
       <div class="body">
         <h3>${escapeHtml(r.name)}</h3>
@@ -146,7 +148,16 @@ async function openRecipe(id) {
   const summary = allRecipes.find(r => r.id === id);
   picked = {};
   current = null;
-  document.getElementById('d-emoji').textContent = summary.emoji;
+  const art = document.getElementById('d-emoji');
+  art.textContent = summary.emoji;
+  if (summary.photo) {
+    art.innerHTML = `<img src="${escapeHtml(summary.photo.url)}" alt="" onerror="this.parentNode.textContent='${escapeHtml(summary.emoji)}'">`;
+  }
+  const credit = document.getElementById('d-credit');
+  credit.innerHTML = summary.photo
+    ? `Photo: <a href="${escapeHtml(summary.photo.sourcePage)}" target="_blank" rel="noopener">${escapeHtml(summary.photo.author)}</a>,
+       <a href="${escapeHtml(summary.photo.licenseUrl)}" target="_blank" rel="noopener">${escapeHtml(summary.photo.license)}</a>, via Wikimedia Commons`
+    : '';
   document.getElementById('d-name').textContent = summary.name;
   document.getElementById('d-desc').textContent = summary.description;
   document.getElementById('d-base').textContent = summary.type === 'KIT'

@@ -3,6 +3,7 @@ package com.suryaprasanth.grocery.service;
 import com.suryaprasanth.grocery.config.RecipeCatalog;
 import com.suryaprasanth.grocery.config.RecipeCatalog.Ingredient;
 import com.suryaprasanth.grocery.config.RecipeCatalog.Recipe;
+import com.suryaprasanth.grocery.dto.PhotoInfo;
 import com.suryaprasanth.grocery.dto.RecipeSummary;
 import com.suryaprasanth.grocery.dto.RecipeView;
 import com.suryaprasanth.grocery.model.Product;
@@ -42,7 +43,7 @@ public class RecipeService {
         for (Recipe r : catalog.all()) {
             RecipeView view = build(r, r.baseServings(), products);
             result.add(new RecipeSummary(r.id(), r.type(), r.name(), r.emoji(), r.description(), r.time(),
-                    r.baseServings(), r.ingredients().size(), view.estimatedTotal()));
+                    r.baseServings(), r.ingredients().size(), view.estimatedTotal(), photoOf(r.id())));
         }
         return result;
     }
@@ -85,7 +86,13 @@ public class RecipeService {
                     lineTotal, available, ing.pantryStaple()));
         }
         return new RecipeView(recipe.id(), recipe.type(), recipe.name(), recipe.emoji(), recipe.description(),
-                recipe.time(), recipe.baseServings(), servings, lines, total, missing);
+                recipe.time(), recipe.baseServings(), servings, lines, total, missing, photoOf(recipe.id()));
+    }
+
+    private PhotoInfo photoOf(String id) {
+        RecipeCatalog.Photo p = catalog.photoFor(id);
+        return p == null ? null : new PhotoInfo(p.url(), p.author(), p.sourcePage(),
+                RecipeCatalog.Photo.LICENSE, RecipeCatalog.Photo.LICENSE_URL);
     }
 
     /** Packs of this product that cover the amount needed (at least 1, at most 20). */
