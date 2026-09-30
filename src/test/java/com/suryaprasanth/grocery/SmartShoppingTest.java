@@ -227,6 +227,13 @@ class SmartShoppingTest extends ApiTestSupport {
         assertEquals(3, second.get("timesBought").asInt());
     }
 
+    @Test
+    @DisplayName("A page or API path that doesn't exist returns 404, not 500")
+    void missingPageIs404() throws Exception {
+        assertEquals(404, status(call("GET", "/no-such-page.html", null, null)));
+        assertEquals(404, status(call("GET", "/api/no-such-endpoint", null, null)));
+    }
+
     private void backdate(JsonNode orderJson, int days) {
         Order order = orderRepository.findById(orderJson.get("id").asLong()).orElseThrow();
         order.setCreatedAt(LocalDateTime.now().minusDays(days));
