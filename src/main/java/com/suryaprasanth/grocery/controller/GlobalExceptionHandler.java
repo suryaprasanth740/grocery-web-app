@@ -13,6 +13,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.server.ResponseStatusException;
 
 /** Turns every error into a short JSON message the frontend can show. Never shows stack traces. */
@@ -62,6 +63,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleConcurrency(ConcurrencyFailureException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ApiError("Many people are ordering right now. Please try again."));
+    }
+
+    /** A page or API path that doesn't exist (e.g. /no-such-page.html) is a 404, not a server error. */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiError> handleNotFound(NoResourceFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiError("Page not found"));
     }
 
     @ExceptionHandler(Exception.class)
