@@ -67,4 +67,13 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Modifying
     @Query(value = "update orders set status = 'PREPARING' where status = 'PACKED'", nativeQuery = true)
     int renamePackedToPreparing();
+
+    // ---------- Admin: all shops, optional filters ----------
+
+    @Query(value = "select o from Order o where (:status is null or o.status = :status) and (:shopId is null or o.shop.id = :shopId)",
+            countQuery = "select count(o) from Order o where (:status is null or o.status = :status) and (:shopId is null or o.shop.id = :shopId)")
+    Page<Order> searchForAdmin(@Param("status") OrderStatus status, @Param("shopId") Long shopId, Pageable pageable);
+
+    @Query("select o from Order o where o.createdAt >= :since and o.status in :statuses")
+    List<Order> findPlacedSince(@Param("since") LocalDateTime since, @Param("statuses") Collection<OrderStatus> statuses);
 }

@@ -79,4 +79,14 @@ public class OrderIssue {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    /** For the admin's dispute list: which order, shop and buyer this problem belongs to. */
+    @com.fasterxml.jackson.annotation.JsonProperty("orderId")
+    public Long orderId() { return order == null ? null : order.getId(); }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("shopName")
+    public String shopName() { return order == null || order.getShop() == null ? null : order.getShop().getName(); }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("customerEmail")
+    public String customerEmail() { return order == null ? null : order.customerEmail(); }
 }

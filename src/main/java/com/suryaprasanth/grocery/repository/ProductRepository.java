@@ -88,4 +88,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @Query("select count(p) from Product p where p.shop.id = :shopId and (p.active is null or p.active = true)")
     long countActiveInShop(@Param("shopId") Long shopId);
+
+    @Query("select count(p) from Product p where p.category.id = :categoryId")
+    long countInCategory(@Param("categoryId") Long categoryId);
 }
