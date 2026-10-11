@@ -95,6 +95,13 @@ public class CartService {
 
     /** Stops expired items, out-of-stock items and silly quantities entering the cart. */
     public void checkCanBuy(Product product, int quantity) {
+        if (!product.isBuyable()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, product.getName() + " is no longer sold.");
+        }
+        if (!product.getShop().isAcceptingOrders()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    product.getShop().getName() + " isn't taking new orders right now.");
+        }
         if (product.isExpired()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     product.getName() + " is past its best-before date and cannot be sold.");

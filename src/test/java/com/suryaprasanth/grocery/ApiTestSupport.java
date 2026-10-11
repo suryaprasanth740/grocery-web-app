@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.suryaprasanth.grocery.model.Category;
 import com.suryaprasanth.grocery.model.Product;
+import com.suryaprasanth.grocery.model.Shop;
 import com.suryaprasanth.grocery.repository.CategoryRepository;
 import com.suryaprasanth.grocery.repository.OrderRepository;
 import com.suryaprasanth.grocery.repository.ProductRepository;
+import com.suryaprasanth.grocery.repository.ShopRepository;
 import com.suryaprasanth.grocery.repository.UserRepository;
 import com.suryaprasanth.grocery.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +52,7 @@ public abstract class ApiTestSupport {
     @Autowired protected CategoryRepository categoryRepository;
     @Autowired protected OrderRepository orderRepository;
     @Autowired protected UserRepository userRepository;
+    @Autowired protected ShopRepository shopRepository;
     @Autowired protected OrderService orderService;
 
     protected final ObjectMapper json = new ObjectMapper();
@@ -115,7 +118,75 @@ public abstract class ApiTestSupport {
                 "1 pc", "T", stock, category);
         p.setGstPercent(gstPercent);
         p.setExpiryDate(expiry);
+        p.setShop(demoShop());
         return productRepository.save(p);
+    }
+
+    /** The approved demo shop run by the test admin (created at startup, delivers to 560xxx). */
+    protected Shop demoShop() {
+        long adminId = userRepository.findByEmailIgnoreCase(ADMIN_EMAIL).orElseThrow().getId();
+        return shopRepository.findByOwnerId(adminId).orElseThrow();
+    }
+
+    /** A seller account with its shop, logged in. */
+    protected record SellerAccount(MockHttpSession session, long shopId, String email) { }
+
+    /** Applies as a new seller (shop at pincode, delivering to the extra PIN codes) and gets approved by the admin. */
+    protected SellerAccount newApprovedSeller(String pincode, String extraPincodes) throws Exception {
+        SellerAccount seller = newPendingSeller(pincode, extraPincodes);
+        MvcResult r = call("POST", "/api/admin/shops/" + seller.shopId() + "/approve", adminSession(), null);
+        if (status(r) != 200) {
+            throw new IllegalStateException("approve failed: " + r.getResponse().getContentAsString());
+        }
+        return seller;
+    }
+
+    protected SellerAccount newPendingSeller(String pincode, String extraPincodes) throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        String email = "shop" + COUNTER.incrementAndGet() + "-" + UUID.randomUUID().toString().substring(0, 8) + "@test.local";
+        Map<String, Object> f = new HashMap<>();
+        f.put("ownerName", "Shop Owner");
+        f.put("email", email);
+        f.put("password", "kirana123");
+        f.put("shopName", "Test Kirana " + COUNTER.get());
+        f.put("category", "KIRANA");
+        f.put("phone", "9876543210");
+        f.put("addressLine", "1, Test Street, Bengaluru");
+        f.put("pincode", pincode);
+        f.put("servicePincodes", extraPincodes);
+        f.put("openTime", "00:00");
+        f.put("closeTime", "23:59");
+        f.put("offersDelivery", true);
+        f.put("offersPickup", true);
+        f.put("deliveryFee", 20);
+        f.put("minOrderAmount", 0);
+        MvcResult r = call("POST", "/api/auth/register-seller", session, f);
+        if (status(r) != 201) {
+            throw new IllegalStateException("seller sign-up failed: " + r.getResponse().getContentAsString());
+        }
+        return new SellerAccount(session, body(r).get("shop").get("id").asLong(), email);
+    }
+
+    /** A valid seller product form. Tests change single fields. */
+    protected Map<String, Object> sellerProduct(String name, String price, int stock) {
+        Map<String, Object> p = new HashMap<>();
+        p.put("name", name);
+        p.put("price", new BigDecimal(price));
+        p.put("stock", stock);
+        p.put("unit", "1 kg");
+        p.put("gstPercent", 0);
+        p.put("categoryId", categoryRepository.findAll().get(0).getId());
+        p.put("expiryDate", LocalDate.now().plusDays(60).toString());
+        return p;
+    }
+
+    /** Creates a product as this seller and returns its id. */
+    protected long sellerAddsProduct(SellerAccount seller, String name, String price, int stock) throws Exception {
+        MvcResult r = call("POST", "/api/seller/products", seller.session(), sellerProduct(name, price, stock));
+        if (status(r) != 201) {
+            throw new IllegalStateException("product create failed: " + r.getResponse().getContentAsString());
+        }
+        return body(r).get("id").asLong();
     }
 
     protected int stockOf(Product p) {

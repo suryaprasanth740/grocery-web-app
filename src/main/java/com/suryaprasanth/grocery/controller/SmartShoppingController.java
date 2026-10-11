@@ -49,18 +49,20 @@ public class SmartShoppingController {
 
     /** Anyone can try it; adding to the cart needs a login. */
     @PostMapping("/smart-list/parse")
-    public List<ListLine> parseList(@Valid @RequestBody ListRequest request) {
-        return shoppingListService.parse(request.getText());
+    public List<ListLine> parseList(@Valid @RequestBody ListRequest request,
+                                    @RequestParam(required = false) Long shopId) {
+        return shoppingListService.parse(request.getText(), shopId);
     }
 
     @GetMapping("/recipes")
-    public List<RecipeSummary> recipes() {
-        return recipeService.list();
+    public List<RecipeSummary> recipes(@RequestParam(required = false) Long shopId) {
+        return recipeService.list(shopId);
     }
 
     @GetMapping("/recipes/{id}")
-    public RecipeView recipe(@PathVariable String id, @RequestParam(required = false) Integer servings) {
-        return recipeService.view(id, servings);
+    public RecipeView recipe(@PathVariable String id, @RequestParam(required = false) Integer servings,
+                             @RequestParam(required = false) Long shopId) {
+        return recipeService.view(id, servings, shopId);
     }
 
     @GetMapping("/budget")

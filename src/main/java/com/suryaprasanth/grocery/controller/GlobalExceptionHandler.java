@@ -71,8 +71,22 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiError("Page not found"));
     }
 
+    /** A photo bigger than the upload limit. */
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> handleTooLarge(Exception ex) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(new ApiError("That file is too big. Photos can be at most 300 KB."));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception ex) {
+        // Spring's own request errors (wrong HTTP method, missing parameter or file...) already
+        // know their status code, e.g. 405 or 400. Pass that on instead of calling it a 500.
+        if (ex instanceof org.springframework.web.ErrorResponse known && known.getStatusCode().is4xxClientError()) {
+            String detail = known.getBody().getDetail();
+            return ResponseEntity.status(known.getStatusCode())
+                    .body(new ApiError(detail != null ? detail : "Request not valid"));
+        }
         log.error("Unexpected error", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ApiError("Something went wrong. Please try again."));

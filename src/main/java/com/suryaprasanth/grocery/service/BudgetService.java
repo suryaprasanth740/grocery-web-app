@@ -159,7 +159,11 @@ public class BudgetService {
             if (toName == null) {
                 continue;
             }
-            Optional<Product> to = productRepository.findAll().stream()
+            // Only swap within the SAME shop: products of unrelated shops are never mixed.
+            if (from.getShopId() == null) {
+                continue;
+            }
+            Optional<Product> to = productRepository.findBuyableByShop(from.getShopId()).stream()
                     .filter(p -> p.getName().equalsIgnoreCase(toName))
                     .min(Comparator.comparing(Product::getId));
             if (to.isEmpty()) {

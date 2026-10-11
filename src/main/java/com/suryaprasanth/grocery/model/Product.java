@@ -53,9 +53,21 @@ public class Product {
 
     /** The shop that sells this product. Older rows are moved to the demo shop at startup. */
     @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "shop_id")
     private Shop shop;
+
+    /** e.g. "Amul", "Aashirvaad". Optional: loose vegetables have no brand. */
+    @Column(length = 60)
+    private String brand;
+
+    /** Maximum retail price printed on the pack. When higher than the price, buyers see the discount. */
+    @Column(precision = 10, scale = 2)
+    private BigDecimal mrp;
+
+    /** A seller can switch a product off without deleting it (old orders still point to it). Null = on. */
+    @Column(name = "active")
+    private Boolean active = Boolean.TRUE;
 
     /** A product that expires today or earlier cannot be sold. */
     public static final int MIN_DAYS_OF_SHELF_LIFE = 1;
@@ -202,4 +214,41 @@ public class Product {
     public void setShop(Shop shop) {
         this.shop = shop;
     }
+
+    public String getBrand() { return brand; }
+    public void setBrand(String brand) { this.brand = brand; }
+    public BigDecimal getMrp() { return mrp; }
+    public void setMrp(BigDecimal mrp) { this.mrp = mrp; }
+
+    public boolean isActive() { return active == null || active; }
+    public void setActive(boolean active) { this.active = active; }
+
+    /** Whole-number discount from MRP, e.g. 12 for "12% off". 0 when there is no MRP or no saving. */
+    @JsonProperty("discountPercent")
+    public int getDiscountPercent() {
+        if (mrp == null || price == null || mrp.compareTo(price) <= 0) {
+            return 0;
+        }
+        return mrp.subtract(price).multiply(BigDecimal.valueOf(100))
+                .divide(mrp, 0, java.math.RoundingMode.DOWN).intValue();
+    }
+
+    /** Can a buyer see and add this product: switched on, and its shop approved with an active owner. */
+    @JsonIgnore
+    public boolean isBuyable() {
+        return isActive() && shop != null && shop.isVisibleToBuyers();
+    }
+
+    @JsonProperty("shopId")
+    public Long getShopId() { return shop == null ? null : shop.getId(); }
+
+    @JsonProperty("shopName")
+    public String getShopName() { return shop == null ? null : shop.getName(); }
+
+    @JsonProperty("shopSlug")
+    public String getShopSlug() { return shop == null ? null : shop.getSlug(); }
+
+    /** False when the shop has paused new orders: buyers can look but not order. */
+    @JsonProperty("shopAcceptingOrders")
+    public boolean isShopAcceptingOrders() { return shop != null && shop.isAcceptingOrders(); }
 }

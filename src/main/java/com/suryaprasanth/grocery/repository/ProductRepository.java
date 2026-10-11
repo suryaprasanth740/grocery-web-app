@@ -36,4 +36,51 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Modifying
     @Query("update Product p set p.shop = :shop where p.shop is null")
     int assignShopWhereMissing(@Param("shop") com.suryaprasanth.grocery.model.Shop shop);
+
+    // ---------- What buyers may see: product switched on, shop approved, owner not suspended ----------
+
+    String BUYABLE = "(p.active is null or p.active = true) and s.status = com.suryaprasanth.grocery.model.ShopStatus.APPROVED"
+            + " and (o.accountStatus is null or o.accountStatus = 'ACTIVE')";
+
+    @Query("select p from Product p join fetch p.shop s join s.owner o where " + BUYABLE + " order by p.id")
+    List<Product> findBuyable();
+
+    @Query("select p from Product p join fetch p.shop s join s.owner o where " + BUYABLE
+            + " and s.id = :shopId order by p.id")
+    List<Product> findBuyableByShop(@Param("shopId") Long shopId);
+
+    /** Buyer search with optional filters. Any filter left null is ignored. */
+    @Query(value = "select p from Product p join p.shop s join s.owner o where " + BUYABLE
+            + " and (:shopId is null or s.id = :shopId)"
+            + " and (:categoryId is null or p.category.id = :categoryId)"
+            + " and (:q is null or lower(p.name) like :q or lower(p.brand) like :q)",
+            countQuery = "select count(p) from Product p join p.shop s join s.owner o where " + BUYABLE
+            + " and (:shopId is null or s.id = :shopId)"
+            + " and (:categoryId is null or p.category.id = :categoryId)"
+            + " and (:q is null or lower(p.name) like :q or lower(p.brand) like :q)")
+    org.springframework.data.domain.Page<Product> searchBuyable(@Param("q") String likePattern,
+                                                                @Param("categoryId") Long categoryId,
+                                                                @Param("shopId") Long shopId,
+                                                                org.springframework.data.domain.Pageable pageable);
+
+    // ---------- Seller's own products ----------
+
+    @Query(value = "select p from Product p where p.shop.id = :shopId"
+            + " and (:q is null or lower(p.name) like :q or lower(p.brand) like :q)"
+            + " and (:categoryId is null or p.category.id = :categoryId)",
+            countQuery = "select count(p) from Product p where p.shop.id = :shopId"
+            + " and (:q is null or lower(p.name) like :q or lower(p.brand) like :q)"
+            + " and (:categoryId is null or p.category.id = :categoryId)")
+    org.springframework.data.domain.Page<Product> searchByShop(@Param("shopId") Long shopId,
+                                                               @Param("q") String likePattern,
+                                                               @Param("categoryId") Long categoryId,
+                                                               org.springframework.data.domain.Pageable pageable);
+
+    java.util.Optional<Product> findByIdAndShopId(Long id, Long shopId);
+
+    @Query("select count(p) from Product p where p.shop.id = :shopId and (p.active is null or p.active = true) and p.stock = 0")
+    long countOutOfStock(@Param("shopId") Long shopId);
+
+    @Query("select p from Product p where p.shop.id = :shopId and (p.active is null or p.active = true) and p.stock <= :limit order by p.stock, p.name")
+    List<Product> findLowStock(@Param("shopId") Long shopId, @Param("limit") int limit);
 }

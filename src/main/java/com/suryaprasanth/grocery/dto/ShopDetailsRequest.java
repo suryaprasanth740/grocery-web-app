@@ -59,6 +59,24 @@ public class ShopDetailsRequest {
     @Digits(integer = 4, fraction = 2, message = "Minimum order can have at most 2 decimal places")
     private BigDecimal minOrderAmount;
 
+    @Size(max = 100, message = "Logo address is too long")
+    private String logoUrl;
+
+    @DecimalMin(value = "6.0", message = "Location must be inside India")
+    @DecimalMax(value = "37.5", message = "Location must be inside India")
+    private Double latitude;
+
+    @DecimalMin(value = "68.0", message = "Location must be inside India")
+    @DecimalMax(value = "97.5", message = "Location must be inside India")
+    private Double longitude;
+
+    public String getLogoUrl() { return logoUrl; }
+    public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
+
     public String getShopName() { return shopName; }
     public void setShopName(String shopName) { this.shopName = shopName; }
     public ShopCategory getCategory() { return category; }

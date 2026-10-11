@@ -98,6 +98,14 @@ public class Shop {
     @Column(name = "status_reason", length = 300)
     private String statusReason;
 
+    /** Shop photo or logo uploaded by the owner ("/api/images/12"). Optional. */
+    @Column(name = "logo_url", length = 100)
+    private String logoUrl;
+
+    /** Optional map position, used only to show buyers how far away the shop is. */
+    private Double latitude;
+    private Double longitude;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -215,4 +223,23 @@ public class Shop {
     public LocalDateTime getApprovedAt() { return approvedAt; }
     public void setApprovedAt(LocalDateTime approvedAt) { this.approvedAt = approvedAt; }
     public Long getVersion() { return version; }
+    public String getLogoUrl() { return logoUrl; }
+    public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
+
+    /** Straight-line distance in km (haversine formula), or null if either position is unknown. */
+    public Double distanceKmFrom(Double lat, Double lng) {
+        if (latitude == null || longitude == null || lat == null || lng == null) {
+            return null;
+        }
+        double dLat = Math.toRadians(lat - latitude);
+        double dLng = Math.toRadians(lng - longitude);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(latitude)) * Math.cos(Math.toRadians(lat)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        double km = 6371.0 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return Math.round(km * 10) / 10.0;
+    }
 }

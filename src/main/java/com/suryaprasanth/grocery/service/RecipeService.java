@@ -38,7 +38,11 @@ public class RecipeService {
     }
 
     public List<RecipeSummary> list() {
-        Map<String, Product> products = productsByName();
+        return list(null);
+    }
+
+    public List<RecipeSummary> list(Long shopId) {
+        Map<String, Product> products = productsByName(shopId);
         List<RecipeSummary> result = new ArrayList<>();
         for (Recipe r : catalog.all()) {
             RecipeView view = build(r, r.baseServings(), products);
@@ -49,6 +53,10 @@ public class RecipeService {
     }
 
     public RecipeView view(String id, Integer servings) {
+        return view(id, servings, null);
+    }
+
+    public RecipeView view(String id, Integer servings, Long shopId) {
         Recipe recipe = catalog.find(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Recipe not found"));
         int people = servings == null ? recipe.baseServings() : servings;
@@ -56,7 +64,7 @@ public class RecipeService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Number of people must be between " + MIN_SERVINGS + " and " + MAX_SERVINGS + ".");
         }
-        return build(recipe, people, productsByName());
+        return build(recipe, people, productsByName(shopId));
     }
 
     private RecipeView build(Recipe recipe, int servings, Map<String, Product> products) {
@@ -105,9 +113,10 @@ public class RecipeService {
         return Math.max(1, Math.min(20, packs));
     }
 
-    private Map<String, Product> productsByName() {
+    /** Only products buyers can order; with a shopId, only that shop's. */
+    private Map<String, Product> productsByName(Long shopId) {
         Map<String, Product> map = new HashMap<>();
-        for (Product p : productRepository.findAll()) {
+        for (Product p : shopId == null ? productRepository.findBuyable() : productRepository.findBuyableByShop(shopId)) {
             map.putIfAbsent(p.getName().toLowerCase(), p);
         }
         return map;

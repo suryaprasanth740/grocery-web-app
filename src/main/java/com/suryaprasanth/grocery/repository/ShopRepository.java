@@ -25,4 +25,7 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
     Optional<Shop> findWithOwnerById(Long id);
 
     long countByStatus(ShopStatus status);
+
+    @EntityGraph(attributePaths = "owner")
+    Optional<Shop> findBySlug(String slug);
 }

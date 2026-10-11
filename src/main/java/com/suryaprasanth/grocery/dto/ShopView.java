@@ -35,11 +35,25 @@ public record ShopView(
         LocalDateTime createdAt,
         LocalDateTime approvedAt,
         String ownerName,
-        String ownerEmail
+        String ownerEmail,
+        String logoUrl,
+        Double latitude,
+        Double longitude,
+        /** Only in buyer search results when the buyer shared their location. */
+        Double distanceKm
 ) {
     private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
 
     public static ShopView of(Shop s, boolean includeOwner) {
+        return of(s, includeOwner, null);
+    }
+
+    /** The public view for buyers: no owner details. */
+    public static ShopView forBuyer(Shop s, Double distanceKm) {
+        return of(s, false, distanceKm);
+    }
+
+    public static ShopView of(Shop s, boolean includeOwner, Double distanceKm) {
         return new ShopView(
                 s.getId(), s.getName(), s.getSlug(), s.getCategory().name(), s.getCategory().getLabel(),
                 s.getPhone(), s.getAddressLine(), s.getPincode(), s.getServicePincodeList(),
@@ -48,6 +62,7 @@ public record ShopView(
                 s.getMinOrderAmount(), s.isAcceptingOrders(), s.getStatus().name(), s.getStatusReason(),
                 s.getCreatedAt(), s.getApprovedAt(),
                 includeOwner ? s.getOwner().getName() : null,
-                includeOwner ? s.getOwner().getEmail() : null);
+                includeOwner ? s.getOwner().getEmail() : null,
+                s.getLogoUrl(), s.getLatitude(), s.getLongitude(), distanceKm);
     }
 }

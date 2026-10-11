@@ -37,11 +37,14 @@ public class ShopService {
     private final ShopRepository shopRepository;
     private final AccountService accountService;
     private final AuditService auditService;
+    private final ImageService imageService;
 
-    public ShopService(ShopRepository shopRepository, AccountService accountService, AuditService auditService) {
+    public ShopService(ShopRepository shopRepository, AccountService accountService, AuditService auditService,
+                       ImageService imageService) {
         this.shopRepository = shopRepository;
         this.accountService = accountService;
         this.auditService = auditService;
+        this.imageService = imageService;
     }
 
     // ---------------- Owner side ----------------
@@ -192,6 +195,15 @@ public class ShopService {
         shop.setDeliveryFee(money(r.getDeliveryFee()));
         shop.setFreeDeliveryAbove(r.getFreeDeliveryAbove() == null ? null : money(r.getFreeDeliveryAbove()));
         shop.setMinOrderAmount(money(r.getMinOrderAmount()));
+        if ((r.getLatitude() == null) != (r.getLongitude() == null)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Give both latitude and longitude, or neither");
+        }
+        shop.setLatitude(r.getLatitude());
+        shop.setLongitude(r.getLongitude());
+        // A brand-new shop has no id yet, so it can't own photos; the logo is added afterwards.
+        if (shop.getId() != null) {
+            shop.setLogoUrl(imageService.checkSellerImageUrl(shop.getId(), r.getLogoUrl()));
+        }
     }
 
     private static BigDecimal money(BigDecimal value) {

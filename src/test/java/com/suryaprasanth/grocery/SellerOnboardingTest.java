@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class SellerOnboardingTest extends ApiTestSupport {
 
-    @Autowired private ShopRepository shopRepository;
     @Autowired private AuditLogRepository auditLogRepository;
 
     private static String uniqueEmail() {

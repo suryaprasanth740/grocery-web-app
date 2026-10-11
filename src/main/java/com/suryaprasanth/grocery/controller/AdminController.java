@@ -34,12 +34,14 @@ public class AdminController {
     private final CouponRepository couponRepository;
     private final OrderService orderService;
     private final AuditService auditService;
+    private final ShopRepository shopRepository;
 
     public AdminController(UserRepository userRepository, ProductRepository productRepository,
                            CategoryRepository categoryRepository, OrderRepository orderRepository,
                            OrderIssueRepository issueRepository, CouponRepository couponRepository,
-                           OrderService orderService, AuditService auditService) {
+                           OrderService orderService, AuditService auditService, ShopRepository shopRepository) {
         this.auditService = auditService;
+        this.shopRepository = shopRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
@@ -78,6 +80,9 @@ public class AdminController {
     public Product createProduct(@Valid @RequestBody ProductRequest request, HttpSession session) {
         User admin = SessionUtil.requireAdmin(session, userRepository);
         Product product = new Product();
+        // Products added from the admin panel belong to the platform's own demo shop.
+        product.setShop(shopRepository.findByOwnerId(admin.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "The admin account has no shop")));
         apply(product, request);
         product = productRepository.save(product);
         auditService.record(admin, "PRODUCT_CREATED", "PRODUCT", product.getId(), product.getName());

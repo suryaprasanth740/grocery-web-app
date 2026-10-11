@@ -118,11 +118,19 @@ public class ShoppingListService {
 
     /** Reads the whole list. Each line of the result says what was understood. */
     public List<ListLine> parse(String text) {
+        return parse(text, null);
+    }
+
+    /**
+     * Reads the whole list against what buyers can actually order. With a shopId, only that
+     * shop's products are matched, so every suggestion is something the shop really stocks.
+     */
+    public List<ListLine> parse(String text, Long shopId) {
         List<ListLine> result = new ArrayList<>();
         if (text == null || text.isBlank()) {
             return result;
         }
-        List<Product> catalog = productRepository.findAll(Sort.by("id"));
+        List<Product> catalog = shopId == null ? productRepository.findBuyable() : productRepository.findBuyableByShop(shopId);
         for (String raw : text.split("[\\n,;]+")) {
             String line = raw.trim();
             if (line.isEmpty()) {
