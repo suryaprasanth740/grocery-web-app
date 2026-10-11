@@ -1043,3 +1043,50 @@ body { font-size: 1.02rem; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .section-heading { flex-wrap: wrap; gap: 4px 16px; }
 @media (max-width: 560px) { .section-heading .note { flex-basis: 100%; } }
+
+/* ---------- Seller forms and dashboard (Phase 5) ---------- */
+.form-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.form-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 14px; }
+@media (max-width: 640px) { .form-2, .form-3 { grid-template-columns: 1fr; } }
+.fieldset { border: none; padding: 0; margin: 0 0 16px; display: grid; gap: 8px; }
+.fieldset legend { font-weight: 600; font-size: 0.88rem; color: var(--ink-soft); margin-bottom: 6px; padding: 0; }
+.choice input[type="checkbox"] { width: auto; padding: 0; margin: 0; flex-shrink: 0; accent-color: var(--primary); }
+.form-section { font-size: 1.1rem; margin: 24px 0 10px; padding-top: 18px; border-top: 1px solid var(--line); }
+.form-section:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+
+.sell-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; align-items: start; padding: 36px 0 64px; }
+.sell-layout .panel { padding: 26px; }
+.sell-aside h2 { font-size: 1.15rem; }
+.sell-aside ol { margin: 0; padding-left: 20px; display: grid; gap: 10px; color: var(--ink-soft); }
+.sell-aside li b { color: var(--ink); }
+@media (max-width: 860px) { .sell-layout { grid-template-columns: 1fr; } }
+
+/* The shop's status, shown like a painted signboard band above the dashboard */
+.shop-board { background: var(--hero-bg); color: #fff; padding: 28px 0 30px; }
+.shop-board h1 { color: #fff; font-size: clamp(1.7rem, 4vw, 2.4rem); margin: 0 0 4px; }
+.shop-board p { margin: 0; color: rgba(255,255,255,0.86); }
+.status-pill { display: inline-block; border-radius: 999px; padding: 3px 12px; font-weight: 700; font-size: 0.85rem; margin-left: 8px; vertical-align: middle; }
+.status-pill.PENDING { background: var(--turmeric); color: var(--turmeric-ink); }
+.status-pill.APPROVED { background: #DDF4E6; color: #145C34; }
+.status-pill.REJECTED, .status-pill.SUSPENDED { background: #FBE1DD; color: var(--accent-dark); }
+.dash-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; align-items: start; padding: 26px 0 64px; }
+@media (max-width: 900px) { .dash-grid { grid-template-columns: 1fr; } }
+.switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.toggle { position: relative; width: 52px; height: 30px; flex: none; }
+.toggle input { opacity: 0; width: 100%; height: 100%; position: absolute; inset: 0; margin: 0; cursor: pointer; z-index: 1; }
+.toggle span { position: absolute; inset: 0; background: #C9D5D2; border-radius: 99px; transition: background 0.15s ease; }
+.toggle span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform 0.15s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+.toggle input:checked + span { background: var(--primary); }
+.toggle input:checked + span::after { transform: translateX(22px); }
+.toggle input:focus-visible + span { outline: 3px solid var(--turmeric); outline-offset: 2px; }
+.toggle input:disabled + span { opacity: 0.5; }
+.facts { display: grid; gap: 6px; font-size: 0.92rem; }
+.facts div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px dashed var(--line); padding-bottom: 6px; }
+.facts dt { color: var(--ink-soft); }
+.facts dd { margin: 0; font-weight: 600; text-align: right; }
+
+.reason-box { background: #FBE1DD; color: var(--accent-dark); border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 12px; font-weight: 600; }
+.admin-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.admin-stats .stat { background: var(--card); border: 1px solid var(--line); }
+.reason-form { display: grid; gap: 6px; margin-top: 6px; }
+.reason-form textarea { font-size: 0.85rem; padding: 6px 8px; min-width: 180px; }

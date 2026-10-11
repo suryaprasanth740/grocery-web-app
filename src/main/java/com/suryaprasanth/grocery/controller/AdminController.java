@@ -1,5 +1,7 @@
 package com.suryaprasanth.grocery.controller;
 
+import com.suryaprasanth.grocery.service.AuditService;
+import com.suryaprasanth.grocery.model.User;
 import com.suryaprasanth.grocery.dto.ProductRequest;
 import com.suryaprasanth.grocery.dto.StatusUpdateRequest;
 import com.suryaprasanth.grocery.model.*;
@@ -31,11 +33,13 @@ public class AdminController {
     private final OrderIssueRepository issueRepository;
     private final CouponRepository couponRepository;
     private final OrderService orderService;
+    private final AuditService auditService;
 
     public AdminController(UserRepository userRepository, ProductRepository productRepository,
                            CategoryRepository categoryRepository, OrderRepository orderRepository,
                            OrderIssueRepository issueRepository, CouponRepository couponRepository,
-                           OrderService orderService) {
+                           OrderService orderService, AuditService auditService) {
+        this.auditService = auditService;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
@@ -56,8 +60,10 @@ public class AdminController {
     @PutMapping("/orders/{id}/status")
     public Order updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request,
                               HttpSession session) {
-        SessionUtil.requireAdmin(session, userRepository);
-        return orderService.adminUpdateStatus(id, request.getStatus());
+        User admin = SessionUtil.requireAdmin(session, userRepository);
+        Order order = orderService.adminUpdateStatus(id, request.getStatus());
+        auditService.record(admin, "ORDER_STATUS_CHANGED", "ORDER", id, "to " + order.getStatus());
+        return order;
     }
 
     // ---------------- Products ----------------
@@ -70,20 +76,25 @@ public class AdminController {
 
     @PostMapping("/products")
     public Product createProduct(@Valid @RequestBody ProductRequest request, HttpSession session) {
-        SessionUtil.requireAdmin(session, userRepository);
+        User admin = SessionUtil.requireAdmin(session, userRepository);
         Product product = new Product();
         apply(product, request);
-        return productRepository.save(product);
+        product = productRepository.save(product);
+        auditService.record(admin, "PRODUCT_CREATED", "PRODUCT", product.getId(), product.getName());
+        return product;
     }
 
     @PutMapping("/products/{id}")
     public Product updateProduct(@PathVariable Long id, @Valid @RequestBody ProductRequest request,
                                  HttpSession session) {
-        SessionUtil.requireAdmin(session, userRepository);
+        User admin = SessionUtil.requireAdmin(session, userRepository);
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
         apply(product, request);
-        return productRepository.save(product);
+        product = productRepository.save(product);
+        auditService.record(admin, "PRODUCT_UPDATED", "PRODUCT", product.getId(),
+                product.getName() + " price " + product.getPrice() + " stock " + product.getStock());
+        return product;
     }
 
     private void apply(Product product, ProductRequest r) {
@@ -128,10 +139,12 @@ public class AdminController {
     @PutMapping("/coupons/{id}/active")
     public Coupon setCouponActive(@PathVariable Long id, @RequestBody Map<String, Boolean> body,
                                   HttpSession session) {
-        SessionUtil.requireAdmin(session, userRepository);
+        User admin = SessionUtil.requireAdmin(session, userRepository);
         Coupon coupon = couponRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Coupon not found"));
         coupon.setActive(Boolean.TRUE.equals(body.get("active")));
+        auditService.record(admin, coupon.isActive() ? "COUPON_ENABLED" : "COUPON_DISABLED", "COUPON",
+                coupon.getId(), coupon.getCode());
         return couponRepository.save(coupon);
     }
 }

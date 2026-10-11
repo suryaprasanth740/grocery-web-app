@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sell on NammaBasket | NammaBasket</title>
+<meta name="description" content="Bring your kirana shop to NammaBasket and take orders from your neighbourhood.">
+<link rel="icon" href="/img/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="signboard" id="site-header"></header>
+
+<main id="main">
+  <section class="page-hero" style="margin-bottom:0;padding-bottom:34px;">
+    <div class="wrap">
+      <h1>Bring your shop to NammaBasket</h1>
+      <p>Take orders from homes around your shop. You keep your prices, your stock and your regular customers.</p>
+    </div>
+  </section>
+
+  <div class="wrap sell-layout">
+    <form class="panel" id="sell-form" novalidate>
+      <div id="form-error" aria-live="assertive"></div>
+      <div id="already" class="notice info" style="display:none;"></div>
+
+      <h2 class="form-section">About you</h2>
+      <div class="field"><label for="f-ownerName">Your name</label>
+        <input id="f-ownerName" name="ownerName" maxlength="100" required autocomplete="name"></div>
+      <div class="form-2">
+        <div class="field"><label for="f-email">Email</label>
+          <input id="f-email" name="email" type="email" maxlength="150" required autocomplete="email"></div>
+        <div class="field"><label for="f-password">Password</label>
+          <input id="f-password" name="password" type="password" minlength="8" maxlength="72" required autocomplete="new-password">
+          <div class="bill-note">At least 8 characters.</div></div>
+      </div>
+
+      <h2 class="form-section">Your shop</h2>
+      <div id="shop-fields"></div>
+
+      <button class="btn btn-primary btn-block" id="submit-btn" type="submit">Send application</button>
+      <p class="bill-note" style="text-align:center;">By applying you agree to the <a href="/terms.html" style="text-decoration:underline;">terms of use</a>.</p>
+    </form>
+
+    <aside class="panel sell-aside">
+      <h2>What happens next</h2>
+      <ol>
+        <li><b>You apply.</b> Your account is ready straight away, and you can edit the shop details at any time.</li>
+        <li><b>We check your shop.</b> An admin reviews the details. If something is missing, you&rsquo;ll see the reason on your dashboard and can send it again.</li>
+        <li><b>You start selling.</b> Once approved, your shop appears to buyers in your PIN codes and you can pause orders whenever you need to.</li>
+      </ol>
+      <p class="bill-note" style="margin-top:14px;">Already applied? <a href="/login.html?next=/seller.html" style="text-decoration:underline;">Log in to your dashboard</a>.</p>
+    </aside>
+  </div>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+<div id="toast"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/shop-form.js"></script>
+<script>
+document.getElementById('shop-fields').innerHTML = shopFieldsHtml(null);
+
+(async () => {
+  try {
+    const me = await API.me();
+    const box = document.getElementById('already');
+    if (me.role === 'SELLER') { window.location.href = '/seller.html'; return; }
+    box.style.display = '';
+    box.textContent = `You're logged in as ${me.email}. A shop needs its own seller account, so use a different email below, or log out first.`;
+  } catch (e) { /* not logged in: the normal case */ }
+})();
+
+document.getElementById('sell-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const errorBox = document.getElementById('form-error');
+  const btn = document.getElementById('submit-btn');
+  const payload = Object.assign(readShopFields(form), {
+    ownerName: form.elements.ownerName.value.trim(),
+    email: form.elements.email.value.trim(),
+    password: form.elements.password.value,
+  });
+  let problem = '';
+  if (!payload.ownerName) problem = 'Enter your name.';
+  else if (!/^\S+@\S+\.\S+$/.test(payload.email)) problem = 'Enter a valid email.';
+  else if (payload.password.length < 8) problem = 'Use a password with at least 8 characters.';
+  else problem = checkShopFields(payload);
+  if (problem) {
+    errorBox.innerHTML = `<div class="alert alert-error">${escapeHtml(problem)}</div>`;
+    errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  errorBox.innerHTML = '';
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {
+    await API.registerSeller(payload);
+    window.location.href = '/seller.html?applied=1';
+  } catch (err) {
+    errorBox.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+    errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    btn.disabled = false;
+    btn.textContent = 'Send application';
+  }
+});
+</script>
+</body>
+</html>

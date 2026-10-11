@@ -29,6 +29,7 @@
         <button type="submit" class="btn btn-primary btn-block" id="login-btn">Log in</button>
       </form>
       <div class="switch">New to NammaBasket? <a href="/register.html">Create an account</a></div>
+      <div class="switch" style="margin-top:6px;">Own a shop? <a href="/sell.html">Sell on NammaBasket</a></div>
     </div>
   </div>
 </main>
@@ -47,13 +48,14 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   btn.textContent = 'Logging in...';
 
   try {
-    await API.login({
+    const user = await API.login({
       email: document.getElementById('email').value.trim(),
       password: document.getElementById('password').value,
     });
     // Only go back to a page on THIS site ("/cart.html"), never to "//evil.com" (open redirect).
     const wanted = new URLSearchParams(window.location.search).get('next') || '';
-    const next = /^\/(?!\/)/.test(wanted) && !wanted.includes('\\') ? wanted : '/index.html';
+    const home = user.role === 'SELLER' ? '/seller.html' : user.role === 'ADMIN' ? '/admin.html' : '/index.html';
+    const next = /^\/(?!\/)/.test(wanted) && !wanted.includes('\\') ? wanted : home;
     window.location.href = next;
   } catch (err) {
     errorBox.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;

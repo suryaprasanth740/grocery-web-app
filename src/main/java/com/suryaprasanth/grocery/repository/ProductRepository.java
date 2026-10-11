@@ -30,4 +30,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Modifying(flushAutomatically = true)
     @Query("update Product p set p.stock = p.stock + :qty where p.id = :id")
     int releaseStock(@Param("id") Long id, @Param("qty") int qty);
+
+    /** Moves products made before shops existed into the given shop. */
+    @org.springframework.transaction.annotation.Transactional
+    @Modifying
+    @Query("update Product p set p.shop = :shop where p.shop is null")
+    int assignShopWhereMissing(@Param("shop") com.suryaprasanth.grocery.model.Shop shop);
 }

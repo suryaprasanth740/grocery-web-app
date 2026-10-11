@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My shop | NammaBasket</title>
+<link rel="icon" href="/img/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="signboard" id="site-header"></header>
+
+<main id="main">
+  <section class="shop-board">
+    <div class="wrap" id="board">
+      <div class="skeleton" style="height:40px;width:320px;opacity:.4"></div>
+    </div>
+  </section>
+
+  <div class="wrap dash-grid" id="dash" hidden>
+    <div>
+      <div id="status-panel"></div>
+
+      <section class="panel" style="margin-top:18px;">
+        <h2>Orders</h2>
+        <div class="placeholder-art" style="padding:26px 10px;">
+          <div class="big" aria-hidden="true">&#128230;</div>
+          <p id="orders-empty" style="margin:0;"></p>
+        </div>
+      </section>
+
+      <form class="panel" id="shop-form" style="margin-top:18px;" novalidate>
+        <h2>Shop details</h2>
+        <p class="panel-sub">Buyers see these details on your shop page.</p>
+        <div id="form-msg" aria-live="polite"></div>
+        <div id="shop-fields"></div>
+        <button class="btn btn-primary" id="save-btn" type="submit">Save changes</button>
+      </form>
+    </div>
+
+    <aside>
+      <section class="panel">
+        <div class="switch-row">
+          <div>
+            <h2 style="margin:0;">Taking orders</h2>
+            <p class="panel-sub" id="accepting-note" style="margin:2px 0 0;"></p>
+          </div>
+          <label class="toggle"><input type="checkbox" id="accepting" aria-describedby="accepting-note"><span></span>
+            <span class="sr-only">Taking new orders</span></label>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>At a glance</h2>
+        <dl class="facts" id="facts"></dl>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+<div id="toast"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/shop-form.js"></script>
+<script>
+const STATUS_TEXT = {
+  PENDING: 'Waiting for approval',
+  APPROVED: 'Approved',
+  REJECTED: 'Needs changes',
+  SUSPENDED: 'Suspended',
+};
+let shop = null;
+
+document.addEventListener('DOMContentLoaded', load);
+
+async function load() {
+  let me;
+  try { me = await API.me(); } catch (e) { window.location.href = '/login.html?next=/seller.html'; return; }
+  if (me.role !== 'SELLER') {
+    document.getElementById('board').innerHTML = `<h1>Seller dashboard</h1>
+      <p>This page is for shop owners. <a href="/sell.html" style="color:#fff;text-decoration:underline;">Apply to sell on NammaBasket</a>.</p>`;
+    return;
+  }
+  try {
+    shop = await API.myShop();
+  } catch (e) {
+    document.getElementById('board').innerHTML = `<h1>Seller dashboard</h1><p>${escapeHtml(e.message)}</p>`;
+    return;
+  }
+  render();
+  if (new URLSearchParams(location.search).get('applied')) {
+    showToast('Application sent. We’ll review your shop soon.', 'ok');
+    history.replaceState(null, '', '/seller.html');
+  }
+}
+
+function render() {
+  document.getElementById('dash').hidden = false;
+  document.getElementById('board').innerHTML = `
+    <h1>${escapeHtml(shop.name)} <span class="status-pill ${shop.status}">${STATUS_TEXT[shop.status]}</span></h1>
+    <p>${escapeHtml(shop.categoryLabel)} &middot; ${escapeHtml(shop.addressLine)}</p>`;
+
+  const panel = document.getElementById('status-panel');
+  if (shop.status === 'PENDING') {
+    panel.innerHTML = `<div class="notice info"><b>Your application is with our team.</b>
+      Buyers can&rsquo;t see your shop until an admin approves it. You can still change the details below.</div>`;
+  } else if (shop.status === 'REJECTED') {
+    panel.innerHTML = `<div class="panel"><h2>Your application needs changes</h2>
+      <div class="reason-box">${escapeHtml(shop.statusReason || 'No reason given')}</div>
+      <p class="panel-sub" style="margin-top:12px;">Fix the shop details below, save them, then send the application again.</p>
+      <button class="btn btn-primary" id="resubmit-btn" type="button">Send application again</button></div>`;
+    document.getElementById('resubmit-btn').addEventListener('click', resubmit);
+  } else if (shop.status === 'SUSPENDED') {
+    panel.innerHTML = `<div class="panel"><h2>Your shop is suspended</h2>
+      <div class="reason-box">${escapeHtml(shop.statusReason || 'No reason given')}</div>
+      <p class="panel-sub" style="margin-top:12px;">Buyers can&rsquo;t see your shop. <a href="/help.html#contact" style="text-decoration:underline;">Contact NammaBasket</a> to sort it out.</p></div>`;
+  } else {
+    panel.innerHTML = shop.acceptingOrders
+      ? `<div class="notice info"><b>Your shop is live.</b> Buyers in your PIN codes can find it and order.</div>`
+      : `<div class="notice warn"><b>New orders are paused.</b> Buyers can see your shop but can&rsquo;t order until you switch orders back on.</div>`;
+  }
+
+  document.getElementById('orders-empty').textContent = shop.status === 'APPROVED'
+    ? 'No orders yet. New orders will appear here as soon as buyers place them.'
+    : 'Orders appear here once your shop is approved and buyers start ordering.';
+
+  const toggle = document.getElementById('accepting');
+  toggle.checked = shop.status === 'APPROVED' && shop.acceptingOrders;
+  toggle.disabled = shop.status !== 'APPROVED';
+  document.getElementById('accepting-note').textContent = shop.status !== 'APPROVED'
+    ? 'Available after approval.'
+    : (shop.acceptingOrders ? 'Buyers can order now.' : 'Paused: buyers can’t order.');
+
+  const money = (n) => n == null ? '—' : formatRupees(n);
+  const fulfil = [shop.offersDelivery && 'Delivery', shop.offersPickup && 'Pickup'].filter(Boolean).join(' and ');
+  document.getElementById('facts').innerHTML = [
+    ['Hours', `${shop.openTime} to ${shop.closeTime}`],
+    ['Open now', shop.openNow ? 'Yes' : 'No'],
+    ['Orders by', fulfil],
+    ['Delivers to', shop.servicePincodes.join(', ')],
+    ['Delivery fee', money(shop.deliveryFee)],
+    ['Free delivery from', money(shop.freeDeliveryAbove)],
+    ['Minimum order', Number(shop.minOrderAmount) > 0 ? money(shop.minOrderAmount) : 'None'],
+  ].map(([k, v]) => `<div><dt>${k}</dt><dd>${escapeHtml(v)}</dd></div>`).join('');
+
+  const form = document.getElementById('shop-form');
+  document.getElementById('shop-fields').innerHTML = shopFieldsHtml(shop);
+  form.querySelectorAll('input, select, button').forEach(el => { el.disabled = shop.status === 'SUSPENDED'; });
+}
+
+document.getElementById('accepting').addEventListener('change', async (e) => {
+  const toggle = e.target;
+  toggle.disabled = true;
+  try {
+    shop = await API.setAcceptingOrders(toggle.checked);
+    showToast(shop.acceptingOrders ? 'Orders switched on' : 'New orders paused', 'ok');
+  } catch (err) {
+    toggle.checked = !toggle.checked;
+    showToast(err.message, 'error');
+  }
+  render();
+});
+
+document.getElementById('shop-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('form-msg');
+  const btn = document.getElementById('save-btn');
+  const payload = readShopFields(e.target);
+  const problem = checkShopFields(payload);
+  if (problem) { msg.innerHTML = `<div class="alert alert-error">${escapeHtml(problem)}</div>`; return; }
+  msg.innerHTML = '';
+  btn.disabled = true;
+  try {
+    shop = await API.updateMyShop(payload);
+    showToast('Shop details saved', 'ok');
+    render();
+  } catch (err) {
+    msg.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+async function resubmit() {
+  const btn = document.getElementById('resubmit-btn');
+  btn.disabled = true;
+  try {
+    shop = await API.resubmitMyShop();
+    showToast('Application sent again', 'ok');
+    render();
+  } catch (err) {
+    showToast(err.message, 'error');
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

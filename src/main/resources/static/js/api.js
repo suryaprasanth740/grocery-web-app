@@ -126,6 +126,20 @@ const API = {
   adminIssues() { return this.get('/api/admin/issues'); },
   adminCoupons() { return this.get('/api/admin/coupons'); },
   adminSetCouponActive(id, active) { return this.put(`/api/admin/coupons/${id}/active`, { active }); },
+  adminShops(status) { return this.get('/api/admin/shops' + (status ? '?status=' + encodeURIComponent(status) : '')); },
+  adminShop(id) { return this.get(`/api/admin/shops/${id}`); },
+  adminShopAction(id, action, reason) { return this.post(`/api/admin/shops/${id}/${action}`, reason ? { reason } : {}); },
+  adminUsers(role, page) { return this.get(`/api/admin/users?role=${encodeURIComponent(role)}&page=${page || 0}`); },
+  adminUserAction(id, action, reason) { return this.post(`/api/admin/users/${id}/${action}`, reason ? { reason } : {}); },
+  adminAudit() { return this.get('/api/admin/audit?limit=200'); },
+  adminStats() { return this.get('/api/admin/stats'); },
+
+  // Seller (only works for a SELLER login, always on the seller's own shop)
+  registerSeller(payload) { return this.post('/api/auth/register-seller', payload); },
+  myShop() { return this.get('/api/seller/shop'); },
+  updateMyShop(payload) { return this.put('/api/seller/shop', payload); },
+  resubmitMyShop() { return this.post('/api/seller/shop/resubmit'); },
+  setAcceptingOrders(acceptingOrders) { return this.put('/api/seller/shop/accepting', { acceptingOrders }); },
 };
 
 function formatRupees(amount) {

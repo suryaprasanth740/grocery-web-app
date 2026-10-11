@@ -135,6 +135,7 @@ function renderFooter() {
             <li><a href="/recipes.html">Recipes &amp; festival kits</a></li>
             <li><a href="/list.html">Paste a shopping list</a></li>
             <li><a href="/orders.html">My orders</a></li>
+            <li><a href="/sell.html">Sell on NammaBasket</a></li>
           </ul>
         </div>
         <div>
@@ -173,6 +174,7 @@ async function initNav() {
     if (authArea) {
       authArea.innerHTML = `
         ${user.role === 'ADMIN' ? '<a href="/admin.html" style="margin-right:18px;">Admin</a>' : ''}
+        ${user.role === 'SELLER' ? '<a href="/seller.html" style="margin-right:18px;">My shop</a>' : ''}
         <span style="margin-right:18px;">Hi, ${escapeHtml(user.name.split(' ')[0])}</span>
         <button class="linklike" id="nav-logout-btn">Log out</button>
       `;
@@ -182,6 +184,9 @@ async function initNav() {
       });
     }
     if (ordersLink) ordersLink.style.display = user.role === 'BUYER' ? '' : 'none';
+    // Only buyers shop, so sellers and admins don't get a cart button.
+    const cart = document.querySelector('.cart-pill');
+    if (cart && user.role !== 'BUYER') cart.style.display = 'none';
   } catch (e) {
     // not logged in - leave the default "Log in" link in place
     if (ordersLink) ordersLink.style.display = 'none';

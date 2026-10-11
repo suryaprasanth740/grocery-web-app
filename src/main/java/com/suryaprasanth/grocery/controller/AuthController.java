@@ -2,16 +2,21 @@ package com.suryaprasanth.grocery.controller;
 
 import com.suryaprasanth.grocery.dto.LoginRequest;
 import com.suryaprasanth.grocery.dto.RegisterRequest;
+import com.suryaprasanth.grocery.dto.SellerRegisterRequest;
+import com.suryaprasanth.grocery.dto.ShopView;
+import com.suryaprasanth.grocery.model.Role;
+import com.suryaprasanth.grocery.model.Shop;
 import com.suryaprasanth.grocery.model.User;
 import com.suryaprasanth.grocery.repository.UserRepository;
+import com.suryaprasanth.grocery.service.AccountService;
 import com.suryaprasanth.grocery.service.LoginAttemptService;
+import com.suryaprasanth.grocery.service.ShopService;
 import com.suryaprasanth.grocery.util.EmailUtil;
 import com.suryaprasanth.grocery.util.PasswordUtil;
 import com.suryaprasanth.grocery.util.SessionUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,45 +29,41 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private static final String ALREADY_REGISTERED =
-            "An account with this email already exists. Please log in.";
-
     private final UserRepository userRepository;
-
     private final LoginAttemptService loginAttempts;
+    private final AccountService accountService;
+    private final ShopService shopService;
 
-    public AuthController(UserRepository userRepository, LoginAttemptService loginAttempts) {
+    public AuthController(UserRepository userRepository, LoginAttemptService loginAttempts,
+                          AccountService accountService, ShopService shopService) {
         this.userRepository = userRepository;
         this.loginAttempts = loginAttempts;
+        this.accountService = accountService;
+        this.shopService = shopService;
     }
 
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> register(@Valid @RequestBody RegisterRequest request,
                                                           HttpSession session) {
-        String email = request.getEmail().trim().toLowerCase();
-        String key = EmailUtil.canonical(email);
-        if (!EmailUtil.hasName(key)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Enter a valid email");
-        }
-        if (PasswordUtil.tooLong(request.getPassword())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password is too long. Use 72 characters or fewer.");
-        }
-        // One email inbox = one account. For Gmail, dots and "+anything" are ignored,
-        // so s.urya@gmail.com and surya+2@gmail.com count as surya@gmail.com.
-        if (userRepository.existsByEmailKey(key) || userRepository.existsByEmailIgnoreCase(email)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, ALREADY_REGISTERED);
-        }
         // The public sign-up page only ever creates BUYER accounts. Sellers apply through
-        // their own form, and admins are created from environment variables.
-        User user = new User(request.getName().trim(), email, PasswordUtil.hash(request.getPassword()));
-        try {
-            user = userRepository.saveAndFlush(user);
-        } catch (DataIntegrityViolationException e) {
-            // Two sign-ups with the same email at the same moment: the database lets only one in.
-            throw new ResponseStatusException(HttpStatus.CONFLICT, ALREADY_REGISTERED);
-        }
+        // /register-seller, and admins are created from environment variables.
+        User user = accountService.createAccount(request.getName(), request.getEmail(),
+                request.getPassword(), Role.BUYER, null);
         session.setAttribute(SessionUtil.USER_ID, user.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(toUserView(user));
+    }
+
+    /** "Sell on NammaBasket": creates a SELLER account and a PENDING shop, then logs the owner in. */
+    @PostMapping("/register-seller")
+    public ResponseEntity<Map<String, Object>> registerSeller(@Valid @RequestBody SellerRegisterRequest request,
+                                                                HttpServletRequest httpRequest) {
+        Shop shop = shopService.registerSeller(request);
+        HttpSession session = httpRequest.getSession(true);
+        httpRequest.changeSessionId();
+        session.setAttribute(SessionUtil.USER_ID, shop.getOwner().getId());
+        Map<String, Object> body = toUserView(shop.getOwner());
+        body.put("shop", ShopView.of(shop, true));
+        return ResponseEntity.status(HttpStatus.CREATED).body(body);
     }
 
     @PostMapping("/login")

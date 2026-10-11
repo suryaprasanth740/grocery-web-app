@@ -1,6 +1,7 @@
 package com.suryaprasanth.grocery.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.hibernate.annotations.Check;
 import java.time.LocalDate;
@@ -49,6 +50,12 @@ public class Product {
     /** GST rate already included in the price: 0, 5, 12 or 18. */
     @Column(name = "gst_percent")
     private Integer gstPercent = 0;
+
+    /** The shop that sells this product. Older rows are moved to the demo shop at startup. */
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shop_id")
+    private Shop shop;
 
     /** A product that expires today or earlier cannot be sold. */
     public static final int MIN_DAYS_OF_SHELF_LIFE = 1;
@@ -186,5 +193,13 @@ public class Product {
     public boolean isExpiresSoon() {
         Long days = daysToExpiry();
         return days != null && !isExpired() && days <= EXPIRES_SOON_DAYS;
+    }
+
+    public Shop getShop() {
+        return shop;
+    }
+
+    public void setShop(Shop shop) {
+        this.shop = shop;
     }
 }

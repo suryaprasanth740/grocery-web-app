@@ -5,11 +5,15 @@ import com.suryaprasanth.grocery.model.Coupon;
 import com.suryaprasanth.grocery.model.CouponType;
 import com.suryaprasanth.grocery.model.Product;
 import com.suryaprasanth.grocery.model.Role;
+import com.suryaprasanth.grocery.model.Shop;
+import com.suryaprasanth.grocery.model.ShopCategory;
+import com.suryaprasanth.grocery.model.ShopStatus;
 import com.suryaprasanth.grocery.model.User;
 import com.suryaprasanth.grocery.util.EmailUtil;
 import com.suryaprasanth.grocery.repository.CategoryRepository;
 import com.suryaprasanth.grocery.repository.CouponRepository;
 import com.suryaprasanth.grocery.repository.ProductRepository;
+import com.suryaprasanth.grocery.repository.ShopRepository;
 import com.suryaprasanth.grocery.repository.UserRepository;
 import com.suryaprasanth.grocery.util.PasswordUtil;
 import org.slf4j.Logger;
@@ -36,12 +40,14 @@ public class DataInitializer implements CommandLineRunner {
     private final ProductRepository productRepository;
     private final CouponRepository couponRepository;
     private final UserRepository userRepository;
+    private final ShopRepository shopRepository;
     private final String adminEmail;
     private final String adminPassword;
     private final boolean refreshExpiredDemoStock;
 
     public DataInitializer(CategoryRepository categoryRepository, ProductRepository productRepository,
                            CouponRepository couponRepository, UserRepository userRepository,
+                           ShopRepository shopRepository,
                            @Value("${app.admin.email:admin@freshcart.com}") String adminEmail,
                            @Value("${app.admin.password:}") String adminPassword,
                            @Value("${app.demo.refresh-expired-stock:true}") boolean refreshExpiredDemoStock) {
@@ -49,6 +55,7 @@ public class DataInitializer implements CommandLineRunner {
         this.productRepository = productRepository;
         this.couponRepository = couponRepository;
         this.userRepository = userRepository;
+        this.shopRepository = shopRepository;
         this.adminEmail = adminEmail;
         this.adminPassword = adminPassword;
         this.refreshExpiredDemoStock = refreshExpiredDemoStock;
@@ -70,6 +77,7 @@ public class DataInitializer implements CommandLineRunner {
             seedCoupons();
         }
         ensureAdminAccount();
+        ensureDemoShop();
         backfillEmailKeys();
     }
 
@@ -235,6 +243,42 @@ public class DataInitializer implements CommandLineRunner {
         couponRepository.save(new Coupon("OLD20", "Expired offer (for testing)",
                 CouponType.PERCENT, new BigDecimal("20"), new BigDecimal("80"), BigDecimal.ZERO,
                 now.minusDays(1), 1));
+    }
+
+    /**
+     * Products from the FreshCart days belong to no shop. They are moved into one approved
+     * "NammaBasket Demo Kirana" run by the platform admin, so the existing catalogue and old
+     * orders keep working. It serves every Bengaluru PIN code (560xxx), like FreshCart did.
+     */
+    private void ensureDemoShop() {
+        User admin = userRepository.findByEmailIgnoreCase(adminEmail.trim()).orElse(null);
+        if (admin == null) {
+            return;
+        }
+        Shop shop = shopRepository.findByOwnerId(admin.getId()).orElseGet(() -> {
+            Shop s = new Shop();
+            s.setOwner(admin);
+            s.setName("NammaBasket Demo Kirana");
+            s.setSlug("nammabasket-demo-kirana");
+            s.setCategory(ShopCategory.KIRANA);
+            s.setPhone("9000000000");
+            s.setAddressLine("Demo shop run by the NammaBasket team, Bengaluru");
+            s.setPincode("560073");
+            s.setServicePincodes("560073,560xxx");
+            s.setOpenTime(java.time.LocalTime.of(7, 0));
+            s.setCloseTime(java.time.LocalTime.of(22, 0));
+            s.setDeliveryFee(new BigDecimal("30.00"));
+            s.setFreeDeliveryAbove(new BigDecimal("500.00"));
+            s.setMinOrderAmount(BigDecimal.ZERO);
+            s.setStatus(ShopStatus.APPROVED);
+            s.setApprovedAt(LocalDateTime.now());
+            log.info("Created the NammaBasket Demo Kirana shop for existing products");
+            return shopRepository.save(s);
+        });
+        int moved = productRepository.assignShopWhereMissing(shop);
+        if (moved > 0) {
+            log.info("Moved {} product(s) without a shop into {}", moved, shop.getName());
+        }
     }
 
     /** Creates the admin account once. The password comes from ADMIN_PASSWORD, or is random. */
