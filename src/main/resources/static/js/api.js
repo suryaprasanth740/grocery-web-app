@@ -15,7 +15,8 @@ const API = {
   async _request(method, url, body, attempt = 0) {
     const options = {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      // X-Requested-With proves the request comes from our own pages (CSRF protection, see CsrfHeaderInterceptor.java).
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       credentials: 'same-origin',
     };
     if (body !== undefined) {

@@ -33,9 +33,17 @@ public class User {
     @Column(name = "password_hash", nullable = false, length = 200)
     private String passwordHash;
 
-    /** "USER" for customers, "ADMIN" for staff who can use the admin panel. */
+    /** BUYER, SELLER or ADMIN (see {@link Role}). Old FreshCart rows may still say "USER" = buyer. */
     @Column(nullable = false, length = 10)
-    private String role = "USER";
+    private String role = Role.BUYER.name();
+
+    /** Optional phone number, e.g. "9876543210". Sellers must give one. */
+    @Column(length = 15)
+    private String phone;
+
+    /** ACTIVE or SUSPENDED. Null on accounts made before this column existed = ACTIVE. */
+    @Column(name = "account_status", length = 12)
+    private String accountStatus = AccountStatus.ACTIVE.name();
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -104,12 +112,49 @@ public class User {
         this.createdAt = createdAt;
     }
 
+    /** The role as text for the API, always BUYER, SELLER or ADMIN (never the old "USER"). */
     public String getRole() {
-        return role;
+        return getRoleType().name();
+    }
+
+    @JsonIgnore
+    public Role getRoleType() {
+        return Role.from(role);
     }
 
     public void setRole(String role) {
-        this.role = role;
+        this.role = Role.from(role).name();
+    }
+
+    public void setRole(Role role) {
+        this.role = role.name();
+    }
+
+    public boolean hasRole(Role wanted) {
+        return getRoleType() == wanted;
+    }
+
+    @JsonIgnore
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    @JsonIgnore
+    public AccountStatus getAccountStatus() {
+        return accountStatus == null ? AccountStatus.ACTIVE : AccountStatus.valueOf(accountStatus);
+    }
+
+    public void setAccountStatus(AccountStatus status) {
+        this.accountStatus = status.name();
+    }
+
+    @JsonIgnore
+    public boolean isSuspended() {
+        return getAccountStatus() == AccountStatus.SUSPENDED;
     }
 
     public BigDecimal getMonthlyBudget() {
@@ -121,6 +166,6 @@ public class User {
     }
 
     public boolean isAdmin() {
-        return "ADMIN".equals(role);
+        return hasRole(Role.ADMIN);
     }
 }

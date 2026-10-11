@@ -35,13 +35,13 @@ public class OrderController {
     /** The bill for the current cart, calculated on the server (used by cart + checkout pages). */
     @PostMapping("/quote")
     public Bill quote(@Valid @RequestBody(required = false) QuoteRequest request, HttpSession session) {
-        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        User user = SessionUtil.requireBuyer(session, userRepository);
         return orderService.quote(user, request == null ? null : request.getCouponCode());
     }
 
     @PostMapping("/checkout")
     public Order checkout(@Valid @RequestBody CheckoutRequest request, HttpSession session) {
-        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        User user = SessionUtil.requireBuyer(session, userRepository);
         try {
             return orderService.placeOrder(user, request);
         } catch (RuntimeException ex) {
@@ -57,33 +57,33 @@ public class OrderController {
 
     @GetMapping
     public List<Order> myOrders(HttpSession session) {
-        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        User user = SessionUtil.requireBuyer(session, userRepository);
         return orderRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
     }
 
     @GetMapping("/{id}")
     public Order getOrder(@PathVariable Long id, HttpSession session) {
-        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        User user = SessionUtil.requireBuyer(session, userRepository);
         return orderService.getOwnedOrder(user, id);
     }
 
     /** Result from the demo UPI screen (SUCCESS or FAILED). */
     @PostMapping("/{id}/pay")
     public Order pay(@PathVariable Long id, @Valid @RequestBody PaymentRequest request, HttpSession session) {
-        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        User user = SessionUtil.requireBuyer(session, userRepository);
         return orderService.pay(user, id, "SUCCESS".equals(request.getOutcome()));
     }
 
     @PostMapping("/{id}/cancel")
     public Order cancel(@PathVariable Long id, HttpSession session) {
-        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        User user = SessionUtil.requireBuyer(session, userRepository);
         return orderService.cancelByCustomer(user, id);
     }
 
     /** Report a missing / damaged / expired item after delivery. */
     @PostMapping("/{id}/issues")
     public Order reportIssue(@PathVariable Long id, @Valid @RequestBody IssueRequest request, HttpSession session) {
-        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        User user = SessionUtil.requireBuyer(session, userRepository);
         return orderService.reportIssue(user, id, request);
     }
 }

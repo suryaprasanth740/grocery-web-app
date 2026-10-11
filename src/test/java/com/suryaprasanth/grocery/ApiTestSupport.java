@@ -64,6 +64,7 @@ public abstract class ApiTestSupport {
             default -> post(url);
         };
         request.contentType(MediaType.APPLICATION_JSON);
+        request.header("X-Requested-With", "XMLHttpRequest"); // what js/api.js sends (CSRF guard)
         if (session != null) {
             request.session(session);
         }

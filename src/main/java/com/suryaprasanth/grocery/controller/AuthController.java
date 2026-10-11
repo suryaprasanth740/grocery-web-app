@@ -7,6 +7,7 @@ import com.suryaprasanth.grocery.repository.UserRepository;
 import com.suryaprasanth.grocery.service.LoginAttemptService;
 import com.suryaprasanth.grocery.util.EmailUtil;
 import com.suryaprasanth.grocery.util.PasswordUtil;
+import com.suryaprasanth.grocery.util.SessionUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
@@ -43,11 +44,16 @@ public class AuthController {
         if (!EmailUtil.hasName(key)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Enter a valid email");
         }
+        if (PasswordUtil.tooLong(request.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password is too long. Use 72 characters or fewer.");
+        }
         // One email inbox = one account. For Gmail, dots and "+anything" are ignored,
         // so s.urya@gmail.com and surya+2@gmail.com count as surya@gmail.com.
         if (userRepository.existsByEmailKey(key) || userRepository.existsByEmailIgnoreCase(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, ALREADY_REGISTERED);
         }
+        // The public sign-up page only ever creates BUYER accounts. Sellers apply through
+        // their own form, and admins are created from environment variables.
         User user = new User(request.getName().trim(), email, PasswordUtil.hash(request.getPassword()));
         try {
             user = userRepository.saveAndFlush(user);
@@ -55,7 +61,7 @@ public class AuthController {
             // Two sign-ups with the same email at the same moment: the database lets only one in.
             throw new ResponseStatusException(HttpStatus.CONFLICT, ALREADY_REGISTERED);
         }
-        session.setAttribute("userId", user.getId());
+        session.setAttribute(SessionUtil.USER_ID, user.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(toUserView(user));
     }
 
@@ -78,16 +84,33 @@ public class AuthController {
         User user = userRepository.findByEmailIgnoreCase(email)
                 .or(() -> userRepository.findByEmailKey(key))
                 .orElse(null);
-        if (user == null || !PasswordUtil.matches(request.getPassword(), user.getPasswordHash())) {
+        boolean passwordOk;
+        if (user == null) {
+            PasswordUtil.burnTime(request.getPassword()); // same response time as a wrong password
+            passwordOk = false;
+        } else {
+            passwordOk = PasswordUtil.matches(request.getPassword(), user.getPasswordHash());
+        }
+        if (!passwordOk) {
             loginAttempts.loginFailed(key);
             // Same message for "no such email" and "wrong password", so attackers can't find valid emails.
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
         }
         loginAttempts.loginSucceeded(key);
 
+        if (user.isSuspended()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "This account is suspended. Please contact NammaBasket support.");
+        }
+        if (PasswordUtil.needsUpgrade(user.getPasswordHash())) {
+            // Old FreshCart hash: replace it with BCrypt now that we know the password.
+            user.setPasswordHash(PasswordUtil.hash(request.getPassword()));
+            user = userRepository.save(user);
+        }
+
         HttpSession session = httpRequest.getSession(true);
         httpRequest.changeSessionId(); // new session id after login (stops session fixation)
-        session.setAttribute("userId", user.getId());
+        session.setAttribute(SessionUtil.USER_ID, user.getId());
         return ResponseEntity.ok(toUserView(user));
     }
 
@@ -99,12 +122,7 @@ public class AuthController {
 
     @GetMapping("/me")
     public ResponseEntity<Map<String, Object>> me(HttpSession session) {
-        Long userId = (Long) session.getAttribute("userId");
-        if (userId == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not logged in");
-        }
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not logged in"));
+        User user = SessionUtil.requireLoggedInUser(session, userRepository);
         return ResponseEntity.ok(toUserView(user));
     }
 

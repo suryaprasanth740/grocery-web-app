@@ -4,6 +4,7 @@ import com.suryaprasanth.grocery.model.Category;
 import com.suryaprasanth.grocery.model.Coupon;
 import com.suryaprasanth.grocery.model.CouponType;
 import com.suryaprasanth.grocery.model.Product;
+import com.suryaprasanth.grocery.model.Role;
 import com.suryaprasanth.grocery.model.User;
 import com.suryaprasanth.grocery.util.EmailUtil;
 import com.suryaprasanth.grocery.repository.CategoryRepository;
@@ -55,6 +56,10 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        int renamed = userRepository.renameLegacyCustomerRole();
+        if (renamed > 0) {
+            log.info("Renamed {} old FreshCart customer account(s) from USER to BUYER", renamed);
+        }
         if (categoryRepository.count() == 0) {
             seed();
         }
@@ -247,8 +252,8 @@ public class DataInitializer implements CommandLineRunner {
             log.warn(" Set ADMIN_PASSWORD in your environment to choose your own.");
             log.warn("============================================================");
         }
-        User admin = new User("FreshCart Admin", adminEmail.trim().toLowerCase(), PasswordUtil.hash(password));
-        admin.setRole("ADMIN");
+        User admin = new User("NammaBasket Admin", adminEmail.trim().toLowerCase(), PasswordUtil.hash(password));
+        admin.setRole(Role.ADMIN);
         userRepository.save(admin);
     }
 

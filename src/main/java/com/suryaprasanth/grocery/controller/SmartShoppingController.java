@@ -65,20 +65,20 @@ public class SmartShoppingController {
 
     @GetMapping("/budget")
     public BudgetSummary budget(HttpSession session) {
-        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        User user = SessionUtil.requireBuyer(session, userRepository);
         return budgetService.summary(user);
     }
 
     @PutMapping("/budget")
     public BudgetSummary setBudget(@RequestBody BudgetRequest request, HttpSession session) {
-        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        User user = SessionUtil.requireBuyer(session, userRepository);
         budgetService.setBudget(user, request.getAmount());
         return budgetService.summary(user);
     }
 
     @GetMapping("/reorder")
     public List<ReorderSuggestion> reorder(HttpSession session) {
-        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        User user = SessionUtil.requireBuyer(session, userRepository);
         return reorderService.suggestions(user);
     }
 }

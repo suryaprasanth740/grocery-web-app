@@ -36,13 +36,13 @@ public class CartController {
 
     @GetMapping
     public List<CartItem> viewCart(HttpSession session) {
-        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        User user = SessionUtil.requireBuyer(session, userRepository);
         return cartService.cartOf(user);
     }
 
     @PostMapping("/add")
     public List<CartItem> addToCart(@Valid @RequestBody CartRequest request, HttpSession session) {
-        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        User user = SessionUtil.requireBuyer(session, userRepository);
         Product product = cartService.findProduct(request.getProductId());
         cartService.addItem(user, product, request.getQuantity());
         return cartService.cartOf(user);
@@ -51,20 +51,20 @@ public class CartController {
     /** "Add all to cart" from a pasted shopping list, a recipe or a festival kit. */
     @PostMapping("/add-many")
     public BulkAddResult addMany(@Valid @RequestBody BulkCartRequest request, HttpSession session) {
-        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        User user = SessionUtil.requireBuyer(session, userRepository);
         return cartService.addMany(user, request.getItems());
     }
 
     /** Budget mode: replace an item with a cheaper one, same quantity. */
     @PostMapping("/swap")
     public List<CartItem> swap(@Valid @RequestBody SwapRequest request, HttpSession session) {
-        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        User user = SessionUtil.requireBuyer(session, userRepository);
         return cartService.swap(user, request.getFromProductId(), request.getToProductId());
     }
 
     @PutMapping("/update")
     public List<CartItem> updateQuantity(@Valid @RequestBody CartRequest request, HttpSession session) {
-        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        User user = SessionUtil.requireBuyer(session, userRepository);
         CartItem item = cartItemRepository.findByUserIdAndProductId(user.getId(), request.getProductId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not in cart"));
         // Lowering the quantity is always allowed (helps the customer fix a stock problem).
@@ -79,7 +79,7 @@ public class CartController {
     /** The customer saw the new price and accepts it. */
     @PostMapping("/accept-prices")
     public List<CartItem> acceptNewPrices(HttpSession session) {
-        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        User user = SessionUtil.requireBuyer(session, userRepository);
         List<CartItem> items = cartService.cartOf(user);
         for (CartItem item : items) {
             item.setPriceWhenAdded(item.getProduct().getPrice());
@@ -90,7 +90,7 @@ public class CartController {
 
     @DeleteMapping("/remove/{productId}")
     public List<CartItem> removeItem(@PathVariable Long productId, HttpSession session) {
-        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        User user = SessionUtil.requireBuyer(session, userRepository);
         CartItem item = cartItemRepository.findByUserIdAndProductId(user.getId(), productId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not in cart"));
         cartItemRepository.delete(item);
@@ -99,7 +99,7 @@ public class CartController {
 
     @DeleteMapping("/clear")
     public List<CartItem> clearCart(HttpSession session) {
-        User user = SessionUtil.requireLoggedInUser(session, userRepository);
+        User user = SessionUtil.requireBuyer(session, userRepository);
         cartItemRepository.deleteByUserId(user.getId());
         return List.of();
     }
