@@ -190,7 +190,8 @@ class SellerCatalogTest extends ApiTestSupport {
     void shopDiscovery() throws Exception {
         SellerAccount near = newApprovedSeller("560034", "560095");
         SellerAccount pending = newPendingSeller("560034", "560095");
-        SellerAccount elsewhere = newApprovedSeller("110001", "");
+        // 403001 (Goa): no other test treats this PIN code as "not served"
+        SellerAccount elsewhere = newApprovedSeller("403001", "");
 
         JsonNode shops = body(call("GET", "/api/shops?pincode=560095", null, null));
         String ids = shops.toString();
@@ -208,8 +209,8 @@ class SellerCatalogTest extends ApiTestSupport {
     @DisplayName("Paged product search returns one page with totals")
     void pagedSearch() throws Exception {
         SellerAccount seller = newApprovedSeller("560073", "");
-        for (int i = 0; i < 3; i++) sellerAddsProduct(seller, "Paged Biscuit " + i, "20.00", 5);
-        JsonNode page = body(call("GET", "/api/products/search?q=paged%20biscuit&shopId=" + seller.shopId() + "&size=2", null, null));
+        for (int i = 0; i < 3; i++) sellerAddsProduct(seller, "Zebrabiscuit " + i, "20.00", 5);
+        JsonNode page = body(call("GET", "/api/products/search?q=zebrabiscuit&shopId=" + seller.shopId() + "&size=2", null, null));
         assertThat(page.get("items").size()).isEqualTo(2);
         assertThat(page.get("totalItems").asLong()).isEqualTo(3);
         assertThat(page.get("totalPages").asInt()).isEqualTo(2);
