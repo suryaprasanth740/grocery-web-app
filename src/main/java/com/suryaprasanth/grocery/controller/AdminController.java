@@ -95,6 +95,12 @@ public class AdminController {
         User admin = SessionUtil.requireAdmin(session, userRepository);
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+        // Admins edit only the platform's own demo shop. A seller's prices and stock are the seller's;
+        // admins can hide a seller's product (PUT /api/admin/products/{id}/active) but not rewrite it.
+        if (product.getShop() == null || !product.getShop().getOwner().getId().equals(admin.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "This product belongs to a seller's shop. You can hide it, but only the seller can edit it.");
+        }
         apply(product, request);
         product = productRepository.save(product);
         auditService.record(admin, "PRODUCT_UPDATED", "PRODUCT", product.getId(),

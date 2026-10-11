@@ -22,8 +22,10 @@
       <button class="tab" data-tab="accounts">Accounts</button>
       <button class="tab" data-tab="orders">Orders</button>
       <button class="tab" data-tab="products">Products</button>
-      <button class="tab" data-tab="issues">Reported problems</button>
-      <button class="tab" data-tab="coupons">Coupons</button>
+      <button class="tab" data-tab="reports">Buyer reports <span id="report-count"></span></button>
+      <button class="tab" data-tab="issues">Missing items</button>
+      <button class="tab" data-tab="categories">Categories</button>
+      <button class="tab" data-tab="coupons">Promotions</button>
       <button class="tab" data-tab="audit">Activity log</button>
     </div>
     <div class="admin-stats" id="admin-stats"></div>
@@ -82,6 +84,8 @@ async function render() {
     if (activeTab === 'shops') await renderShops(root, null);
     if (activeTab === 'accounts') await renderAccounts(root, 'SELLER', 0);
     if (activeTab === 'audit') await renderAudit(root);
+    if (activeTab === 'reports') await renderReports(root, 'OPEN');
+    if (activeTab === 'categories') await renderCategories(root);
     if (activeTab === 'orders') await renderOrders(root);
     if (activeTab === 'products') await renderProducts(root);
     if (activeTab === 'issues') await renderIssues(root);
@@ -98,10 +102,14 @@ async function renderStats() {
     const st = await API.adminStats();
     const pending = st.shops.PENDING || 0;
     document.getElementById('pending-count').textContent = pending ? `(${pending})` : '';
+    document.getElementById('report-count').textContent = st.openReports ? `(${st.openReports})` : '';
     document.getElementById('admin-stats').innerHTML = [
-      ['Buyers', st.buyers], ['Sellers', st.sellers], ['Live shops', st.shops.APPROVED || 0],
-      ['Waiting for review', pending], ['Orders', st.orders],
-    ].map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${Number(v).toLocaleString('en-IN')}</div></div>`).join('');
+      ['Buyers', Number(st.buyers).toLocaleString('en-IN')], ['Sellers', Number(st.sellers).toLocaleString('en-IN')],
+      ['Live shops', st.shops.APPROVED || 0], ['Waiting for review', pending],
+      ['Orders today', `${st.ordersToday} (${formatRupees(st.valueToday)})`],
+      ['Last 7 days', `${st.ordersLast7Days} (${formatRupees(st.valueLast7Days)})`],
+      ['Open reports', st.openReports],
+    ].map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
   } catch (e) { /* stats are a nice-to-have; the tabs still work */ }
 }
 
@@ -235,10 +243,27 @@ async function renderAudit(root) {
 }
 
 // ---------------- Orders ----------------
+let orderFilters = { status: '', shopId: '', page: 0 };
 async function renderOrders(root) {
-  const orders = await API.adminOrders();
-  if (!orders.length) { root.innerHTML = '<p>No orders yet.</p>'; return; }
-  root.innerHTML = `<div class="table-wrap"><table class="admin-table">
+  const [data, shops] = await Promise.all([API.adminOrderSearch(orderFilters), API.adminShops(null)]);
+  const orders = data.items;
+  const statusOptions = ['', 'PAYMENT_PENDING', 'PLACED', 'ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED', 'PAYMENT_FAILED'];
+  const filterBar = `<div class="filter-bar">
+      <label class="filter-sort" style="margin-left:0;">Shop <select id="of-shop"><option value="">All shops</option>${shops.map(s => `<option value="${s.id}" ${String(s.id) === String(orderFilters.shopId) ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}</select></label>
+      <label class="filter-sort" style="margin-left:0;">Status <select id="of-status">${statusOptions.map(v => `<option value="${v}" ${v === orderFilters.status ? 'selected' : ''}>${v ? escapeHtml(STATUS_LABELS[v][0]) : 'Any status'}</option>`).join('')}</select></label>
+      <span class="muted small">${data.totalItems} order${data.totalItems === 1 ? '' : 's'}</span>
+    </div>`;
+  const pager = data.totalPages > 1 ? `<div class="action-row">
+      <button class="btn btn-outline btn-sm" data-opage="${orderFilters.page - 1}" ${orderFilters.page <= 0 ? 'disabled' : ''}>Previous</button>
+      <span class="muted small" style="align-self:center;">Page ${orderFilters.page + 1} of ${data.totalPages}</span>
+      <button class="btn btn-outline btn-sm" data-opage="${orderFilters.page + 1}" ${orderFilters.page + 1 >= data.totalPages ? 'disabled' : ''}>Next</button></div>` : '';
+  const wireFilters = () => {
+    root.querySelector('#of-shop').addEventListener('change', (e) => { orderFilters.shopId = e.target.value; orderFilters.page = 0; renderOrders(root); });
+    root.querySelector('#of-status').addEventListener('change', (e) => { orderFilters.status = e.target.value; orderFilters.page = 0; renderOrders(root); });
+    root.querySelectorAll('[data-opage]').forEach(b => b.addEventListener('click', () => { orderFilters.page = Number(b.dataset.opage); renderOrders(root); }));
+  };
+  if (!orders.length) { root.innerHTML = filterBar + '<div class="empty-state"><h3>No orders match</h3></div>'; wireFilters(); return; }
+  root.innerHTML = filterBar + `<div class="table-wrap"><table class="admin-table">
     <thead><tr><th>#</th><th>Date</th><th>Shop</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>If unavailable</th><th>Status</th><th>Actions</th></tr></thead>
     <tbody>${orders.map(o => `
       <tr>
@@ -255,7 +280,8 @@ async function renderOrders(root) {
           <button class="btn btn-sm ${s === 'CANCELLED' ? 'btn-outline danger' : 'btn-primary'}" data-order="${o.id}" data-status="${s}">
             ${s === 'CANCELLED' ? 'Cancel' : 'Mark ' + escapeHtml(STATUS_LABELS[s][0].toLowerCase())}</button>`).join('') || '<span class="muted small">&mdash;</span>'}
         </td>
-      </tr>`).join('')}</tbody></table></div>`;
+      </tr>`).join('')}</tbody></table></div>` + pager;
+  wireFilters();
   root.querySelectorAll('button[data-order]').forEach(btn => btn.addEventListener('click', async () => {
     btn.disabled = true;
     try {
@@ -271,7 +297,18 @@ async function renderProducts(root) {
   const [products, categories] = await Promise.all([API.adminProducts(), API.categories()]);
   const catOptions = (selected) => categories.map(c => `<option value="${c.id}" ${c.id === selected ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
   const gstOptions = (selected) => [0, 5, 12, 18].map(g => `<option value="${g}" ${g === selected ? 'selected' : ''}>${g}%</option>`).join('');
-  const row = (p) => `
+  const mineShop = (products.find(p => p.shopSlug === 'nammabasket-demo-kirana') || {}).shopId;
+  const sellerRow = (p) => `
+    <tr>
+      <td>${escapeHtml(p.imageEmoji || '')}</td>
+      <td><b>${escapeHtml(p.name)}</b><div class="muted small">${escapeHtml(p.unit || '')}</div></td>
+      <td colspan="5" class="small">${escapeHtml(p.shopName || '-')}, ${formatRupees(p.price)}, stock ${p.stock}
+        <div class="muted">Seller's product: only the seller can edit it.</div></td>
+      <td><button class="btn btn-sm ${p.active ? 'btn-outline danger' : 'btn-primary'}" data-moderate="${p.id}" data-active="${!p.active}">${p.active ? 'Hide' : 'Show'}</button>
+        <div class="reason-form" hidden><textarea rows="2" maxlength="300" placeholder="Why hide it? (kept in the activity log)"></textarea>
+        <button class="btn btn-sm btn-primary confirm" type="button">Confirm</button></div></td>
+    </tr>`;
+  const row = (p) => p && p.shopId !== mineShop ? sellerRow(p) : `
     <tr data-id="${p ? p.id : ''}">
       <td><input class="f-emoji" value="${p ? escapeHtml(p.imageEmoji || '') : ''}" maxlength="10" style="width:52px"></td>
       <td><input class="f-name" value="${p ? escapeHtml(p.name) : ''}" maxlength="150" placeholder="Name">
@@ -285,11 +322,28 @@ async function renderProducts(root) {
       <td><button class="btn btn-sm btn-primary f-save">${p ? 'Save' : 'Add'}</button></td>
     </tr>`;
   root.innerHTML = `
-    <p class="bill-note">Change the price to test the "price changed" warning in a customer's cart. Set an old expiry date to test expiry blocking.</p>
+    <p class="bill-note">You can edit the NammaBasket Demo Kirana's products here. Sellers' products can only be hidden or shown.
+      Change a demo price to test the "price changed" warning in a buyer's cart; set an old expiry date to test expiry blocking.</p>
     <div class="table-wrap"><table class="admin-table">
       <thead><tr><th>Icon</th><th>Name / unit</th><th>Category</th><th>Price &#8377;</th><th>Stock</th><th>Best before</th><th>GST</th><th></th></tr></thead>
       <tbody>${row(null)}${products.map(row).join('')}</tbody>
     </table></div>`;
+  root.querySelectorAll('button[data-moderate]').forEach(btn => btn.addEventListener('click', async () => {
+    const show = btn.dataset.active === 'true';
+    const send = async (reason) => {
+      btn.disabled = true;
+      try {
+        await API.adminSetProductActive(Number(btn.dataset.moderate), show, reason);
+        showToast(show ? 'Product shown again' : 'Product hidden from buyers', 'ok');
+        await renderProducts(root);
+      } catch (e) { showError(e.message); btn.disabled = false; }
+    };
+    if (show) { send(null); return; }
+    const form = btn.closest('td').querySelector('.reason-form');
+    form.hidden = false;
+    form.querySelector('textarea').focus();
+    form.querySelector('.confirm').onclick = () => send(form.querySelector('textarea').value.trim());
+  }));
   root.querySelectorAll('.f-save').forEach(btn => btn.addEventListener('click', async () => {
     const tr = btn.closest('tr');
     const val = (cls) => tr.querySelector(cls).value;
@@ -318,9 +372,10 @@ async function renderIssues(root) {
   const issues = await API.adminIssues();
   if (!issues.length) { root.innerHTML = '<p>No problems reported. &#127881;</p>'; return; }
   root.innerHTML = `<div class="table-wrap"><table class="admin-table">
-    <thead><tr><th>Date</th><th>Order</th><th>Item</th><th>Qty</th><th>Problem</th><th>Note</th><th>Refund</th></tr></thead>
+    <thead><tr><th>Date</th><th>Order</th><th>Shop / buyer</th><th>Item</th><th>Qty</th><th>Problem</th><th>Note</th><th>Refund</th></tr></thead>
     <tbody>${issues.map(i => `<tr>
-      <td>${formatDateTime(i.createdAt)}</td><td>#${i.orderId}</td><td>${escapeHtml(i.productName)}</td><td>${i.quantity}</td>
+      <td>${formatDateTime(i.createdAt)}</td><td>#${i.orderId}</td>
+      <td class="small">${escapeHtml(i.shopName || '-')}<div class="muted">${escapeHtml(i.customerEmail || '')}</div></td><td>${escapeHtml(i.productName)}</td><td>${i.quantity}</td>
       <td>${escapeHtml(i.reason)}</td><td class="small">${escapeHtml(i.note || '')}</td><td>${formatRupees(i.refundAmount)}</td>
     </tr>`).join('')}</tbody></table></div>`;
 }
@@ -329,21 +384,173 @@ async function renderIssues(root) {
 async function renderCoupons(root) {
   const coupons = await API.adminCoupons();
   const now = Date.now();
-  root.innerHTML = `<div class="table-wrap"><table class="admin-table">
-    <thead><tr><th>Code</th><th>Offer</th><th>Min order</th><th>Per customer</th><th>Expires</th><th>Active</th></tr></thead>
+  root.innerHTML = `
+    <form class="panel" id="coupon-form" novalidate style="margin-bottom:18px;">
+      <h2 id="cf-title">New promotion</h2>
+      <p class="panel-sub">Platform coupons apply to the whole basket and are paid for by NammaBasket, not the shops.</p>
+      <div id="cf-msg" aria-live="polite"></div>
+      <input type="hidden" name="id">
+      <div class="form-3">
+        <div class="field"><label for="cf-code">Code</label><input id="cf-code" name="code" maxlength="20" placeholder="DIWALI100"></div>
+        <div class="field"><label for="cf-type">Type</label><select id="cf-type" name="type"><option value="FLAT">Rupees off</option><option value="PERCENT">Percent off</option></select></div>
+        <div class="field"><label for="cf-value">Discount</label><input id="cf-value" name="value" type="number" min="1" max="1000"></div>
+      </div>
+      <div class="field"><label for="cf-desc">Offer text buyers see</label><input id="cf-desc" name="description" maxlength="150" placeholder="Rs 100 off on orders above Rs 999"></div>
+      <div class="form-3">
+        <div class="field"><label for="cf-max">Max discount (&#8377;, percent only)</label><input id="cf-max" name="maxDiscount" type="number" min="1" max="1000"></div>
+        <div class="field"><label for="cf-min">Minimum order (&#8377;)</label><input id="cf-min" name="minOrder" type="number" min="0" value="0"></div>
+        <div class="field"><label for="cf-uses">Uses per buyer</label><input id="cf-uses" name="perUserLimit" type="number" min="1" max="50" value="1"></div>
+      </div>
+      <div class="form-2">
+        <div class="field"><label for="cf-last">Last day</label><input id="cf-last" name="lastDay" type="date"></div>
+      </div>
+      <div class="action-row" style="margin:0;">
+        <button class="btn btn-primary" type="submit" id="cf-save">Create promotion</button>
+        <button class="btn btn-outline" type="button" id="cf-reset">Clear</button>
+      </div>
+    </form>
+    <div class="table-wrap"><table class="admin-table">
+    <thead><tr><th>Code</th><th>Offer</th><th>Min order</th><th>Per buyer</th><th>Last day</th><th>Active</th><th></th></tr></thead>
     <tbody>${coupons.map(c => {
       const expired = c.expiresAt && serverDate(c.expiresAt).getTime() <= now;
       return `<tr>
         <td><b>${escapeHtml(c.code)}</b></td><td>${escapeHtml(c.description)}</td><td>${formatRupees(c.minOrder)}</td>
         <td>${c.perUserLimit}</td>
         <td>${c.expiresAt ? formatDateTime(c.expiresAt) : 'Never'} ${expired ? '<span class="expiry-tag danger">expired</span>' : ''}</td>
-        <td><label class="switch"><input type="checkbox" data-coupon="${c.id}" ${c.active ? 'checked' : ''}> ${c.active ? 'On' : 'Off'}</label></td>
+        <td><label class="toggle"><input type="checkbox" data-coupon="${c.id}" ${c.active ? 'checked' : ''}><span></span><span class="sr-only">${escapeHtml(c.code)} active</span></label></td>
+        <td><button class="btn btn-outline btn-sm" data-edit-coupon="${c.id}">Edit</button></td>
       </tr>`; }).join('')}</tbody></table></div>`;
+  const form = root.querySelector('#coupon-form');
+  const fill = (c) => {
+    form.elements.id.value = c ? c.id : '';
+    form.elements.code.value = c ? c.code : '';
+    form.elements.code.disabled = !!c;
+    form.elements.type.value = c ? c.type : 'FLAT';
+    form.elements.value.value = c ? c.value : '';
+    form.elements.description.value = c ? c.description : '';
+    form.elements.maxDiscount.value = c && c.maxDiscount != null ? c.maxDiscount : '';
+    form.elements.minOrder.value = c ? c.minOrder : 0;
+    form.elements.perUserLimit.value = c ? c.perUserLimit : 1;
+    form.elements.lastDay.value = c && c.expiresAt ? serverDate(c.expiresAt).toLocaleDateString('en-CA') : '';
+    root.querySelector('#cf-title').textContent = c ? `Edit ${c.code}` : 'New promotion';
+    root.querySelector('#cf-save').textContent = c ? 'Save changes' : 'Create promotion';
+  };
+  root.querySelector('#cf-reset').addEventListener('click', () => fill(null));
+  root.querySelectorAll('[data-edit-coupon]').forEach(b => b.addEventListener('click', () => {
+    fill(coupons.find(c => c.id === Number(b.dataset.editCoupon)));
+    form.scrollIntoView({ behavior: 'smooth' });
+  }));
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const el = form.elements;
+    const num = (v) => v === '' ? null : Number(v);
+    const payload = {
+      code: el.code.value.trim(), type: el.type.value, value: num(el.value.value), description: el.description.value.trim(),
+      maxDiscount: el.type.value === 'PERCENT' ? num(el.maxDiscount.value) : null, minOrder: num(el.minOrder.value),
+      perUserLimit: num(el.perUserLimit.value), lastDay: el.lastDay.value || null,
+    };
+    const btn = root.querySelector('#cf-save');
+    btn.disabled = true;
+    try {
+      if (el.id.value) await API.adminUpdateCoupon(Number(el.id.value), payload); else await API.adminCreateCoupon(payload);
+      showToast(el.id.value ? 'Promotion saved' : 'Promotion created', 'ok');
+      await renderCoupons(root);
+    } catch (err) {
+      root.querySelector('#cf-msg').innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+      btn.disabled = false;
+    }
+  });
   root.querySelectorAll('input[data-coupon]').forEach(cb => cb.addEventListener('change', async () => {
     try { await API.adminSetCouponActive(Number(cb.dataset.coupon), cb.checked); await renderCoupons(root); }
     catch (e) { showError(e.message); }
   }));
 }
+
+// ---------------- Buyer reports ----------------
+async function renderReports(root, status) {
+  const reports = await API.adminReports(status);
+  const filters = [['OPEN', 'Open'], ['RESOLVED', 'Resolved'], ['DISMISSED', 'Dismissed'], ['ALL', 'All']];
+  root.innerHTML = `
+    <div class="chip-row" style="margin-bottom:14px;">${filters.map(([v, l]) => `<button class="chip ${v === status ? 'active' : ''}" data-rfilter="${v}">${l}</button>`).join('')}</div>
+    ${reports.length ? reports.map(r => `
+      <article class="order-card">
+        <div class="top-row">
+          <div><div class="order-id">${r.targetType === 'PRODUCT' ? `${escapeHtml(r.productName)} <span class="muted small">from ${escapeHtml(r.shopName)}</span>` : escapeHtml(r.shopName)}</div>
+            <div class="date">Report #${r.id}, ${formatDateTime(r.createdAt)}, by ${escapeHtml(r.reporterEmail)}</div></div>
+          <span class="status-pill ${r.status === 'OPEN' ? 'PENDING' : r.status === 'RESOLVED' ? 'APPROVED' : 'SUSPENDED'}" style="margin:0;">${r.status.toLowerCase()}</span>
+        </div>
+        <div class="order-meta">
+          <div><strong>Reason:</strong> ${escapeHtml(r.reasonLabel)}</div>
+          ${r.details ? `<div><strong>Buyer wrote:</strong> ${escapeHtml(r.details)}</div>` : ''}
+          <div><strong>Shop is:</strong> ${escapeHtml(r.shopStatus.toLowerCase())}${r.targetType === 'PRODUCT' ? `; product is ${r.productActive ? 'on sale' : 'hidden'}` : ''}</div>
+          ${r.resolutionNote ? `<div><strong>Outcome:</strong> ${escapeHtml(r.resolutionNote)} <span class="muted">(${escapeHtml(r.resolvedBy || '')})</span></div>` : ''}
+        </div>
+        ${r.status === 'OPEN' ? `<form class="resolve-form" data-report="${r.id}">
+          <div class="form-3">
+            <div class="field"><label>Outcome</label><select name="status"><option value="RESOLVED">Resolved: problem confirmed</option><option value="DISMISSED">Dismissed: nothing wrong</option></select></div>
+            <div class="field"><label>Action</label><select name="action"><option value="NONE">No action</option>
+              ${r.targetType === 'PRODUCT' ? '<option value="HIDE_PRODUCT">Hide the product</option>' : ''}
+              ${r.shopStatus === 'APPROVED' ? '<option value="SUSPEND_SHOP">Suspend the shop</option>' : ''}</select></div>
+            <div class="field"><label>What you found</label><input name="note" maxlength="300" placeholder="Checked with the shop..."></div>
+          </div>
+          <button class="btn btn-primary btn-sm" type="submit">Close report</button>
+        </form>` : ''}
+      </article>`).join('') : `<div class="empty-state"><h3>No ${status === 'ALL' ? '' : status.toLowerCase() + ' '}reports</h3><p>Reports from buyers about shops and products appear here.</p></div>`}`;
+  root.querySelectorAll('[data-rfilter]').forEach(b => b.addEventListener('click', () => renderReports(root, b.dataset.rfilter)));
+  root.querySelectorAll('.resolve-form').forEach(f => f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = f.querySelector('button');
+    btn.disabled = true;
+    try {
+      await API.adminResolveReport(Number(f.dataset.report), { status: f.elements.status.value, action: f.elements.action.value, note: f.elements.note.value.trim() });
+      showToast('Report closed', 'ok');
+      await Promise.all([renderReports(root, status), renderStats()]);
+    } catch (err) { showError(err.message); btn.disabled = false; }
+  }));
+}
+
+// ---------------- Categories ----------------
+async function renderCategories(root) {
+  const categories = await API.categories();
+  root.innerHTML = `
+    <form class="panel" id="cat-form" style="margin-bottom:18px;" novalidate>
+      <h2>Add a category</h2>
+      <div class="inline-row">
+        <input name="icon" maxlength="10" placeholder="Emoji" style="max-width:90px;" aria-label="Icon (emoji)">
+        <input name="name" maxlength="60" placeholder="e.g. Personal care" aria-label="Category name">
+        <button class="btn btn-primary" type="submit">Add</button>
+      </div>
+    </form>
+    <div class="table-wrap"><table class="admin-table">
+      <thead><tr><th>Icon</th><th>Name</th><th></th></tr></thead>
+      <tbody>${categories.map(c => `<tr data-cat="${c.id}">
+        <td><input class="c-icon" value="${escapeHtml(c.icon || '')}" maxlength="10" style="width:64px" aria-label="Icon"></td>
+        <td><input class="c-name" value="${escapeHtml(c.name)}" maxlength="60" aria-label="Name"></td>
+        <td class="actions" style="flex-direction:row;"><button class="btn btn-sm btn-primary c-save">Save</button>
+          <button class="btn btn-sm btn-outline danger c-del">Delete</button></td>
+      </tr>`).join('')}</tbody></table></div>
+    <p class="bill-note">A category can only be deleted when no product uses it.</p>`;
+  root.querySelector('#cat-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await API.adminCreateCategory({ name: e.target.elements.name.value.trim(), icon: e.target.elements.icon.value.trim() });
+      showToast('Category added', 'ok');
+      await renderCategories(root);
+    } catch (err) { showError(err.message); }
+  });
+  root.querySelectorAll('tr[data-cat]').forEach(tr => {
+    const id = Number(tr.dataset.cat);
+    tr.querySelector('.c-save').addEventListener('click', async () => {
+      try { await API.adminUpdateCategory(id, { name: tr.querySelector('.c-name').value.trim(), icon: tr.querySelector('.c-icon').value.trim() }); showToast('Category saved', 'ok'); }
+      catch (err) { showError(err.message); }
+    });
+    tr.querySelector('.c-del').addEventListener('click', async () => {
+      try { await API.adminDeleteCategory(id); showToast('Category deleted', 'ok'); await renderCategories(root); }
+      catch (err) { showError(err.message); }
+    });
+  });
+}
+
 </script>
 </body>
 </html>

@@ -21,6 +21,19 @@
       </div>
       <div class="chip-row" id="cat-chips"></div>
     </div>
+    <details class="report-box" id="report-box" hidden>
+      <summary>Report a problem with this shop</summary>
+      <form id="report-form" novalidate>
+        <div class="form-2">
+          <div class="field"><label for="r-what">About</label><select id="r-what" name="productId"><option value="">The shop itself</option></select></div>
+          <div class="field"><label for="r-reason">What&rsquo;s wrong?</label><select id="r-reason" name="reason"></select></div>
+        </div>
+        <div class="field"><label for="r-details">Details <span class="muted">(optional)</span></label>
+          <textarea id="r-details" name="details" rows="2" maxlength="500" placeholder="What happened? Our team reads every report."></textarea></div>
+        <button class="btn btn-outline btn-sm" type="submit">Send report</button>
+        <div class="field-msg" id="r-msg" aria-live="polite"></div>
+      </form>
+    </details>
     <div class="grid" id="shop-products">
       <div class="skeleton" style="height:220px;"></div>
       <div class="skeleton" style="height:220px;"></div>
@@ -48,6 +61,7 @@ let activeCat = null;
     renderHead(data.shop);
     renderChips();
     renderProducts();
+    wireReport(data.shop);
   } catch (e) {
     document.getElementById('shop-head').innerHTML = `<div><h1>Shop not found</h1><p class="muted">This shop isn&rsquo;t on NammaBasket right now. <a href="/shops.html" style="text-decoration:underline;">See other shops</a></p></div>`;
     document.getElementById('shop-products').innerHTML = '';
@@ -98,6 +112,35 @@ function renderProducts() {
   attachAddToCartHandlers(grid);
 }
 document.getElementById('in-shop').addEventListener('input', renderProducts);
+
+async function wireReport(shop) {
+  const box = document.getElementById('report-box');
+  box.hidden = false;
+  document.getElementById('r-what').innerHTML = '<option value="">The shop itself</option>' +
+    products.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  try {
+    const reasons = await API.reportReasons();
+    document.getElementById('r-reason').innerHTML = reasons.map(r => `<option value="${r.value}">${escapeHtml(r.label)}</option>`).join('');
+  } catch (e) { box.hidden = true; return; }
+  document.getElementById('report-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    const msg = document.getElementById('r-msg');
+    const btn = f.querySelector('button');
+    btn.disabled = true;
+    try {
+      const r = await API.report({ shopId: shop.id, productId: f.elements.productId.value ? Number(f.elements.productId.value) : null,
+        reason: f.elements.reason.value, details: f.elements.details.value.trim() || null });
+      msg.className = 'field-msg ok';
+      msg.textContent = r.message;
+      f.reset();
+    } catch (err) {
+      if (err.status === 401) { window.location.href = '/login.html?next=' + encodeURIComponent(location.pathname + location.search); return; }
+      msg.className = 'field-msg error';
+      msg.textContent = err.status === 403 ? 'Only buyer accounts can send reports.' : err.message;
+    } finally { btn.disabled = false; }
+  });
+}
 </script>
 </body>
 </html>

@@ -140,6 +140,17 @@ const API = {
   adminUserAction(id, action, reason) { return this.post(`/api/admin/users/${id}/${action}`, reason ? { reason } : {}); },
   adminAudit() { return this.get('/api/admin/audit?limit=200'); },
   adminStats() { return this.get('/api/admin/stats'); },
+  adminOrderSearch(params) { return this.get('/api/admin/orders/search?' + new URLSearchParams(params || {}).toString()); },
+  adminReports(status) { return this.get('/api/admin/reports?status=' + encodeURIComponent(status || 'OPEN')); },
+  adminResolveReport(id, payload) { return this.post(`/api/admin/reports/${id}/resolve`, payload); },
+  adminCreateCategory(payload) { return this.post('/api/admin/categories', payload); },
+  adminUpdateCategory(id, payload) { return this.put(`/api/admin/categories/${id}`, payload); },
+  adminDeleteCategory(id) { return this.del(`/api/admin/categories/${id}`); },
+  adminCreateCoupon(payload) { return this.post('/api/admin/coupons', payload); },
+  adminUpdateCoupon(id, payload) { return this.put(`/api/admin/coupons/${id}`, payload); },
+  adminSetProductActive(id, active, reason) { return this.put(`/api/admin/products/${id}/active`, { active, reason }); },
+  reportReasons() { return this.get('/api/reports/reasons'); },
+  report(payload) { return this.post('/api/reports', payload); },
 
   // Seller (only works for a SELLER login, always on the seller's own shop)
   registerSeller(payload) { return this.post('/api/auth/register-seller', payload); },

@@ -127,7 +127,9 @@ public class MarketplaceAdminService {
         c.setValue(r.getValue().setScale(2, RoundingMode.HALF_UP));
         c.setMaxDiscount(r.getType() == CouponType.PERCENT ? r.getMaxDiscount().setScale(2, RoundingMode.HALF_UP) : null);
         c.setMinOrder(r.getMinOrder().setScale(2, RoundingMode.HALF_UP));
-        c.setExpiresAt(r.getLastDay().atTime(23, 59, 59));
+        // The coupon works until the end of its last day in Indian time, whatever zone the server runs in.
+        c.setExpiresAt(r.getLastDay().atTime(23, 59, 59).atZone(Shop.SHOP_ZONE)
+                .withZoneSameInstant(java.time.ZoneId.systemDefault()).toLocalDateTime());
         c.setPerUserLimit(r.getPerUserLimit());
     }
 
