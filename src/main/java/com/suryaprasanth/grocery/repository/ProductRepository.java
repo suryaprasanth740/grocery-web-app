@@ -76,7 +76,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                                                                @Param("categoryId") Long categoryId,
                                                                org.springframework.data.domain.Pageable pageable);
 
-    java.util.Optional<Product> findByIdAndShopId(Long id, Long shopId);
+    /** Written out by hand: Product has a getShopId() for JSON, which would confuse the derived name. */
+    @Query("select p from Product p where p.id = :id and p.shop.id = :shopId")
+    java.util.Optional<Product> findByIdAndShopId(@Param("id") Long id, @Param("shopId") Long shopId);
 
     @Query("select count(p) from Product p where p.shop.id = :shopId and (p.active is null or p.active = true) and p.stock = 0")
     long countOutOfStock(@Param("shopId") Long shopId);
