@@ -31,7 +31,6 @@ const params = new URLSearchParams(window.location.search);
 const ORDER_ID = params.get('id');
 const JUST_PLACED = params.get('justPlaced') === '1';
 const ISSUE_WINDOW_HOURS = 48; // same as app.issue.window-hours on the server
-const STEPS = ['PLACED', 'PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
 
 document.addEventListener('DOMContentLoaded', async () => {
   try {
@@ -56,41 +55,49 @@ async function loadOrder(flash) {
     root.innerHTML = `<p>Could not load this order. ${escapeHtml(e.message)}</p>`;
     return;
   }
-  root.innerHTML = orderHtml(order, flash);
+  let siblings = [];
+  if (order.ordersInCheckout > 1) {
+    try { siblings = (await API.orders()).filter(o => o.checkoutId === order.checkoutId && o.id !== order.id); } catch (e) { /* optional */ }
+  }
+  root.innerHTML = orderHtml(order, flash, siblings);
   wireActions(order);
 }
 
-function orderHtml(order, flash) {
+function orderHtml(order, flash, siblings) {
   const pending = order.status === 'PAYMENT_PENDING';
   const deliveredRecently = order.status === 'DELIVERED' && order.deliveredAt
     && (Date.now() - serverDate(order.deliveredAt).getTime()) < ISSUE_WINDOW_HOURS * 3600 * 1000;
-  const canCancel = order.status === 'PLACED' || pending;
+  const canCancel = order.canCancel;
+  const pickup = order.fulfilment === 'PICKUP';
 
   return `
     ${JUST_PLACED && order.status === 'PLACED' && !flash ? `
       <div class="confirm-banner">
         <div class="stamp-big">&#9989;</div>
         <h2 style="color:#fff;">Order placed!</h2>
-        <p style="opacity:0.85;">Order #${order.id} is confirmed. Thanks for shopping with NammaBasket.</p>
+        <p style="opacity:0.85;">${siblings.length ? `Your basket became ${siblings.length + 1} orders, one per shop.` : `Order #${order.id} is with ${escapeHtml(order.shopName || 'the shop')}.`} Thanks for shopping with NammaBasket.</p>
       </div>` : `<div class="section-heading" style="margin-top:34px;"><h2>Order #${order.id}</h2></div>`}
 
     ${flash ? `<div class="alert alert-success">${escapeHtml(flash)}</div>` : ''}
     ${order.statusNote ? `<div class="notice ${order.status === 'PAYMENT_FAILED' || order.status === 'CANCELLED' ? 'warn' : 'info'}">${escapeHtml(order.statusNote)}</div>` : ''}
 
     ${pending ? upiPanelHtml(order) : ''}
+    ${order.rejectionReason ? `<div class="notice warn"><b>${escapeHtml(order.shopName || 'The shop')} couldn&rsquo;t take this order:</b> ${escapeHtml(order.rejectionReason)}</div>` : ''}
 
     <div class="order-card">
       <div class="top-row">
         <div>
-          <div class="order-id">Order #${order.id}</div>
+          <div class="order-id">Order #${order.id}${order.shopName ? ` from ${order.shopSlug ? `<a href="/shop.html?s=${encodeURIComponent(order.shopSlug)}" style="text-decoration:underline;">${escapeHtml(order.shopName)}</a>` : escapeHtml(order.shopName)}` : ''}</div>
           <div class="date">${formatDateTime(order.createdAt)}</div>
         </div>
         ${statusBadgeHtml(order.status)}
       </div>
       ${timelineHtml(order)}
       <div class="order-meta">
-        <div><strong>Delivering to:</strong> ${escapeHtml(order.shippingAddress)}${order.pincode ? ' &ndash; ' + escapeHtml(order.pincode) : ''}</div>
-        <div><strong>Payment:</strong> ${escapeHtml(order.paymentMethod)} &middot; ${escapeHtml(PAYMENT_LABELS[order.paymentStatus] || order.paymentStatus)}</div>
+        ${pickup
+          ? `<div><strong>Pick up from:</strong> ${escapeHtml(order.shopAddress || '')}${order.shopPhone ? `, phone ${escapeHtml(order.shopPhone)}` : ''}</div>`
+          : `<div><strong>Delivering to:</strong> ${escapeHtml(order.shippingAddress || '')}${order.pincode ? ', ' + escapeHtml(order.pincode) : ''}</div>`}
+        <div><strong>Payment:</strong> ${escapeHtml(order.paymentMethod)}, ${escapeHtml(PAYMENT_LABELS[order.paymentStatus] || order.paymentStatus)}</div>
         <div><strong>If an item is unavailable:</strong> ${escapeHtml(SUBSTITUTION_LABELS[order.substitutionPreference] || '-')}</div>
       </div>
       <div class="order-items-list">
@@ -100,6 +107,12 @@ function orderHtml(order, flash) {
       </div>
       <div style="margin-top:10px;">${billRowsHtml(order)}</div>
     </div>
+
+    ${siblings.length ? `
+      <div class="order-card">
+        <h3 style="font-size:1rem;margin-bottom:10px;">Also from this basket</h3>
+        ${siblings.map(o => `<a class="order-line" href="/order.html?id=${o.id}"><span><b>Order #${o.id}</b> from ${escapeHtml(o.shopName || '')}</span><span>${statusBadgeHtml(o.status)}</span></a>`).join('')}
+      </div>` : ''}
 
     ${order.issues.length ? `
       <div class="order-card">
@@ -115,6 +128,7 @@ function orderHtml(order, flash) {
     <div id="action-error"></div>
     <div class="action-row">
       ${canCancel ? `<button class="btn btn-outline danger" id="cancel-btn">Cancel order</button>` : ''}
+      ${['DELIVERED', 'CANCELLED', 'PAYMENT_FAILED'].includes(order.status) ? `<button class="btn btn-outline" id="reorder-btn">Order again</button>` : ''}
       <a href="/orders.html" class="btn btn-outline">Back to my orders</a>
       <a href="/products.html" class="btn btn-primary">Continue shopping</a>
     </div>
@@ -122,8 +136,10 @@ function orderHtml(order, flash) {
 }
 
 function timelineHtml(order) {
-  if (!STEPS.includes(order.status)) return '';
-  const current = STEPS.indexOf(order.status);
+  const STEPS = orderSteps(order);
+  const status = order.status === 'PACKED' ? 'PREPARING' : order.status;
+  if (!STEPS.includes(status)) return '';
+  const current = STEPS.indexOf(status);
   return `<div class="timeline">${STEPS.map((s, i) => `
     <div class="step ${i <= current ? 'done' : ''}"><span class="dot"></span>${escapeHtml(STATUS_LABELS[s][0])}</div>`).join('')}</div>`;
 }
@@ -132,7 +148,7 @@ function upiPanelHtml(order) {
   return `
     <div class="upi-panel">
       <div class="upi-head">&#128241; Demo UPI app</div>
-      <p>Pay <b>${formatRupees(order.totalAmount)}</b> to NammaBasket. This is a <b>test</b> screen, so no real money moves.
+      <p>Pay <b>${formatRupees(order.checkoutTotal)}</b> to NammaBasket${order.ordersInCheckout > 1 ? ` for all ${order.ordersInCheckout} shop orders in this basket` : ''}. This is a <b>test</b> screen, so no real money moves.
          Pick what the "bank" should do:</p>
       <div class="action-row">
         <button class="btn btn-primary" id="pay-success-btn">Payment succeeds</button>
@@ -187,6 +203,23 @@ function showActionError(message) {
 }
 
 function wireActions(order) {
+  const reorderBtn = document.getElementById('reorder-btn');
+  if (reorderBtn) {
+    reorderBtn.addEventListener('click', async () => {
+      reorderBtn.disabled = true;
+      try {
+        const r = await API.reorder(order.id);
+        refreshCartCount();
+        if (r.added.length) {
+          showToast(r.skipped.length ? `Added ${r.added.length}; skipped: ${r.skipped[0]}` : 'Items added to your cart', r.skipped.length ? undefined : 'ok');
+          setTimeout(() => { window.location.href = '/cart.html'; }, 900);
+        } else {
+          showToast(r.skipped[0] || 'None of these items can be bought right now', 'error');
+          reorderBtn.disabled = false;
+        }
+      } catch (e) { showToast(e.message, 'error'); reorderBtn.disabled = false; }
+    });
+  }
   const payOk = document.getElementById('pay-success-btn');
   const payFail = document.getElementById('pay-fail-btn');
   if (payOk) {

@@ -38,6 +38,20 @@ const REQUEST_ID = newRequestId();
 let appliedCoupon = null;
 let currentBill = null;
 let pincodeOk = false;
+let pincode = (NBLocation.get() || {}).pincode || '';
+
+/** Delivery/pickup per shop, exactly as the bill shows it. */
+function fulfilmentChoices() {
+  const out = {};
+  (currentBill ? currentBill.shops : []).forEach(sb => { if (sb.shopId) out[sb.shopId] = sb.fulfilment; });
+  return Object.keys(out).length ? out : NBChoices.all();
+}
+function needsDelivery() {
+  return currentBill.shops.some(sb => sb.fulfilment === 'DELIVERY');
+}
+async function refreshBill() {
+  currentBill = await API.quote(appliedCoupon, fulfilmentChoices(), pincode.length === 6 ? pincode : null);
+}
 
 async function init() {
   const root = document.getElementById('checkout-root');
@@ -49,7 +63,7 @@ async function init() {
   }
 
   try {
-    currentBill = await API.quote();
+    currentBill = await API.quote(null, NBChoices.all(), null);
   } catch (e) {
     root.innerHTML = '<p>Could not load your cart.</p>';
     return;
@@ -76,10 +90,8 @@ async function init() {
 
   root.innerHTML = `
     <div class="cart-summary" style="position:static;margin-bottom:24px;">
-      <h3 style="font-size:1.05rem;margin-bottom:14px;">${currentBill.lines.length} item${currentBill.lines.length === 1 ? '' : 's'} in your order</h3>
-      ${currentBill.lines.map(l => `
-        <div class="summary-row"><span>${escapeHtml(l.name)} &times; ${l.quantity}</span><span>${formatRupees(l.lineTotal)}</span></div>
-      `).join('')}
+      <h3 style="font-size:1.05rem;margin-bottom:14px;">${currentBill.shops.length > 1 ? `${currentBill.shops.length} shops, one payment` : 'Your order'}</h3>
+      <div id="shop-summaries"></div>
       <hr class="soft">
       <div class="field coupon-field">
         <label for="coupon">Coupon code</label>
@@ -96,7 +108,7 @@ async function init() {
       <div id="checkout-error"></div>
 
       <div class="field">
-        <label for="pincode">Delivery PIN code</label>
+        <label for="pincode">Your PIN code</label>
         <div class="inline-row">
           <input id="pincode" type="text" inputmode="numeric" maxlength="6" placeholder="6 digits, e.g. 560073" autocomplete="postal-code">
           <button type="button" class="btn btn-outline" id="pincode-btn">Check</button>
@@ -104,7 +116,7 @@ async function init() {
         <div id="pincode-msg" class="field-msg"></div>
       </div>
 
-      <div class="field">
+      <div class="field" id="address-field">
         <label for="address">Delivery address</label>
         <textarea id="address" rows="3" maxlength="300" placeholder="House / flat no., street, area, landmark"></textarea>
         <div class="field-msg muted"><span id="address-count">0</span>/300 characters (at least 10)</div>
@@ -125,13 +137,17 @@ async function init() {
       </div>
 
       <button type="submit" class="btn btn-accent btn-block" id="place-order-btn" disabled>Place order</button>
-      <div class="field-msg muted center" id="place-hint" style="margin-top:8px;">Enter a PIN code we deliver to, to continue.</div>
+      <div class="field-msg muted center" id="place-hint" style="margin-top:8px;">Enter your PIN code to continue.</div>
     </form>
   `;
 
   renderBill();
   wireCoupon();
   wirePincode();
+  if (pincode) {
+    document.getElementById('pincode').value = pincode;
+    document.getElementById('pincode').dispatchEvent(new Event('input'));
+  }
   const address = document.getElementById('address');
   address.addEventListener('input', () => {
     document.getElementById('address-count').textContent = address.value.length;
@@ -151,6 +167,15 @@ function renderBill() {
     msg.textContent = currentBill.couponMessage || 'The coupon no longer applies.';
   }
   document.getElementById('bill-rows').innerHTML = billRowsHtml(currentBill);
+  document.getElementById('shop-summaries').innerHTML = currentBill.shops.map(sb => `
+    <div class="summary-row" style="color:var(--ink);font-weight:700;margin-top:6px;">
+      <span>${escapeHtml(sb.shopName)} <span class="muted small" style="font-weight:600;">(${sb.fulfilment === 'PICKUP' ? 'pickup from shop' : 'delivery'})</span></span>
+      <span>${formatRupees(sb.total)}</span></div>
+    ${sb.lines.map(l => `<div class="summary-row"><span>${escapeHtml(l.name)} &times; ${l.quantity}</span><span>${formatRupees(l.lineTotal)}</span></div>`).join('')}
+    ${sb.problems.length ? `<div class="group-problems">${sb.problems.map(p => escapeHtml(p)).join('<br>')}</div>` : ''}
+  `).join('<hr class="soft">');
+  const addressField = document.getElementById('address-field');
+  if (addressField) addressField.hidden = !needsDelivery();
 
   const choices = document.getElementById('payment-choices');
   const previous = document.querySelector('input[name="pay"]:checked');
@@ -186,7 +211,7 @@ function wireCoupon() {
       input.disabled = false;
       btn.textContent = 'Apply';
       msg.textContent = '';
-      currentBill = await API.quote();
+      await refreshBill();
       renderBill();
       return;
     }
@@ -194,7 +219,7 @@ function wireCoupon() {
     if (!code) { msg.className = 'field-msg error'; msg.textContent = 'Enter a coupon code.'; return; }
     btn.disabled = true;
     try {
-      const bill = await API.quote(code);
+      const bill = await API.quote(code, fulfilmentChoices(), pincode.length === 6 ? pincode : null);
       if (bill.couponApplied) {
         appliedCoupon = bill.couponCode;
         currentBill = bill;
@@ -229,10 +254,22 @@ function wirePincode() {
       return;
     }
     try {
-      const r = await API.checkPincode(input.value);
-      pincodeOk = r.serviceable;
-      msg.className = 'field-msg ' + (r.serviceable ? 'ok' : 'error');
-      msg.textContent = r.message + (r.eta ? ` Delivery in ${r.eta}.` : '');
+      pincode = input.value;
+      await refreshBill();
+      renderBill();
+      const areaProblems = currentBill.problems.filter(p => p.includes("doesn't deliver to"));
+      pincodeOk = currentBill.problems.length === 0;
+      if (areaProblems.length) {
+        msg.className = 'field-msg error';
+        msg.textContent = areaProblems.join(' ');
+      } else if (!pincodeOk) {
+        msg.className = 'field-msg error';
+        msg.textContent = currentBill.problems[0];
+      } else {
+        msg.className = 'field-msg ok';
+        msg.textContent = needsDelivery() ? `Delivery to ${pincode} is available.` : 'Pickup only, so no delivery needed.';
+        NBLocation.check(pincode).catch(() => {});
+      }
     } catch (e) {
       msg.className = 'field-msg error';
       msg.textContent = e.message;
@@ -251,7 +288,7 @@ async function placeOrder(e) {
 
   const address = document.getElementById('address').value.trim();
   const pincode = document.getElementById('pincode').value.trim();
-  if (address.length < 10) {
+  if (needsDelivery() && address.length < 10) {
     errorBox.innerHTML = '<div class="alert alert-error">Please enter your full address (at least 10 characters).</div>';
     return;
   }
@@ -260,23 +297,25 @@ async function placeOrder(e) {
   btn.disabled = true; // first protection against double clicks (the server has the real one)
   btn.textContent = 'Placing order...';
   try {
-    const order = await API.checkout({
+    const placed = await API.checkout({
       requestId: REQUEST_ID,
-      shippingAddress: address,
+      shippingAddress: needsDelivery() ? address : null,
       pincode,
+      fulfilment: fulfilmentChoices(),
       paymentMethod: document.querySelector('input[name="pay"]:checked').value,
       couponCode: appliedCoupon,
       substitutionPreference: document.querySelector('input[name="subst"]:checked').value,
       expectedTotal: currentBill.total,
     });
     refreshCartCount();
-    const next = order.status === 'PAYMENT_PENDING' ? 'pay=1' : 'justPlaced=1';
-    window.location.href = `/order.html?id=${order.id}&${next}`;
+    const first = placed.orders[0];
+    const next = first.status === 'PAYMENT_PENDING' ? 'pay=1' : 'justPlaced=1';
+    window.location.href = `/order.html?id=${first.id}&${next}`;
   } catch (err) {
     errorBox.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
     if (err.status === 409) {
       // Bill changed (price / stock / coupon). Show the fresh bill.
-      try { currentBill = await API.quote(appliedCoupon); renderBill(); } catch (_) { /* ignore */ }
+      try { await refreshBill(); renderBill(); } catch (_) { /* ignore */ }
     }
     updatePlaceButton();
     errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });

@@ -35,7 +35,32 @@ const NBLocation = {
   label() {
     const loc = this.get();
     return loc && loc.pincode ? loc.pincode : 'Set PIN code';
-  }
+  },
+
+  // ---- Optional map position, only used to show how far away shops are ----
+  COORDS: 'nb-coords',
+  /** Asks the browser for the location (the browser asks the person first). Rounded to about 100 m. */
+  locate() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) { reject(new Error('This browser can\u2019t share a location. Enter your PIN code instead.')); return; }
+      navigator.geolocation.getCurrentPosition((pos) => {
+        const c = { lat: Math.round(pos.coords.latitude * 1000) / 1000, lng: Math.round(pos.coords.longitude * 1000) / 1000 };
+        try { localStorage.setItem(this.COORDS, JSON.stringify(c)); } catch (e) { /* not remembered */ }
+        this._coords = c;
+        resolve(c);
+      }, (err) => {
+        reject(new Error(err.code === 1
+          ? 'Location permission was not given. You can still enter your PIN code.'
+          : 'Could not find your location. Enter your PIN code instead.'));
+      }, { timeout: 10000, maximumAge: 600000 });
+    });
+  },
+  /** {lat, lng} for API calls, or {} when the person hasn't shared a location. */
+  coordsParams() {
+    let c = this._coords;
+    if (!c) { try { c = JSON.parse(localStorage.getItem(this.COORDS)); } catch (e) { c = null; } }
+    return c && typeof c.lat === 'number' ? { lat: c.lat, lng: c.lng } : {};
+  },
 };
 
 function renderHeader() {
@@ -57,10 +82,12 @@ function renderHeader() {
             <button class="btn btn-primary btn-sm" type="submit">Check</button>
           </form>
           <div class="field-msg" id="loc-msg" aria-live="polite"></div>
+          <button type="button" class="linklike small" id="loc-near" style="margin-top:8px;text-decoration:underline;">Use my location to show distances</button>
         </div>
       </div>
       <nav class="nav-links" aria-label="Main">
-        <a href="/products.html">Shop</a>
+        <a href="/shops.html">Shops</a>
+        <a href="/products.html">Groceries</a>
         <a href="/recipes.html">Recipes &amp; Kits</a>
         <a href="/list.html">Quick List</a>
         <a href="/budget.html">Budget</a>
@@ -109,6 +136,17 @@ function wireLocationPicker() {
       msg.className = 'field-msg error';
     } finally {
       submit.disabled = false;
+    }
+  });
+
+  document.getElementById('loc-near').addEventListener('click', async () => {
+    try {
+      await NBLocation.locate();
+      msg.textContent = 'Location saved in this browser. Shops now show how far away they are.';
+      msg.className = 'field-msg ok';
+    } catch (err) {
+      msg.textContent = err.message;
+      msg.className = 'field-msg error';
     }
   });
 

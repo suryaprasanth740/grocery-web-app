@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shops near you | NammaBasket</title>
+<meta name="description" content="Kirana shops on NammaBasket that deliver to your PIN code.">
+<link rel="icon" href="/img/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="signboard" id="site-header"></header>
+
+<main id="main">
+  <div class="wrap">
+    <div class="section-heading" style="margin-top:34px;">
+      <h2 id="shops-title">Shops near you</h2>
+      <span class="note" id="shops-count"></span>
+    </div>
+
+    <div class="filter-bar" role="search">
+      <label class="filter-sort" style="margin-left:0;">PIN code
+        <input id="s-pin" inputmode="numeric" maxlength="6" placeholder="560073" style="width:110px;">
+      </label>
+      <label class="filter-sort" style="margin-left:0;">Shop name
+        <input id="s-q" type="search" placeholder="e.g. Lakshmi" style="width:180px;">
+      </label>
+      <label class="filter-sort" style="margin-left:0;">Type
+        <select id="s-cat">
+          <option value="">All shops</option>
+          <option value="KIRANA">Kirana / general store</option>
+          <option value="SUPERMARKET">Supermarket</option>
+          <option value="FRUITS_VEGETABLES">Fruits &amp; vegetables</option>
+          <option value="DAIRY">Dairy &amp; milk booth</option>
+          <option value="BAKERY">Bakery</option>
+          <option value="ORGANIC">Organic store</option>
+        </select>
+      </label>
+      <button class="btn btn-outline btn-sm" type="button" id="s-near">Sort by distance</button>
+    </div>
+    <div class="field-msg" id="s-msg" aria-live="polite"></div>
+
+    <div class="shop-grid" id="shop-grid" style="padding-bottom:56px;">
+      <div class="skeleton" style="height:130px;"></div>
+      <div class="skeleton" style="height:130px;"></div>
+      <div class="skeleton" style="height:130px;"></div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+<div id="toast"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/shop.js"></script>
+<script>
+const pinInput = document.getElementById('s-pin');
+const saved = NBLocation.get();
+if (saved && saved.pincode) pinInput.value = saved.pincode;
+
+let timer;
+const debounced = () => { clearTimeout(timer); timer = setTimeout(load, 250); };
+pinInput.addEventListener('input', () => { pinInput.value = pinInput.value.replace(/\D/g, '').slice(0, 6); debounced(); });
+document.getElementById('s-q').addEventListener('input', debounced);
+document.getElementById('s-cat').addEventListener('change', load);
+document.getElementById('s-near').addEventListener('click', async () => {
+  const msg = document.getElementById('s-msg');
+  try {
+    await NBLocation.locate();
+    msg.className = 'field-msg ok';
+    msg.textContent = 'Showing the nearest shops first. Your location stays in this browser.';
+    load();
+  } catch (e) {
+    msg.className = 'field-msg error';
+    msg.textContent = e.message;
+  }
+});
+document.addEventListener('nb:location', (e) => { if (e.detail && e.detail.pincode) { pinInput.value = e.detail.pincode; load(); } });
+
+async function load() {
+  const grid = document.getElementById('shop-grid');
+  const pin = pinInput.value;
+  const params = {};
+  if (pin.length === 6) params.pincode = pin;
+  const q = document.getElementById('s-q').value.trim();
+  if (q) params.q = q;
+  const cat = document.getElementById('s-cat').value;
+  if (cat) params.category = cat;
+  Object.assign(params, NBLocation.coordsParams());
+  document.getElementById('shops-title').textContent = params.pincode ? `Shops delivering to ${params.pincode}` : 'All shops';
+  try {
+    const shops = await API.shops(params);
+    document.getElementById('shops-count').textContent = `${shops.length} shop${shops.length === 1 ? '' : 's'}`;
+    grid.innerHTML = shops.length ? shops.map(shopCardHtml).join('') : `
+      <div class="empty-state" style="grid-column:1/-1;">
+        <div class="big-emoji" aria-hidden="true">&#127978;</div>
+        <h3>No shops ${params.pincode ? `deliver to ${escapeHtml(params.pincode)} yet` : 'match'}</h3>
+        <p>Try a nearby PIN code, or clear the filters. Own a shop here? <a href="/sell.html" style="text-decoration:underline;">Bring it to NammaBasket</a>.</p>
+      </div>`;
+  } catch (e) {
+    grid.innerHTML = `<div class="alert alert-error" style="grid-column:1/-1;">Could not load shops. ${escapeHtml(e.message)}</div>`;
+  }
+}
+load();
+</script>
+</body>
+</html>

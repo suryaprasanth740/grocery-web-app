@@ -26,6 +26,10 @@
       <div class="panel">
         <h2>Your list</h2>
         <p class="panel-sub">One item per line, or separate with commas.</p>
+        <div class="field" style="margin-bottom:10px;">
+          <label for="list-shop">Match from</label>
+          <select id="list-shop"><option value="">Any shop</option></select>
+        </div>
         <textarea id="list-text" class="list-input" maxlength="2000"
           placeholder="2 kg tomatoes&#10;1 litre milk&#10;atta 5kg&#10;dozen eggs&#10;thakkali&#10;500 g paneer"></textarea>
         <button class="btn btn-primary btn-block" id="read-btn" style="margin-top:12px;">&#10024; Read my list</button>
@@ -102,7 +106,7 @@ async function readList() {
   btn.disabled = true;
   btn.textContent = 'Reading your list...';
   try {
-    const result = await API.parseList(text);
+    const result = await API.parseList(text, document.getElementById('list-shop').value || null);
     lines = result.map(l => ({ ...l, checked: !!l.product && isBuyable(l.product) }));
     renderResults();
   } catch (e) {
@@ -201,6 +205,16 @@ async function addAll() {
     justAdded = true;
   }
 }
+
+// "Match from": shops that deliver to the saved PIN code, so every match is something that shop stocks.
+(async () => {
+  try {
+    const loc = NBLocation.get();
+    const shops = await API.shops(loc && loc.pincode ? { pincode: loc.pincode } : {});
+    document.getElementById('list-shop').innerHTML = '<option value="">Any shop</option>' +
+      shops.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+  } catch (e) { /* "Any shop" still works */ }
+})();
 </script>
 </body>
 </html>

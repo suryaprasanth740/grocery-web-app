@@ -52,7 +52,84 @@ function shopFieldsHtml(shop) {
         <input id="f-freeDeliveryAbove" name="freeDeliveryAbove" type="number" min="1" max="10000" step="1" value="${v('freeDeliveryAbove')}"></div>
       <div class="field"><label for="f-minOrderAmount">Minimum order (&#8377;)</label>
         <input id="f-minOrderAmount" name="minOrderAmount" type="number" min="0" max="5000" step="1" required value="${v('minOrderAmount', '0')}"></div>
-    </div>`;
+    </div>
+    ${shop ? `
+    <div class="form-2">
+      <div class="field"><label for="f-logo">Shop photo or logo <span class="muted">(optional)</span></label>
+        <div class="photo-pick">
+          <div class="shop-logo" id="logo-preview">${shop.logoUrl ? `<img src="${escapeHtml(shop.logoUrl)}" alt="">` : '&#127978;'}</div>
+          <input id="f-logo" type="file" accept="image/jpeg,image/png,image/webp">
+        </div>
+        <input type="hidden" name="logoUrl" value="${v('logoUrl')}">
+        <div class="field-msg" id="logo-msg" aria-live="polite"></div></div>
+      <div class="field"><label>Map position <span class="muted">(optional, shows buyers the distance)</span></label>
+        <input type="hidden" name="latitude" value="${v('latitude')}">
+        <input type="hidden" name="longitude" value="${v('longitude')}">
+        <div class="muted small" id="pos-text">${shop.latitude != null ? `Saved: ${shop.latitude}, ${shop.longitude}` : 'Not set'}</div>
+        <div class="action-row" style="margin:6px 0 0;">
+          <button type="button" class="btn btn-outline btn-sm" id="pos-here">Use my current location</button>
+          <button type="button" class="btn btn-outline btn-sm" id="pos-clear">Clear</button>
+        </div>
+        <div class="field-msg" id="pos-msg" aria-live="polite"></div></div>
+    </div>` : ''}`;
+}
+
+/** Shrinks a photo in the browser (longest side 900 px, JPEG) so it fits the 300 KB limit. */
+async function shrinkPhoto(file) {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error('Choose a JPEG, PNG or WebP photo.');
+  const img = await new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const i = new Image();
+    i.onload = () => { URL.revokeObjectURL(url); resolve(i); };
+    i.onerror = () => { URL.revokeObjectURL(url); reject(new Error('That file could not be read as a photo.')); };
+    i.src = url;
+  });
+  const scale = Math.min(1, 900 / Math.max(img.width, img.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(img.width * scale);
+  canvas.height = Math.round(img.height * scale);
+  canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+  for (const q of [0.85, 0.75, 0.65, 0.5]) {
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', q));
+    if (blob && blob.size <= 300 * 1024) return blob;
+  }
+  throw new Error('This photo is still too big after shrinking. Try a smaller one.');
+}
+
+/** Wires the logo picker and the "use my location" buttons on the shop form. */
+function wireShopExtras(form) {
+  const logo = form.querySelector('#f-logo');
+  if (logo) {
+    logo.addEventListener('change', async () => {
+      const msg = form.querySelector('#logo-msg');
+      if (!logo.files[0]) return;
+      msg.className = 'field-msg'; msg.textContent = 'Uploading\u2026';
+      try {
+        const up = await API.uploadImage(await shrinkPhoto(logo.files[0]), 'logo.jpg');
+        form.elements.logoUrl.value = up.url;
+        form.querySelector('#logo-preview').innerHTML = `<img src="${escapeHtml(up.url)}" alt="">`;
+        msg.className = 'field-msg ok'; msg.textContent = 'Photo ready. Save changes to use it.';
+      } catch (e) { msg.className = 'field-msg error'; msg.textContent = e.message; }
+    });
+  }
+  const here = form.querySelector('#pos-here');
+  if (here) {
+    here.addEventListener('click', async () => {
+      const msg = form.querySelector('#pos-msg');
+      try {
+        const c = await NBLocation.locate();
+        form.elements.latitude.value = c.lat;
+        form.elements.longitude.value = c.lng;
+        form.querySelector('#pos-text').textContent = `New: ${c.lat}, ${c.lng}`;
+        msg.className = 'field-msg ok'; msg.textContent = 'Use this only when you are at the shop. Save changes to keep it.';
+      } catch (e) { msg.className = 'field-msg error'; msg.textContent = e.message; }
+    });
+    form.querySelector('#pos-clear').addEventListener('click', () => {
+      form.elements.latitude.value = '';
+      form.elements.longitude.value = '';
+      form.querySelector('#pos-text').textContent = 'Not set';
+    });
+  }
 }
 
 /** Reads the shop fields inside `form` into the JSON the API expects. */
@@ -73,6 +150,9 @@ function readShopFields(form) {
     deliveryFee: num('deliveryFee'),
     freeDeliveryAbove: num('freeDeliveryAbove'),
     minOrderAmount: num('minOrderAmount'),
+    logoUrl: form.elements.logoUrl ? (form.elements.logoUrl.value || null) : null,
+    latitude: form.elements.latitude && form.elements.latitude.value !== '' ? Number(form.elements.latitude.value) : null,
+    longitude: form.elements.longitude && form.elements.longitude.value !== '' ? Number(form.elements.longitude.value) : null,
   };
 }
 

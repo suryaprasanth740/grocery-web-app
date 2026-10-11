@@ -94,7 +94,11 @@ const API = {
   clearCart() { return this.del('/api/cart/clear'); },
 
   // Orders
-  quote(couponCode) { return this.post('/api/orders/quote', { couponCode: couponCode || null }); },
+  /** The bill for the cart. fulfilment = {shopId: 'DELIVERY'|'PICKUP'}; pincode checks each shop's delivery area. */
+  quote(couponCode, fulfilment, pincode) {
+    return this.post('/api/orders/quote', { couponCode: couponCode || null, fulfilment: fulfilment || {}, pincode: pincode || null });
+  },
+  reorder(id) { return this.post(`/api/orders/${id}/reorder`); },
   checkout(payload) { return this.post('/api/orders/checkout', payload); },
   orders() { return this.get('/api/orders'); },
   order(id) { return this.get(`/api/orders/${id}`); },
@@ -104,11 +108,14 @@ const API = {
 
   // Cart extras, delivery and offers
   acceptPrices() { return this.post('/api/cart/accept-prices'); },
+  shops(params) { return this.get('/api/shops?' + new URLSearchParams(params || {}).toString()); },
+  shopPage(slug, params) { return this.get(`/api/shops/${encodeURIComponent(slug)}?` + new URLSearchParams(params || {}).toString()); },
+  searchProducts(params) { return this.get('/api/products/search?' + new URLSearchParams(params || {}).toString()); },
   checkPincode(pincode) { return this.get('/api/delivery/check?pincode=' + encodeURIComponent(pincode)); },
   coupons() { return this.get('/api/coupons'); },
 
   // Smart shopping
-  parseList(text) { return this.post('/api/smart-list/parse', { text }); },
+  parseList(text, shopId) { return this.post('/api/smart-list/parse' + (shopId ? '?shopId=' + encodeURIComponent(shopId) : ''), { text }); },
   addMany(items) { return this.post('/api/cart/add-many', { items }); },
   swapInCart(fromProductId, toProductId) { return this.post('/api/cart/swap', { fromProductId, toProductId }); },
   recipes() { return this.get('/api/recipes'); },
@@ -136,6 +143,32 @@ const API = {
 
   // Seller (only works for a SELLER login, always on the seller's own shop)
   registerSeller(payload) { return this.post('/api/auth/register-seller', payload); },
+  sellerSummary() { return this.get('/api/seller/summary'); },
+  sellerProducts(params) { return this.get('/api/seller/products?' + new URLSearchParams(params || {}).toString()); },
+  createProduct(payload) { return this.post('/api/seller/products', payload); },
+  updateProduct(id, payload) { return this.put(`/api/seller/products/${id}`, payload); },
+  setProductStock(id, stock) { return this.put(`/api/seller/products/${id}/stock`, { stock }); },
+  setProductActive(id, active) { return this.put(`/api/seller/products/${id}/active`, { active }); },
+  sellerOrders(status, page) { return this.get(`/api/seller/orders?status=${encodeURIComponent(status || 'all')}&page=${page || 0}`); },
+  sellerOrder(id) { return this.get(`/api/seller/orders/${id}`); },
+  setOrderStep(id, status) { return this.put(`/api/seller/orders/${id}/status`, { status }); },
+  rejectOrder(id, reason) { return this.post(`/api/seller/orders/${id}/reject`, { reason }); },
+  /** Uploads one photo (already shrunk in the browser). Returns {id, url}. */
+  async uploadImage(blob, filename) {
+    const form = new FormData();
+    form.append('file', blob, filename || 'photo.jpg');
+    const res = await fetch('/api/seller/images', {
+      method: 'POST', body: form, credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      const err = new Error((data && data.message) || `Upload failed (${res.status})`);
+      err.status = res.status;
+      throw err;
+    }
+    return data;
+  },
   myShop() { return this.get('/api/seller/shop'); },
   updateMyShop(payload) { return this.put('/api/seller/shop', payload); },
   resubmitMyShop() { return this.post('/api/seller/shop/resubmit'); },

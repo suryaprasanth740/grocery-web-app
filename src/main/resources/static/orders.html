@@ -57,8 +57,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       <a href="/order.html?id=${o.id}" class="order-card" style="display:block;">
         <div class="top-row">
           <div>
-            <div class="order-id">Order #${o.id}</div>
-            <div class="date">${formatDateTime(o.createdAt)}</div>
+            <div class="order-id">Order #${o.id}${o.shopName ? ` from ${escapeHtml(o.shopName)}` : ''}</div>
+            <div class="date">${formatDateTime(o.createdAt)}${o.fulfilment === 'PICKUP' ? ', pickup' : ''}</div>
           </div>
           ${statusBadgeHtml(o.status)}
         </div>

@@ -19,7 +19,7 @@
       <div class="hero-tools">
         <form class="search-row" id="hero-search-form" role="search">
           <label for="hero-search" class="sr-only">Search groceries</label>
-          <input type="search" id="hero-search" placeholder="Search tomatoes, atta, milk&hellip;" autocomplete="off">
+          <input type="search" id="hero-search" placeholder="Search groceries or shops&hellip;" autocomplete="off">
           <button class="btn btn-primary" type="submit">Search</button>
         </form>
         <div class="pin-card">
@@ -36,6 +36,17 @@
   </section>
 
   <div class="wrap">
+    <section aria-labelledby="near-title">
+      <div class="section-heading">
+        <h2 id="near-title">Kirana shops near you</h2>
+        <span class="note"><a href="/shops.html">All shops</a></span>
+      </div>
+      <div class="shop-strip" id="near-shops">
+        <div class="skeleton" style="flex:0 0 290px;height:130px;"></div>
+        <div class="skeleton" style="flex:0 0 290px;height:130px;"></div>
+      </div>
+    </section>
+
     <div class="section-heading">
       <h2>Shop by category</h2>
       <span class="note">Everything from the produce crate to the pantry shelf</span>
@@ -100,6 +111,22 @@
       <div><b>Fresh-date guarantee</b><span>Expired items can never be sold</span></div>
       <div><b>UPI or cash</b><span>Pay the way you like</span></div>
     </div>
+
+    <section id="offers-section" hidden aria-labelledby="offers-title">
+      <div class="section-heading">
+        <h2 id="offers-title">Best offers</h2>
+        <span class="note">Savings on the MRP, set by each shop</span>
+      </div>
+      <div class="grid" id="offers-grid" style="padding-bottom:8px;"></div>
+    </section>
+
+    <section id="essentials-section" hidden aria-labelledby="essentials-title">
+      <div class="section-heading">
+        <h2 id="essentials-title">Everyday essentials</h2>
+        <span class="note">Rice, dal, milk and the things you buy every week</span>
+      </div>
+      <div class="grid" id="essentials-grid" style="padding-bottom:8px;"></div>
+    </section>
 
     <div class="section-heading">
       <h2>Today&rsquo;s picks</h2>
@@ -171,8 +198,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('category-row').innerHTML = '<p>Could not load categories right now.</p>';
   }
 
+  loadNearbyShops();
+  document.addEventListener('nb:location', loadNearbyShops);
+
   try {
     const products = await API.products();
+    // Best offers: real MRP discounts, biggest first
+    const offers = products.filter(p => p.discountPercent > 0 && p.stock > 0 && !p.expired)
+      .sort((a, b) => b.discountPercent - a.discountPercent).slice(0, 4);
+    if (offers.length) {
+      document.getElementById('offers-section').hidden = false;
+      const og = document.getElementById('offers-grid');
+      og.innerHTML = offers.map(productCardHtml).join('');
+      attachAddToCartHandlers(og);
+    }
+    // Everyday essentials: staples and dairy in stock
+    const essentials = products.filter(p => p.category && /staple|dairy|rice|atta|grain/i.test(p.category.name) && p.stock > 0 && !p.expired).slice(0, 4);
+    if (essentials.length) {
+      document.getElementById('essentials-section').hidden = false;
+      const eg = document.getElementById('essentials-grid');
+      eg.innerHTML = essentials.map(productCardHtml).join('');
+      attachAddToCartHandlers(eg);
+    }
     const featured = products.slice(0, 8);
     const grid = document.getElementById('featured-grid');
     grid.innerHTML = featured.map(productCardHtml).join('');
@@ -181,6 +228,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('featured-grid').innerHTML = '<p>Could not load products right now.</p>';
   }
 });
+
+/** Shops that deliver to the saved PIN code (or all shops when no PIN code is set yet). */
+async function loadNearbyShops() {
+  const box = document.getElementById('near-shops');
+  const loc = NBLocation.get();
+  const params = Object.assign({}, NBLocation.coordsParams());
+  if (loc && loc.pincode) params.pincode = loc.pincode;
+  document.getElementById('near-title').textContent = params.pincode ? `Kirana shops delivering to ${params.pincode}` : 'Kirana shops on NammaBasket';
+  try {
+    const shops = await API.shops(params);
+    box.innerHTML = shops.length ? shops.slice(0, 8).map(shopCardHtml).join('') : `
+      <div class="empty-state" style="padding:24px;flex:1;"><h3>No shops deliver to ${escapeHtml(params.pincode || 'this area')} yet</h3>
+        <p>Try a nearby PIN code. Own a shop here? <a href="/sell.html" style="text-decoration:underline;">Sell on NammaBasket</a>.</p></div>`;
+  } catch (e) {
+    box.innerHTML = '<p class="muted">Could not load shops right now.</p>';
+  }
+}
 
 // Festival kits strip
 (async () => {

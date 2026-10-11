@@ -41,11 +41,17 @@
 <script src="/js/shop.js"></script>
 <script>
 // Next allowed status for each status (same rules as OrderService on the server).
+// Pickup orders go PREPARING -> READY_FOR_PICKUP; delivery orders go PREPARING -> OUT_FOR_DELIVERY.
 const NEXT_STATUS = {
-  PLACED: ['PACKED', 'CANCELLED'],
+  PLACED: ['ACCEPTED', 'CANCELLED'],
+  ACCEPTED: ['PREPARING', 'CANCELLED'],
+  PREPARING: ['OUT_FOR_DELIVERY', 'READY_FOR_PICKUP'],
   PACKED: ['OUT_FOR_DELIVERY', 'CANCELLED'],
   OUT_FOR_DELIVERY: ['DELIVERED'],
+  READY_FOR_PICKUP: ['DELIVERED'],
 };
+const nextStepsFor = (o) => (NEXT_STATUS[o.status] || []).filter(s =>
+  !(s === 'OUT_FOR_DELIVERY' && o.fulfilment === 'PICKUP') && !(s === 'READY_FOR_PICKUP' && o.fulfilment !== 'PICKUP'));
 let activeTab = 'applications';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -233,18 +239,19 @@ async function renderOrders(root) {
   const orders = await API.adminOrders();
   if (!orders.length) { root.innerHTML = '<p>No orders yet.</p>'; return; }
   root.innerHTML = `<div class="table-wrap"><table class="admin-table">
-    <thead><tr><th>#</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>If unavailable</th><th>Status</th><th>Actions</th></tr></thead>
+    <thead><tr><th>#</th><th>Date</th><th>Shop</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>If unavailable</th><th>Status</th><th>Actions</th></tr></thead>
     <tbody>${orders.map(o => `
       <tr>
         <td><b>${o.id}</b></td>
         <td>${formatDateTime(o.createdAt)}</td>
+        <td>${escapeHtml(o.shopName || '-')}<div class="muted small">${o.fulfilment === 'PICKUP' ? 'Pickup' : 'Delivery'}</div></td>
         <td>${escapeHtml(o.customerName || '')}<div class="muted small">${escapeHtml(o.customerEmail || '')}</div><div class="muted small">PIN ${escapeHtml(o.pincode || '-')}</div></td>
         <td>${o.items.map(i => `${escapeHtml(i.productName)} &times; ${i.quantity}`).join('<br>')}</td>
         <td>${formatRupees(o.totalAmount)}${Number(o.discount) > 0 ? `<div class="muted small">${escapeHtml(o.couponCode)} &minus;${formatRupees(o.discount)}</div>` : ''}</td>
         <td>${escapeHtml(o.paymentMethod)}<div class="muted small">${escapeHtml(PAYMENT_LABELS[o.paymentStatus] || o.paymentStatus)}</div></td>
         <td class="small">${escapeHtml(SUBSTITUTION_LABELS[o.substitutionPreference] || '-')}</td>
         <td>${statusBadgeHtml(o.status)}</td>
-        <td class="actions">${(NEXT_STATUS[o.status] || []).map(s => `
+        <td class="actions">${nextStepsFor(o).map(s => `
           <button class="btn btn-sm ${s === 'CANCELLED' ? 'btn-outline danger' : 'btn-primary'}" data-order="${o.id}" data-status="${s}">
             ${s === 'CANCELLED' ? 'Cancel' : 'Mark ' + escapeHtml(STATUS_LABELS[s][0].toLowerCase())}</button>`).join('') || '<span class="muted small">&mdash;</span>'}
         </td>

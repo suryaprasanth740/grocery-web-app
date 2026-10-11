@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop | NammaBasket</title>
+<link rel="icon" href="/img/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="signboard" id="site-header"></header>
+
+<main id="main">
+  <section class="shop-hero"><div class="wrap" id="shop-head"><div class="skeleton" style="height:72px;width:min(420px,100%);"></div></div></section>
+  <div class="wrap">
+    <div class="filter-bar" style="margin-top:18px;">
+      <div class="search-row" style="margin:0;flex:1;min-width:220px;max-width:520px;">
+        <label for="in-shop" class="sr-only">Search this shop</label>
+        <input id="in-shop" type="search" placeholder="Search this shop">
+      </div>
+      <div class="chip-row" id="cat-chips"></div>
+    </div>
+    <div class="grid" id="shop-products">
+      <div class="skeleton" style="height:220px;"></div>
+      <div class="skeleton" style="height:220px;"></div>
+      <div class="skeleton" style="height:220px;"></div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+<div id="toast"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/shop.js"></script>
+<script>
+const slug = new URLSearchParams(location.search).get('s');
+let products = [];
+let activeCat = null;
+
+(async () => {
+  if (!slug) { document.getElementById('shop-head').innerHTML = '<h1>Shop not found</h1>'; return; }
+  try {
+    const data = await API.shopPage(slug, NBLocation.coordsParams());
+    products = data.products;
+    renderHead(data.shop);
+    renderChips();
+    renderProducts();
+  } catch (e) {
+    document.getElementById('shop-head').innerHTML = `<div><h1>Shop not found</h1><p class="muted">This shop isn&rsquo;t on NammaBasket right now. <a href="/shops.html" style="text-decoration:underline;">See other shops</a></p></div>`;
+    document.getElementById('shop-products').innerHTML = '';
+  }
+})();
+
+function renderHead(s) {
+  document.title = `${s.name} | NammaBasket`;
+  const how = [s.offersDelivery && 'Delivery', s.offersPickup && 'Pickup'].filter(Boolean).join(' and ');
+  const loc = NBLocation.get();
+  const serves = loc && loc.pincode ? s.servicePincodes.some(p => p === loc.pincode || (p.endsWith('xxx') && loc.pincode.startsWith(p.slice(0, 3)))) : null;
+  document.getElementById('shop-head').innerHTML = `
+    <div class="shop-logo">${s.logoUrl ? `<img src="${escapeHtml(s.logoUrl)}" alt="">` : '&#127978;'}</div>
+    <div style="flex:1;min-width:240px;">
+      <h1>${escapeHtml(s.name)}</h1>
+      <div class="muted">${escapeHtml(s.categoryLabel)}, ${escapeHtml(s.addressLine)}${s.distanceKm != null ? `, ${s.distanceKm} km away` : ''}</div>
+      <div class="shop-card-facts">
+        <span class="${s.acceptingOrders && s.openNow ? 'open' : 'closed'}">${!s.acceptingOrders ? 'Not taking orders right now' : s.openNow ? `Open now, until ${s.closeTime}` : `Closed, opens at ${s.openTime}`}</span>
+        <span>${how}</span>
+        ${s.offersDelivery ? `<span>${Number(s.deliveryFee) === 0 ? 'Free delivery' : `Delivery ${formatRupees(s.deliveryFee)}`}${s.freeDeliveryAbove ? `, free from ${formatRupees(s.freeDeliveryAbove)}` : ''}</span>` : ''}
+        ${Number(s.minOrderAmount) > 0 ? `<span>Minimum order ${formatRupees(s.minOrderAmount)}</span>` : ''}
+        ${serves === true && s.offersDelivery ? `<span class="open">Delivers to ${escapeHtml(loc.pincode)}</span>` : ''}
+        ${serves === false && s.offersDelivery ? `<span class="closed">Doesn&rsquo;t deliver to ${escapeHtml(loc.pincode)}${s.offersPickup ? '; pickup only' : ''}</span>` : ''}
+      </div>
+    </div>`;
+}
+
+function renderChips() {
+  const cats = [...new Map(products.filter(p => p.category).map(p => [p.category.id, p.category])).values()];
+  const box = document.getElementById('cat-chips');
+  box.innerHTML = `<button class="chip ${activeCat === null ? 'active' : ''}" data-cat="">All</button>` +
+    cats.map(c => `<button class="chip ${activeCat === c.id ? 'active' : ''}" data-cat="${c.id}">${escapeHtml(c.name)}</button>`).join('');
+  box.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
+    activeCat = b.dataset.cat ? Number(b.dataset.cat) : null;
+    renderChips();
+    renderProducts();
+  }));
+}
+
+function renderProducts() {
+  const q = document.getElementById('in-shop').value.trim().toLowerCase();
+  const list = products.filter(p => (activeCat === null || (p.category && p.category.id === activeCat))
+    && (!q || p.name.toLowerCase().includes(q) || (p.brand || '').toLowerCase().includes(q)));
+  const grid = document.getElementById('shop-products');
+  grid.innerHTML = list.length ? list.map(productCardHtml).join('') : `
+    <div class="empty-state" style="grid-column:1/-1;"><h3>${products.length ? 'Nothing matches' : 'No products yet'}</h3>
+      <p>${products.length ? 'Try another word or category.' : 'This shop hasn&rsquo;t listed products yet.'}</p></div>`;
+  attachAddToCartHandlers(grid);
+}
+document.getElementById('in-shop').addEventListener('input', renderProducts);
+</script>
+</body>
+</html>

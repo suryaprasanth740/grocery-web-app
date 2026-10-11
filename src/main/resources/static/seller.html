@@ -18,43 +18,15 @@
     </div>
   </section>
 
-  <div class="wrap dash-grid" id="dash" hidden>
-    <div>
-      <div id="status-panel"></div>
-
-      <section class="panel" style="margin-top:18px;">
-        <h2>Orders</h2>
-        <div class="placeholder-art" style="padding:26px 10px;">
-          <div class="big" aria-hidden="true">&#128230;</div>
-          <p id="orders-empty" style="margin:0;"></p>
-        </div>
-      </section>
-
-      <form class="panel" id="shop-form" style="margin-top:18px;" novalidate>
-        <h2>Shop details</h2>
-        <p class="panel-sub">Buyers see these details on your shop page.</p>
-        <div id="form-msg" aria-live="polite"></div>
-        <div id="shop-fields"></div>
-        <button class="btn btn-primary" id="save-btn" type="submit">Save changes</button>
-      </form>
+  <div class="wrap" id="dash" hidden>
+    <div class="tabs" role="tablist" style="margin-top:20px;">
+      <button class="tab active" role="tab" data-tab="overview">Overview</button>
+      <button class="tab" role="tab" data-tab="orders">Orders <span id="new-badge"></span></button>
+      <button class="tab" role="tab" data-tab="products">Products</button>
+      <button class="tab" role="tab" data-tab="details">Shop details</button>
     </div>
-
-    <aside>
-      <section class="panel">
-        <div class="switch-row">
-          <div>
-            <h2 style="margin:0;">Taking orders</h2>
-            <p class="panel-sub" id="accepting-note" style="margin:2px 0 0;"></p>
-          </div>
-          <label class="toggle"><input type="checkbox" id="accepting" aria-describedby="accepting-note"><span></span>
-            <span class="sr-only">Taking new orders</span></label>
-        </div>
-      </section>
-      <section class="panel">
-        <h2>At a glance</h2>
-        <dl class="facts" id="facts"></dl>
-      </section>
-    </aside>
+    <div id="status-panel"></div>
+    <div id="tab-root" style="padding-bottom:64px;"></div>
   </div>
 </main>
 
@@ -63,15 +35,25 @@
 
 <script src="/js/api.js"></script>
 <script src="/js/nav.js"></script>
+<script src="/js/shop.js"></script>
 <script src="/js/shop-form.js"></script>
 <script>
-const STATUS_TEXT = {
-  PENDING: 'Waiting for approval',
-  APPROVED: 'Approved',
-  REJECTED: 'Needs changes',
-  SUSPENDED: 'Suspended',
+const STATUS_TEXT = { PENDING: 'Waiting for approval', APPROVED: 'Approved', REJECTED: 'Needs changes', SUSPENDED: 'Suspended' };
+// What the shop can do next with an order (same rules as the server)
+const NEXT_ACTIONS = {
+  PLACED: [['ACCEPTED', 'Accept order']],
+  ACCEPTED: [['PREPARING', 'Start preparing']],
+  PREPARING: [['OUT_FOR_DELIVERY', 'Out for delivery', 'DELIVERY'], ['READY_FOR_PICKUP', 'Ready for pickup', 'PICKUP']],
+  PACKED: [['OUT_FOR_DELIVERY', 'Out for delivery', 'DELIVERY']],
+  OUT_FOR_DELIVERY: [['DELIVERED', 'Mark delivered']],
+  READY_FOR_PICKUP: [['DELIVERED', 'Mark handed over']],
 };
 let shop = null;
+let tab = 'overview';
+let orderFilter = 'new';
+let lastNewCount = null;
+let categories = [];
+let productQuery = { q: '', sort: 'name', page: 0 };
 
 document.addEventListener('DOMContentLoaded', load);
 
@@ -84,104 +66,410 @@ async function load() {
     return;
   }
   try {
-    shop = await API.myShop();
+    [shop, categories] = await Promise.all([API.myShop(), API.categories()]);
   } catch (e) {
     document.getElementById('board').innerHTML = `<h1>Seller dashboard</h1><p>${escapeHtml(e.message)}</p>`;
     return;
   }
-  render();
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
+    tab = t.dataset.tab;
+    renderTab();
+  }));
+  renderFrame();
+  renderTab();
   if (new URLSearchParams(location.search).get('applied')) {
     showToast('Application sent. We’ll review your shop soon.', 'ok');
     history.replaceState(null, '', '/seller.html');
   }
+  // New-order alerts: check every 30 seconds while the page is open
+  if (shop.status === 'APPROVED') setInterval(pollNewOrders, 30000);
 }
 
-function render() {
+function renderFrame() {
   document.getElementById('dash').hidden = false;
   document.getElementById('board').innerHTML = `
     <h1>${escapeHtml(shop.name)} <span class="status-pill ${shop.status}">${STATUS_TEXT[shop.status]}</span></h1>
     <p>${escapeHtml(shop.categoryLabel)}, ${escapeHtml(shop.addressLine)}</p>`;
-
   const panel = document.getElementById('status-panel');
   if (shop.status === 'PENDING') {
     panel.innerHTML = `<div class="notice info"><b>Your application is with our team.</b>
-      Buyers can&rsquo;t see your shop until an admin approves it. You can still change the details below.</div>`;
+      Buyers can&rsquo;t see your shop until an admin approves it. Meanwhile you can add your products and edit your details.</div>`;
   } else if (shop.status === 'REJECTED') {
-    panel.innerHTML = `<div class="panel"><h2>Your application needs changes</h2>
+    panel.innerHTML = `<div class="panel" style="margin-bottom:16px;"><h2>Your application needs changes</h2>
       <div class="reason-box">${escapeHtml(shop.statusReason || 'No reason given')}</div>
-      <p class="panel-sub" style="margin-top:12px;">Fix the shop details below, save them, then send the application again.</p>
+      <p class="panel-sub" style="margin-top:12px;">Fix the shop details, save them, then send the application again.</p>
       <button class="btn btn-primary" id="resubmit-btn" type="button">Send application again</button></div>`;
     document.getElementById('resubmit-btn').addEventListener('click', resubmit);
   } else if (shop.status === 'SUSPENDED') {
-    panel.innerHTML = `<div class="panel"><h2>Your shop is suspended</h2>
+    panel.innerHTML = `<div class="panel" style="margin-bottom:16px;"><h2>Your shop is suspended</h2>
       <div class="reason-box">${escapeHtml(shop.statusReason || 'No reason given')}</div>
       <p class="panel-sub" style="margin-top:12px;">Buyers can&rsquo;t see your shop. <a href="/help.html#contact" style="text-decoration:underline;">Contact NammaBasket</a> to sort it out.</p></div>`;
+  } else if (!shop.acceptingOrders) {
+    panel.innerHTML = `<div class="notice warn"><b>New orders are paused.</b> Buyers can see your shop but can&rsquo;t order until you switch orders back on.</div>`;
   } else {
-    panel.innerHTML = shop.acceptingOrders
-      ? `<div class="notice info"><b>Your shop is live.</b> Buyers in your PIN codes can find it and order.</div>`
-      : `<div class="notice warn"><b>New orders are paused.</b> Buyers can see your shop but can&rsquo;t order until you switch orders back on.</div>`;
+    panel.innerHTML = '';
   }
-
-  document.getElementById('orders-empty').textContent = shop.status === 'APPROVED'
-    ? 'No orders yet. New orders will appear here as soon as buyers place them.'
-    : 'Orders appear here once your shop is approved and buyers start ordering.';
-
-  const toggle = document.getElementById('accepting');
-  toggle.checked = shop.status === 'APPROVED' && shop.acceptingOrders;
-  toggle.disabled = shop.status !== 'APPROVED';
-  document.getElementById('accepting-note').textContent = shop.status !== 'APPROVED'
-    ? 'Available after approval.'
-    : (shop.acceptingOrders ? 'Buyers can order now.' : 'Paused: buyers can’t order.');
-
-  const money = (n) => n == null ? '—' : formatRupees(n);
-  const fulfil = [shop.offersDelivery && 'Delivery', shop.offersPickup && 'Pickup'].filter(Boolean).join(' and ');
-  document.getElementById('facts').innerHTML = [
-    ['Hours', `${shop.openTime} to ${shop.closeTime}`],
-    ['Open now', shop.openNow ? 'Yes' : 'No'],
-    ['Orders by', fulfil],
-    ['Delivers to', shop.servicePincodes.join(', ')],
-    ['Delivery fee', money(shop.deliveryFee)],
-    ['Free delivery from', money(shop.freeDeliveryAbove)],
-    ['Minimum order', Number(shop.minOrderAmount) > 0 ? money(shop.minOrderAmount) : 'None'],
-  ].map(([k, v]) => `<div><dt>${k}</dt><dd>${escapeHtml(v)}</dd></div>`).join('');
-
-  const form = document.getElementById('shop-form');
-  document.getElementById('shop-fields').innerHTML = shopFieldsHtml(shop);
-  form.querySelectorAll('input, select, button').forEach(el => { el.disabled = shop.status === 'SUSPENDED'; });
 }
 
-document.getElementById('accepting').addEventListener('change', async (e) => {
-  const toggle = e.target;
-  toggle.disabled = true;
+async function renderTab() {
+  const root = document.getElementById('tab-root');
   try {
-    shop = await API.setAcceptingOrders(toggle.checked);
-    showToast(shop.acceptingOrders ? 'Orders switched on' : 'New orders paused', 'ok');
-  } catch (err) {
-    toggle.checked = !toggle.checked;
-    showToast(err.message, 'error');
+    if (tab === 'overview') await renderOverview(root);
+    if (tab === 'orders') await renderOrders(root);
+    if (tab === 'products') await renderProducts(root);
+    if (tab === 'details') renderDetails(root);
+  } catch (e) {
+    root.innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`;
   }
-  render();
-});
+}
 
-document.getElementById('shop-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const msg = document.getElementById('form-msg');
-  const btn = document.getElementById('save-btn');
-  const payload = readShopFields(e.target);
-  const problem = checkShopFields(payload);
-  if (problem) { msg.innerHTML = `<div class="alert alert-error">${escapeHtml(problem)}</div>`; return; }
-  msg.innerHTML = '';
-  btn.disabled = true;
+// ---------------- Overview ----------------
+async function renderOverview(root) {
+  const sum = await API.sellerSummary();
+  updateNewBadge(sum.newOrders);
+  const maxSales = Math.max(1, ...sum.daily.map(d => Number(d.sales)));
+  const day = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' });
+  root.innerHTML = `
+    <div class="dash-grid" style="padding-top:0;">
+      <div>
+        <div class="admin-stats">
+          ${[['New orders', sum.newOrders], ['In progress', sum.inProgress], ['Completed', sum.completed],
+             ['Sales today', formatRupees(sum.salesToday)], ['Last 7 days', formatRupees(sum.salesThisWeek)]]
+            .map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}
+        </div>
+        <section class="panel">
+          <h2>Sales, last 7 days</h2>
+          ${sum.totalOrders === 0
+            ? `<p class="panel-sub" style="margin:0;">${shop.status === 'APPROVED' ? 'No orders yet. Sales will appear here as soon as buyers order.' : 'Sales will appear here once your shop is approved and buyers order.'}</p>`
+            : `<div class="bars" role="table" aria-label="Sales per day">${sum.daily.map(d => `
+                <div class="bar-row" role="row">
+                  <span role="cell">${day(d.date)}</span>
+                  <span class="bar" role="cell"><span style="width:${Math.round(Number(d.sales) / maxSales * 100)}%"></span></span>
+                  <span class="amt" role="cell">${formatRupees(d.sales)}<span class="muted small" style="font-weight:500;"> (${d.orders})</span></span>
+                </div>`).join('')}</div>
+               <p class="bill-note">Amount per day, with the number of orders. Cancelled and unpaid orders are not counted.</p>`}
+        </section>
+        <section class="panel">
+          <h2>Best sellers, last 30 days</h2>
+          ${sum.bestSellers.length ? `<dl class="facts">${sum.bestSellers.map(b => `<div><dt>${escapeHtml(b.name)}</dt><dd>${b.quantity} sold, ${formatRupees(b.sales)}</dd></div>`).join('')}</dl>`
+            : '<p class="panel-sub" style="margin:0;">Your best-selling products will show here.</p>'}
+        </section>
+      </div>
+      <aside>
+        <section class="panel">
+          <div class="switch-row">
+            <div>
+              <h2 style="margin:0;">Taking orders</h2>
+              <p class="panel-sub" id="accepting-note" style="margin:2px 0 0;">${shop.status !== 'APPROVED' ? 'Available after approval.' : shop.acceptingOrders ? 'Buyers can order now.' : 'Paused: buyers can’t order.'}</p>
+            </div>
+            <label class="toggle"><input type="checkbox" id="accepting" ${shop.status === 'APPROVED' && shop.acceptingOrders ? 'checked' : ''} ${shop.status === 'APPROVED' ? '' : 'disabled'}><span></span>
+              <span class="sr-only">Taking new orders</span></label>
+          </div>
+        </section>
+        <section class="panel">
+          <h2>Stock to watch</h2>
+          <p class="panel-sub">${sum.activeProducts} product${sum.activeProducts === 1 ? '' : 's'} on sale, ${sum.outOfStock} out of stock.</p>
+          ${sum.lowStock.length ? `<dl class="facts">${sum.lowStock.map(p => `<div><dt>${escapeHtml(p.name)}</dt><dd class="${p.stock === 0 ? 'saving' : ''}" style="${p.stock === 0 ? 'color:var(--accent-dark)' : ''}">${p.stock === 0 ? 'Out of stock' : p.stock + ' left'}</dd></div>`).join('')}</dl>`
+            : '<p class="panel-sub" style="margin:0;">Nothing is running low.</p>'}
+        </section>
+      </aside>
+    </div>`;
+  document.getElementById('accepting').addEventListener('change', async (e) => {
+    const toggle = e.target;
+    toggle.disabled = true;
+    try {
+      shop = await API.setAcceptingOrders(toggle.checked);
+      showToast(shop.acceptingOrders ? 'Orders switched on' : 'New orders paused', 'ok');
+    } catch (err) {
+      toggle.checked = !toggle.checked;
+      showToast(err.message, 'error');
+    }
+    renderFrame();
+    renderTab();
+  });
+}
+
+function updateNewBadge(n) {
+  document.getElementById('new-badge').textContent = n ? `(${n})` : '';
+}
+
+async function pollNewOrders() {
   try {
-    shop = await API.updateMyShop(payload);
-    showToast('Shop details saved', 'ok');
-    render();
-  } catch (err) {
-    msg.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
-  } finally {
-    btn.disabled = false;
-  }
-});
+    const sum = await API.sellerSummary();
+    if (lastNewCount !== null && sum.newOrders > lastNewCount) {
+      showToast(sum.newOrders - lastNewCount === 1 ? 'New order received' : `${sum.newOrders - lastNewCount} new orders received`, 'ok');
+      if (tab === 'orders') renderTab();
+    }
+    lastNewCount = sum.newOrders;
+    updateNewBadge(sum.newOrders);
+  } catch (e) { /* try again next time */ }
+}
+
+// ---------------- Orders ----------------
+async function renderOrders(root) {
+  const data = await API.sellerOrders(orderFilter, 0);
+  const filters = [['new', 'New'], ['active', 'In progress'], ['done', 'Completed'], ['cancelled', 'Cancelled'], ['all', 'All']];
+  root.innerHTML = `
+    <div class="chip-row" style="margin-bottom:14px;">
+      ${filters.map(([v, l]) => `<button class="chip ${orderFilter === v ? 'active' : ''}" data-filter="${v}">${l}</button>`).join('')}
+    </div>
+    ${data.items.length ? data.items.map(sellerOrderHtml).join('') : `
+      <div class="empty-state"><h3>No ${orderFilter === 'all' ? '' : filters.find(f => f[0] === orderFilter)[1].toLowerCase() + ' '}orders</h3>
+        <p>${orderFilter === 'new' ? 'New orders appear here, and this page tells you when one arrives.' : 'Nothing here yet.'}</p></div>`}
+    ${data.totalPages > 1 ? `<p class="muted small">Showing the latest ${data.items.length} of ${data.totalItems}.</p>` : ''}`;
+  root.querySelectorAll('[data-filter]').forEach(b => b.addEventListener('click', () => { orderFilter = b.dataset.filter; renderTab(); }));
+  root.querySelectorAll('button[data-step]').forEach(btn => btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    try {
+      await API.setOrderStep(Number(btn.dataset.order), btn.dataset.step);
+      showToast(`Order #${btn.dataset.order} updated`, 'ok');
+      renderTab();
+    } catch (e) { showToast(e.message, 'error'); btn.disabled = false; }
+  }));
+  root.querySelectorAll('button[data-reject]').forEach(btn => btn.addEventListener('click', () => {
+    const form = btn.closest('.order-card').querySelector('.reason-form');
+    form.hidden = false;
+    const box = form.querySelector('textarea');
+    box.focus();
+    form.querySelector('.confirm').onclick = async () => {
+      if (box.value.trim().length < 5) { showToast('Write a reason of at least 5 characters. The buyer will see it.', 'error'); return; }
+      try {
+        await API.rejectOrder(Number(btn.dataset.reject), box.value.trim());
+        showToast('Order rejected. The buyer has been told why.', 'ok');
+        renderTab();
+      } catch (e) { showToast(e.message, 'error'); }
+    };
+  }));
+}
+
+function sellerOrderHtml(o) {
+  const actions = (NEXT_ACTIONS[o.status] || []).filter(a => !a[2] || a[2] === o.fulfilment);
+  const canReject = o.status === 'PLACED' || o.status === 'ACCEPTED';
+  return `
+    <article class="order-card">
+      <div class="top-row">
+        <div>
+          <div class="order-id">Order #${o.id} <span class="muted small" style="font-weight:600;">${o.fulfilment === 'PICKUP' ? 'Pickup' : 'Delivery'}</span></div>
+          <div class="date">${formatDateTime(o.createdAt)}, ${escapeHtml(o.customerName || '')}</div>
+        </div>
+        ${statusBadgeHtml(o.status)}
+      </div>
+      <div class="order-meta">
+        ${o.fulfilment === 'DELIVERY' ? `<div><strong>Deliver to:</strong> ${escapeHtml(o.shippingAddress || '')}, ${escapeHtml(o.pincode || '')}</div>` : '<div><strong>Buyer collects from your shop.</strong></div>'}
+        <div><strong>Payment:</strong> ${escapeHtml(o.paymentMethod)}, ${escapeHtml(PAYMENT_LABELS[o.paymentStatus] || o.paymentStatus)}</div>
+        <div><strong>If an item runs out:</strong> ${escapeHtml(SUBSTITUTION_LABELS[o.substitutionPreference] || '-')}</div>
+        ${o.rejectionReason ? `<div><strong>Rejected:</strong> ${escapeHtml(o.rejectionReason)}</div>` : ''}
+      </div>
+      <div class="order-items-list">
+        ${o.items.map(it => `<div class="order-line"><span><b>${escapeHtml(it.productName)}</b> &times; ${it.quantity}</span><span>${formatRupees(it.price * it.quantity)}</span></div>`).join('')}
+        <div class="order-line"><span>Delivery fee</span><span>${formatRupees(o.deliveryFee)}</span></div>
+        ${Number(o.discount) > 0 ? `<div class="order-line"><span>Coupon (paid by NammaBasket)</span><span>&minus; ${formatRupees(o.discount)}</span></div>` : ''}
+        <div class="order-line"><b>Total</b><b>${formatRupees(o.totalAmount)}</b></div>
+      </div>
+      ${actions.length || canReject ? `<div class="action-row" style="margin:12px 0 0;">
+        ${actions.map(([step, label]) => `<button class="btn btn-primary btn-sm" data-order="${o.id}" data-step="${step}">${label}</button>`).join('')}
+        ${canReject ? `<button class="btn btn-outline danger btn-sm" data-reject="${o.id}">Reject</button>` : ''}
+      </div>
+      <div class="reason-form" hidden style="max-width:420px;">
+        <textarea rows="2" maxlength="300" placeholder="Reason the buyer will see, e.g. Out of fresh stock today"></textarea>
+        <button class="btn btn-sm btn-primary confirm" type="button">Confirm rejection</button>
+      </div>` : ''}
+    </article>`;
+}
+
+// ---------------- Products ----------------
+async function renderProducts(root) {
+  const data = await API.sellerProducts({ q: productQuery.q, sort: productQuery.sort, page: productQuery.page, size: 25 });
+  root.innerHTML = `
+    <div class="filter-bar">
+      <div class="search-row" style="margin:0;flex:1;min-width:200px;max-width:420px;">
+        <label for="p-q" class="sr-only">Search your products</label>
+        <input id="p-q" type="search" placeholder="Search your products" value="${escapeHtml(productQuery.q)}">
+      </div>
+      <label class="filter-sort" style="margin-left:0;">Sort
+        <select id="p-sort">
+          ${[['name', 'Name'], ['stock', 'Lowest stock'], ['price', 'Price'], ['newest', 'Newest']].map(([v, l]) => `<option value="${v}" ${productQuery.sort === v ? 'selected' : ''}>${l}</option>`).join('')}
+        </select>
+      </label>
+      <button class="btn btn-primary" id="p-add" type="button" ${shop.status === 'SUSPENDED' ? 'disabled' : ''}>Add product</button>
+    </div>
+    <div id="product-form-slot"></div>
+    ${data.items.length ? `<div class="table-wrap"><table class="admin-table">
+      <thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>On sale</th><th></th></tr></thead>
+      <tbody>${data.items.map(p => `
+        <tr>
+          <td><div style="display:flex;gap:10px;align-items:center;">${thumbHtml(p)}<div><b>${escapeHtml(p.name)}</b>
+            <div class="muted small">${escapeHtml([p.brand, p.unit, p.category && p.category.name].filter(Boolean).join(', '))}</div></div></div></td>
+          <td>${formatRupees(p.price)}${p.discountPercent ? `<div class="muted small">MRP ${formatRupees(p.mrp)}, ${p.discountPercent}% off</div>` : ''}</td>
+          <td><input type="number" min="0" max="10000" value="${p.stock}" data-stock="${p.id}" aria-label="Stock of ${escapeHtml(p.name)}" style="width:84px;">
+            ${p.stock === 0 ? '<div class="muted small" style="color:var(--accent-dark)">Out of stock</div>' : ''}</td>
+          <td><label class="toggle"><input type="checkbox" data-active="${p.id}" ${p.active ? 'checked' : ''}><span></span><span class="sr-only">${escapeHtml(p.name)} on sale</span></label></td>
+          <td><button class="btn btn-outline btn-sm" data-edit="${p.id}">Edit</button></td>
+        </tr>`).join('')}</tbody></table></div>
+      ${data.totalPages > 1 ? `<div class="action-row">
+        <button class="btn btn-outline btn-sm" data-page="${productQuery.page - 1}" ${productQuery.page <= 0 ? 'disabled' : ''}>Previous</button>
+        <span class="muted small" style="align-self:center;">Page ${productQuery.page + 1} of ${data.totalPages}</span>
+        <button class="btn btn-outline btn-sm" data-page="${productQuery.page + 1}" ${productQuery.page + 1 >= data.totalPages ? 'disabled' : ''}>Next</button></div>` : ''}`
+      : `<div class="empty-state"><h3>${productQuery.q ? 'No products match' : 'No products yet'}</h3>
+          <p>${productQuery.q ? 'Try another word.' : 'Add the products you sell. Buyers see them once your shop is approved.'}</p></div>`}`;
+
+  let timer;
+  root.querySelector('#p-q').addEventListener('input', (e) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { productQuery.q = e.target.value.trim(); productQuery.page = 0; renderTab(); }, 300);
+  });
+  root.querySelector('#p-sort').addEventListener('change', (e) => { productQuery.sort = e.target.value; renderTab(); });
+  root.querySelector('#p-add').addEventListener('click', () => openProductForm(null));
+  root.querySelectorAll('[data-page]').forEach(b => b.addEventListener('click', () => { productQuery.page = Number(b.dataset.page); renderTab(); }));
+  root.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openProductForm(data.items.find(p => p.id === Number(b.dataset.edit)))));
+  root.querySelectorAll('[data-stock]').forEach(input => {
+    const save = async () => {
+      const stock = Number(input.value);
+      if (!Number.isInteger(stock) || stock < 0 || stock > 10000) { showToast('Stock must be a whole number from 0 to 10000', 'error'); return; }
+      try { await API.setProductStock(Number(input.dataset.stock), stock); showToast('Stock saved', 'ok'); }
+      catch (e) { showToast(e.message, 'error'); }
+    };
+    input.addEventListener('change', save);
+  });
+  root.querySelectorAll('[data-active]').forEach(box => box.addEventListener('change', async () => {
+    box.disabled = true;
+    try {
+      await API.setProductActive(Number(box.dataset.active), box.checked);
+      showToast(box.checked ? 'Product is on sale' : 'Product hidden from buyers', 'ok');
+    } catch (e) { box.checked = !box.checked; showToast(e.message, 'error'); }
+    box.disabled = false;
+  }));
+}
+
+function openProductForm(p) {
+  const slot = document.getElementById('product-form-slot');
+  const v = (k, d = '') => escapeHtml(p && p[k] != null ? p[k] : d);
+  slot.innerHTML = `
+    <form class="panel" id="product-form" novalidate style="margin-bottom:18px;">
+      <h2>${p ? 'Edit ' + escapeHtml(p.name) : 'Add a product'}</h2>
+      <div id="pf-msg" aria-live="polite"></div>
+      <div class="form-2">
+        <div class="field"><label for="pf-name">Name</label><input id="pf-name" name="name" maxlength="150" required value="${v('name')}" placeholder="Sona Masoori Rice"></div>
+        <div class="field"><label for="pf-brand">Brand <span class="muted">(optional)</span></label><input id="pf-brand" name="brand" maxlength="60" value="${v('brand')}"></div>
+      </div>
+      <div class="form-3">
+        <div class="field"><label for="pf-cat">Category</label><select id="pf-cat" name="categoryId">${categories.map(c => `<option value="${c.id}" ${p && p.category && p.category.id === c.id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}</select></div>
+        <div class="field"><label for="pf-unit">Pack size</label><input id="pf-unit" name="unit" maxlength="20" value="${v('unit')}" placeholder="1 kg, 500 ml, 12 pcs"></div>
+        <div class="field"><label for="pf-gst">GST in price</label><select id="pf-gst" name="gstPercent">${[0, 5, 12, 18].map(g => `<option value="${g}" ${p && p.gstPercent === g ? 'selected' : ''}>${g}%</option>`).join('')}</select></div>
+      </div>
+      <div class="form-3">
+        <div class="field"><label for="pf-price">Your price (&#8377;)</label><input id="pf-price" name="price" type="number" min="1" step="0.01" required value="${v('price')}"></div>
+        <div class="field"><label for="pf-mrp">MRP (&#8377;) <span class="muted">(optional)</span></label><input id="pf-mrp" name="mrp" type="number" min="1" step="0.01" value="${v('mrp')}"></div>
+        <div class="field"><label for="pf-stock">Stock</label><input id="pf-stock" name="stock" type="number" min="0" max="10000" required value="${v('stock', '0')}"></div>
+      </div>
+      <div class="form-2">
+        <div class="field"><label for="pf-expiry">Best before <span class="muted">(optional)</span></label><input id="pf-expiry" name="expiryDate" type="date" value="${v('expiryDate')}"></div>
+        <div class="field"><label for="pf-photo">Photo <span class="muted">(optional)</span></label>
+          <div class="photo-pick"><div class="thumb" id="pf-preview">${p && p.imageUrl ? `<img src="${escapeHtml(p.imageUrl)}" alt="">` : escapeHtml((p && p.imageEmoji) || '\u{1F6D2}')}</div>
+          <input id="pf-photo" type="file" accept="image/jpeg,image/png,image/webp"></div>
+          <input type="hidden" name="imageUrl" value="${v('imageUrl')}">
+          <div class="field-msg" id="pf-photo-msg" aria-live="polite"></div></div>
+      </div>
+      <div class="field"><label for="pf-desc">Description <span class="muted">(optional)</span></label><input id="pf-desc" name="description" maxlength="500" value="${v('description')}"></div>
+      <label class="choice" style="margin-bottom:14px;"><input type="checkbox" name="active" ${!p || p.active ? 'checked' : ''}> On sale (buyers can see and order it)</label>
+      <div class="action-row" style="margin:0;">
+        <button class="btn btn-primary" type="submit" id="pf-save">${p ? 'Save changes' : 'Add product'}</button>
+        <button class="btn btn-outline" type="button" id="pf-cancel">Cancel</button>
+      </div>
+    </form>`;
+  const form = document.getElementById('product-form');
+  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  form.elements.name.focus();
+  document.getElementById('pf-cancel').addEventListener('click', () => { slot.innerHTML = ''; });
+  document.getElementById('pf-photo').addEventListener('change', async (e) => {
+    const msg = document.getElementById('pf-photo-msg');
+    if (!e.target.files[0]) return;
+    msg.className = 'field-msg'; msg.textContent = 'Uploading…';
+    try {
+      const up = await API.uploadImage(await shrinkPhoto(e.target.files[0]), 'product.jpg');
+      form.elements.imageUrl.value = up.url;
+      document.getElementById('pf-preview').innerHTML = `<img src="${escapeHtml(up.url)}" alt="">`;
+      msg.className = 'field-msg ok'; msg.textContent = 'Photo ready.';
+    } catch (err) { msg.className = 'field-msg error'; msg.textContent = err.message; }
+  });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const val = (n) => form.elements[n].value.trim();
+    const payload = {
+      name: val('name'), brand: val('brand') || null, categoryId: Number(val('categoryId')), unit: val('unit') || null,
+      gstPercent: Number(val('gstPercent')), price: val('price') === '' ? null : Number(val('price')),
+      mrp: val('mrp') === '' ? null : Number(val('mrp')), stock: val('stock') === '' ? null : Number(val('stock')),
+      expiryDate: val('expiryDate') || null, imageUrl: val('imageUrl') || null, description: val('description') || null,
+      imageEmoji: p ? p.imageEmoji : null, active: form.elements.active.checked,
+    };
+    const msg = document.getElementById('pf-msg');
+    let problem = '';
+    if (!payload.name) problem = 'Enter the product name.';
+    else if (!(payload.price >= 1)) problem = 'Enter a price of at least ₹1.';
+    else if (payload.mrp != null && payload.mrp < payload.price) problem = 'MRP can’t be lower than your price.';
+    else if (!Number.isInteger(payload.stock) || payload.stock < 0) problem = 'Stock must be a whole number, 0 or more.';
+    if (problem) { msg.innerHTML = `<div class="alert alert-error">${escapeHtml(problem)}</div>`; return; }
+    const btn = document.getElementById('pf-save');
+    btn.disabled = true;
+    try {
+      if (p) await API.updateProduct(p.id, payload); else await API.createProduct(payload);
+      showToast(p ? 'Product saved' : 'Product added', 'ok');
+      renderTab();
+    } catch (err) {
+      msg.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+      btn.disabled = false;
+    }
+  });
+}
+
+// ---------------- Shop details ----------------
+function renderDetails(root) {
+  const money = (n) => n == null ? '—' : formatRupees(n);
+  const fulfil = [shop.offersDelivery && 'Delivery', shop.offersPickup && 'Pickup'].filter(Boolean).join(' and ');
+  root.innerHTML = `
+    <div class="dash-grid" style="padding-top:0;">
+      <form class="panel" id="shop-form" novalidate>
+        <h2>Shop details</h2>
+        <p class="panel-sub">Buyers see these details on your shop page.</p>
+        <div id="form-msg" aria-live="polite"></div>
+        ${shopFieldsHtml(shop)}
+        <button class="btn btn-primary" id="save-btn" type="submit">Save changes</button>
+      </form>
+      <aside><section class="panel">
+        <h2>At a glance</h2>
+        <dl class="facts">${[
+          ['Hours', `${shop.openTime} to ${shop.closeTime}`], ['Open now', shop.openNow ? 'Yes' : 'No'], ['Orders by', fulfil],
+          ['Delivers to', shop.servicePincodes.join(', ')], ['Delivery fee', money(shop.deliveryFee)],
+          ['Free delivery from', money(shop.freeDeliveryAbove)],
+          ['Minimum order', Number(shop.minOrderAmount) > 0 ? money(shop.minOrderAmount) : 'None'],
+        ].map(([k, v]) => `<div><dt>${k}</dt><dd>${escapeHtml(v)}</dd></div>`).join('')}</dl>
+        ${shop.status === 'APPROVED' ? `<p class="bill-note"><a href="/shop.html?s=${encodeURIComponent(shop.slug)}" style="text-decoration:underline;">See your shop as buyers see it</a></p>` : ''}
+      </section></aside>
+    </div>`;
+  const form = document.getElementById('shop-form');
+  wireShopExtras(form);
+  if (shop.status === 'SUSPENDED') form.querySelectorAll('input, select, button').forEach(el => { el.disabled = true; });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('form-msg');
+    const btn = document.getElementById('save-btn');
+    const payload = readShopFields(form);
+    const problem = checkShopFields(payload);
+    if (problem) { msg.innerHTML = `<div class="alert alert-error">${escapeHtml(problem)}</div>`; return; }
+    msg.innerHTML = '';
+    btn.disabled = true;
+    try {
+      shop = await API.updateMyShop(payload);
+      showToast('Shop details saved', 'ok');
+      renderFrame();
+      renderTab();
+    } catch (err) {
+      msg.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+      btn.disabled = false;
+    }
+  });
+}
 
 async function resubmit() {
   const btn = document.getElementById('resubmit-btn');
@@ -189,7 +477,8 @@ async function resubmit() {
   try {
     shop = await API.resubmitMyShop();
     showToast('Application sent again', 'ok');
-    render();
+    renderFrame();
+    renderTab();
   } catch (err) {
     showToast(err.message, 'error');
     btn.disabled = false;

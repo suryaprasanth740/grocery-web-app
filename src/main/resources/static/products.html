@@ -25,6 +25,20 @@
 
     <div class="category-row" id="category-row"></div>
 
+    <div class="filter-bar" role="group" aria-label="Filters">
+      <label class="filter-check"><input type="checkbox" id="f-stock"> In stock only</label>
+      <label class="filter-check" id="f-pin-wrap"><input type="checkbox" id="f-pin"> <span id="f-pin-label">Delivers to my PIN code</span></label>
+      <label class="filter-sort">Sort
+        <select id="f-sort">
+          <option value="">Recommended</option>
+          <option value="price">Price: low to high</option>
+          <option value="price-desc">Price: high to low</option>
+          <option value="discount">Biggest discount</option>
+        </select>
+      </label>
+    </div>
+    <div id="shop-results"></div>
+
     <div class="grid" id="product-grid">
       <div class="skeleton" style="height:220px;"></div>
       <div class="skeleton" style="height:220px;"></div>
@@ -68,6 +82,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('category-row').innerHTML = '';
   }
 
+  const loc = NBLocation.get();
+  const pinBox = document.getElementById('f-pin');
+  if (loc && loc.pincode) {
+    document.getElementById('f-pin-label').textContent = `Delivers to ${loc.pincode}`;
+  } else {
+    pinBox.disabled = true;
+    document.getElementById('f-pin-wrap').title = 'Set your PIN code at the top of the page first';
+  }
+  ['f-stock', 'f-pin', 'f-sort'].forEach(id => document.getElementById(id).addEventListener('change', loadProducts));
+  document.addEventListener('nb:location', (e) => {
+    pinBox.disabled = false;
+    document.getElementById('f-pin-label').textContent = `Delivers to ${e.detail.pincode}`;
+    if (pinBox.checked) loadProducts();
+  });
+
   loadProducts();
 });
 
@@ -93,6 +122,17 @@ function renderCategories() {
   });
 }
 
+/** When searching, shops whose name matches are shown above the products. */
+async function renderShopResults() {
+  const box = document.getElementById('shop-results');
+  if (!activeSearch) { box.innerHTML = ''; return; }
+  try {
+    const shops = await API.shops({ q: activeSearch });
+    box.innerHTML = shops.length ? `<h3 style="font-size:1.05rem;margin:6px 0 10px;">Shops</h3>
+      <div class="shop-strip">${shops.map(shopCardHtml).join('')}</div>` : '';
+  } catch (e) { box.innerHTML = ''; }
+}
+
 async function loadProducts() {
   const grid = document.getElementById('product-grid');
   grid.innerHTML = '<div class="skeleton" style="height:220px;"></div><div class="skeleton" style="height:220px;"></div>';
@@ -100,6 +140,8 @@ async function loadProducts() {
   const params = {};
   if (activeSearch) params.search = activeSearch;
   else if (activeCategoryId) params.categoryId = activeCategoryId;
+  const loc = NBLocation.get();
+  if (document.getElementById('f-pin').checked && loc && loc.pincode) params.pincode = loc.pincode;
 
   document.getElementById('page-title').textContent = activeSearch
     ? `Results for "${activeSearch}"`
@@ -108,7 +150,13 @@ async function loadProducts() {
         : 'Full catalog');
 
   try {
-    const products = await API.products(params);
+    let products = await API.products(params);
+    if (document.getElementById('f-stock').checked) products = products.filter(p => p.stock > 0 && !p.expired);
+    const sort = document.getElementById('f-sort').value;
+    if (sort === 'price') products.sort((a, b) => a.price - b.price);
+    if (sort === 'price-desc') products.sort((a, b) => b.price - a.price);
+    if (sort === 'discount') products.sort((a, b) => (b.discountPercent || 0) - (a.discountPercent || 0));
+    renderShopResults();
     document.getElementById('result-count').textContent = `${products.length} item${products.length === 1 ? '' : 's'}`;
     if (products.length === 0) {
       grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
