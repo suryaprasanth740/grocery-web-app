@@ -40,6 +40,8 @@ jobs:
         run: |
           {
             grep -E "\[ERROR\] .*\.java|COMPILATION ERROR|cannot find symbol|symbol:|location:" build.log | head -40
+            # Root causes (e.g. why the app could not start), most specific last
+            grep -hE "^Caused by:" target/surefire-reports/*.txt build.log 2>/dev/null | sort | uniq -c | sort -rn | head -12
             grep -E "\[ERROR\] (Tests run|Failures|  [A-Za-z]+Test\.)" build.log | head -40
             grep -hE -A6 "<<< (FAILURE|ERROR)!" target/surefire-reports/*.txt 2>/dev/null | head -120
           } > failures.txt || true
