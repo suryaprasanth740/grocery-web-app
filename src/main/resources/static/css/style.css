@@ -1090,3 +1090,4 @@ body { font-size: 1.02rem; }
 .admin-stats .stat { background: var(--card); border: 1px solid var(--line); }
 .reason-form { display: grid; gap: 6px; margin-top: 6px; }
 .reason-form textarea { font-size: 0.85rem; padding: 6px 8px; min-width: 180px; }
+.reason-form[hidden] { display: none; }

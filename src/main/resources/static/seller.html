@@ -100,7 +100,7 @@ function render() {
   document.getElementById('dash').hidden = false;
   document.getElementById('board').innerHTML = `
     <h1>${escapeHtml(shop.name)} <span class="status-pill ${shop.status}">${STATUS_TEXT[shop.status]}</span></h1>
-    <p>${escapeHtml(shop.categoryLabel)} &middot; ${escapeHtml(shop.addressLine)}</p>`;
+    <p>${escapeHtml(shop.categoryLabel)}, ${escapeHtml(shop.addressLine)}</p>`;
 
   const panel = document.getElementById('status-panel');
   if (shop.status === 'PENDING') {
