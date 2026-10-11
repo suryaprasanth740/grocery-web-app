@@ -1,4 +1,4 @@
-// Thin wrapper around fetch() for the Grocery Web App REST API.
+// Thin wrapper around fetch() for the NammaBasket REST API.
 // All calls include credentials so the session cookie (login state) is sent.
 
 // When the frontend is hosted on Vercel/Netlify, /api/* is proxied to the
@@ -133,17 +133,26 @@ function formatRupees(amount) {
   return '\u20B9' + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function showToast(message) {
+/**
+ * Small message at the bottom of the screen.
+ * tone: 'ok' (green, something worked), 'error' (red, something failed) or leave it out.
+ * Screen readers announce it because #toast has role="status".
+ */
+function showToast(message, tone) {
   let toast = document.getElementById('toast');
   if (!toast) {
     toast = document.createElement('div');
     toast.id = 'toast';
     document.body.appendChild(toast);
   }
+  toast.setAttribute('role', 'status');
+  toast.setAttribute('aria-live', 'polite');
+  toast.className = tone === 'ok' || tone === 'error' ? tone : '';
   toast.textContent = message;
+  void toast.offsetWidth; // restart the slide-in when two toasts come quickly
   toast.classList.add('show');
   clearTimeout(window.__toastTimer);
-  window.__toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+  window.__toastTimer = setTimeout(() => toast.classList.remove('show'), tone === 'error' ? 4200 : 2800);
 }
 
 /** A random id for one checkout attempt. Sending it twice can never create two orders. */

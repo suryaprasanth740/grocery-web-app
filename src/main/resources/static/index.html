@@ -3,42 +3,35 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FreshCart &mdash; Groceries delivered from your neighbourhood</title>
+<title>NammaBasket | Your Neighbourhood Shops, All in One Basket</title>
+<link rel="icon" href="/img/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
-<header class="signboard">
-  <div class="wrap">
-    <a href="/" class="brand"><span class="crate">&#127811;</span>FreshCart</a>
-    <nav class="nav-links">
-      <a href="/products.html">Shop</a>
-      <a href="/recipes.html">Recipes &amp; Kits</a>
-      <a href="/list.html">Quick List</a>
-      <a href="/budget.html">Budget</a>
-      <a href="/orders.html" id="nav-orders" style="display:none">My Orders</a>
-      <span id="nav-auth-area"><a href="/login.html" id="nav-login">Login</a></span>
-      <a href="/cart.html" class="cart-pill">&#128722; Cart <span class="count" id="cart-count">0</span></a>
-    </nav>
-  </div>
-</header>
+<header class="signboard" id="site-header"></header>
 
-<main>
+<main id="main">
   <section class="hero">
     <div class="wrap">
-      <span class="eyebrow">&#127811; groceries, delivered fast</span>
-      <h1>Your neighbourhood grocer, now a click away.</h1>
-      <p class="sub">Browse the daily stock, fill your basket, and check out &mdash; no store visit required. Real produce, real prices, straight to your door.</p>
-      <div class="hero-tags">
-        <span class="hero-tag">&#9889; Fast delivery</span>
-        <span class="hero-tag">&#127811; Fresh picks daily</span>
-        <span class="hero-tag">&#128176; Free delivery over &#8377;500</span>
+      <h1>Your Neighbourhood Shops, All in One Basket.</h1>
+      <p class="sub">Order from the kirana stores around you, from one basket. They pack it, and you get it delivered or pick it up on your way home.</p>
+      <div class="hero-tools">
+        <form class="search-row" id="hero-search-form" role="search">
+          <label for="hero-search" class="sr-only">Search groceries</label>
+          <input type="search" id="hero-search" placeholder="Search tomatoes, atta, milk&hellip;" autocomplete="off">
+          <button class="btn btn-primary" type="submit">Search</button>
+        </form>
+        <div class="pin-card">
+          <label for="hero-pin">Deliver to PIN code</label>
+          <form id="hero-pin-form" novalidate>
+            <input id="hero-pin" inputmode="numeric" maxlength="6" autocomplete="postal-code" placeholder="560073">
+            <button class="btn" type="submit">Check</button>
+          </form>
+          <div class="pin-msg" id="hero-pin-msg" aria-live="polite"></div>
+        </div>
       </div>
-      <div class="search-row">
-        <input type="text" id="hero-search" placeholder="Search for tomatoes, milk, rice...">
-        <button class="btn btn-primary" id="hero-search-btn">Search</button>
-      </div>
-      <a href="/list.html" class="hero-link">&#128221; Have a long list? Paste it all at once &rarr;</a>
+      <a href="/list.html" class="hero-link">Have a long list? Paste it all at once</a>
     </div>
   </section>
 
@@ -56,41 +49,50 @@
     <div id="running-low" style="display:none;">
       <div class="section-heading">
         <h2>&#9200; Running low?</h2>
-        <span class="note"><a href="/budget.html">See all &rarr;</a></span>
+        <span class="note"><a href="/budget.html">See all</a></span>
       </div>
       <div class="strip" id="running-low-strip"></div>
     </div>
 
     <div class="section-heading">
-      <h2>Only on FreshCart <span class="tag new" style="vertical-align:middle;">New</span></h2>
-      <span class="note">Smart tools that save you time and money</span>
+      <h2>Shop smarter</h2>
+      <span class="note">Tools that save you time and money</span>
     </div>
     <div class="feature-grid">
       <a class="feature-card" href="/list.html">
         <div class="icon">&#128221;</div>
         <h3>Paste your list &rarr; cart</h3>
         <p>Write &ldquo;2 kg tomato, 1 litre milk, atta 5kg&rdquo; &mdash; even in Kannada, Tamil or Hindi words &mdash; and the whole cart fills in one go.</p>
-        <span class="go">Try Quick List &rarr;</span>
+        <span class="go">Try Quick List</span>
       </a>
       <a class="feature-card" href="/recipes.html">
         <div class="icon" style="background:#E6F6EF;">&#127859;</div>
         <h3>Recipe &rarr; cart</h3>
         <p>Choose a dish and how many people. Get every ingredient in real pack sizes, and skip what you already have.</p>
-        <span class="go">Browse recipes &rarr;</span>
+        <span class="go">Browse recipes</span>
       </a>
       <a class="feature-card" href="/recipes.html#pongal-kit">
         <div class="icon" style="background:#F4F0FF;">&#129684;</div>
         <h3>Festival kits</h3>
         <p>Pongal, Diwali, Ugadi and Ganesh Chaturthi &mdash; diyas, flowers and sweet-making basics in one click.</p>
-        <span class="go">See kits &rarr;</span>
+        <span class="go">See kits</span>
       </a>
       <a class="feature-card" href="/budget.html">
         <div class="icon" style="background:#E8F0FE;">&#128176;</div>
         <h3>Budget mode</h3>
         <p>Set a monthly limit. Get warned <b>before</b> checkout, cheaper swaps, and &ldquo;running low&rdquo; reminders.</p>
-        <span class="go">Set my budget &rarr;</span>
+        <span class="go">Set my budget</span>
       </a>
     </div>
+
+    <section class="how" aria-labelledby="how-title">
+      <h2 id="how-title">How NammaBasket works</h2>
+      <ol>
+        <li><h3>Find shops near you</h3><p>Enter your PIN code and see the kirana stores that deliver to your area, with their hours and delivery fee.</p></li>
+        <li><h3>Fill one basket</h3><p>Add groceries from one shop or several. Your basket keeps each shop&rsquo;s items, fees and total separate.</p></li>
+        <li><h3>The shop packs it</h3><p>Each shop accepts your order and packs it. Track it until it reaches your door, or collect it yourself.</p></li>
+      </ol>
+    </section>
 
     <div class="trust-bar">
       <div><b>&#8377;0 hidden fees</b><span>Every rupee shown in the bill</span></div>
@@ -101,7 +103,7 @@
 
     <div class="section-heading">
       <h2>Today&rsquo;s picks</h2>
-      <span class="note"><a href="/products.html" style="text-decoration:underline;">See full catalog &rarr;</a></span>
+      <span class="note"><a href="/products.html" style="text-decoration:underline;">See full catalog</a></span>
     </div>
     <div class="grid" id="featured-grid">
       <div class="skeleton" style="height:220px;"></div>
@@ -111,18 +113,13 @@
     </div>
     <div class="section-heading" style="margin-top:0;">
       <h2>&#129684; Festival kits</h2>
-      <span class="note"><a href="/recipes.html">All recipes &amp; kits &rarr;</a></span>
+      <span class="note"><a href="/recipes.html">All recipes &amp; kits</a></span>
     </div>
     <div class="strip" id="kits-strip" style="padding-bottom:48px;"></div>
   </div>
 </main>
 
-<footer>
-  <div class="wrap">
-    FreshCart &mdash; a student full-stack demo project. Built with Spring Boot, PostgreSQL, and vanilla JS by
-    <a href="https://github.com/suryaprasanth740" target="_blank" rel="noopener">Surya Prasanth</a>.
-  </div>
-</footer>
+<footer class="site-footer" id="site-footer"></footer>
 
 <div id="toast"></div>
 
@@ -131,14 +128,36 @@
 <script src="/js/shop.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
-  document.getElementById('hero-search-btn').addEventListener('click', runSearch);
-  document.getElementById('hero-search').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') runSearch();
-  });
-  function runSearch() {
+  document.getElementById('hero-search-form').addEventListener('submit', (e) => {
+    e.preventDefault();
     const q = document.getElementById('hero-search').value.trim();
     window.location.href = '/products.html' + (q ? '?search=' + encodeURIComponent(q) : '');
+  });
+
+  // PIN code check: asks the server, remembers the answer, and updates the header too.
+  const pinInput = document.getElementById('hero-pin');
+  const pinMsg = document.getElementById('hero-pin-msg');
+  const saved = NBLocation.get();
+  if (saved) {
+    pinInput.value = saved.pincode;
+    pinMsg.textContent = saved.message;
+    pinMsg.className = 'pin-msg' + (saved.serviceable ? '' : ' bad');
   }
+  document.getElementById('hero-pin-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button');
+    btn.disabled = true;
+    try {
+      const result = await NBLocation.check(pinInput.value);
+      pinMsg.textContent = result.message;
+      pinMsg.className = 'pin-msg' + (result.serviceable ? '' : ' bad');
+    } catch (err) {
+      pinMsg.textContent = err.message;
+      pinMsg.className = 'pin-msg bad';
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   try {
     const categories = await API.categories();
@@ -169,7 +188,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const kits = (await API.recipes()).filter(r => r.type === 'KIT');
     document.getElementById('kits-strip').innerHTML = kits.map(k => `
       <a class="mini-card" href="/recipes.html#${encodeURIComponent(k.id)}" style="width:260px;">
-        <div class="thumb" style="background:linear-gradient(135deg,#F4F0FF,#FFF0F6);font-size:1.7rem;width:56px;height:56px;">${k.photo
+        <div class="thumb" style="background:var(--tint-warm);font-size:1.7rem;width:56px;height:56px;">${k.photo
           ? `<img src="${escapeHtml(k.photo.url)}" alt="" loading="lazy" onerror="this.parentNode.textContent='${escapeHtml(k.emoji)}'">`
           : escapeHtml(k.emoji)}</div>
         <div class="info"><h4>${escapeHtml(k.name)}</h4><div class="meta">${k.ingredientCount} items &middot; about ${formatRupees(k.estimatedTotal)}</div></div>

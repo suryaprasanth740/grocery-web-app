@@ -3,32 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Budget &amp; Running Low &mdash; FreshCart</title>
+<title>Budget &amp; Running Low | NammaBasket</title>
+<link rel="icon" href="/img/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
-<header class="signboard">
-  <div class="wrap">
-    <a href="/" class="brand"><span class="crate">&#127811;</span>FreshCart</a>
-    <nav class="nav-links">
-      <a href="/products.html">Shop</a>
-      <a href="/recipes.html">Recipes &amp; Kits</a>
-      <a href="/list.html">Quick List</a>
-      <a href="/budget.html">Budget</a>
-      <a href="/orders.html" id="nav-orders" style="display:none">My Orders</a>
-      <span id="nav-auth-area"><a href="/login.html" id="nav-login">Login</a></span>
-      <a href="/cart.html" class="cart-pill">&#128722; Cart <span class="count" id="cart-count">0</span></a>
-    </nav>
-  </div>
-</header>
+<header class="signboard" id="site-header"></header>
 
-<main>
+<main id="main">
   <section class="page-hero">
     <div class="wrap">
-      <span class="eyebrow">&#128176; Spend smart</span>
       <h1>Budget &amp; Running Low</h1>
-      <p>Set a monthly grocery budget and FreshCart warns you <b>before</b> you go over, suggests cheaper swaps,
+      <p>Set a monthly grocery budget and NammaBasket warns you <b>before</b> you go over, suggests cheaper swaps,
         and learns how often you buy things so you never run out of milk again.</p>
     </div>
   </section>
@@ -101,12 +88,7 @@
   </div>
 </main>
 
-<footer>
-  <div class="wrap">
-    FreshCart &mdash; a student full-stack demo project. Built with Spring Boot, PostgreSQL, and vanilla JS by
-    <a href="https://github.com/suryaprasanth740" target="_blank" rel="noopener">Surya Prasanth</a>.
-  </div>
-</footer>
+<footer class="site-footer" id="site-footer"></footer>
 
 <div id="toast"></div>
 
@@ -247,7 +229,7 @@ function days(n) {
 function renderReorder(list) {
   const box = document.getElementById('reorder');
   if (!list.length) {
-    box.innerHTML = `<p class="muted small">Order a few times and FreshCart will learn your routine &mdash;
+    box.innerHTML = `<p class="muted small">Order a few times and NammaBasket will learn your routine &mdash;
       for example &ldquo;you buy milk every 3 days&rdquo; &mdash; and remind you here before you run out.</p>`;
     return;
   }

@@ -3,25 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login &mdash; FreshCart</title>
+<title>Login | NammaBasket</title>
+<link rel="icon" href="/img/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
-<header class="signboard">
-  <div class="wrap">
-    <a href="/" class="brand"><span class="crate">&#127811;</span>FreshCart</a>
-    <nav class="nav-links">
-      <a href="/products.html">Shop</a>
-      <a href="/recipes.html">Recipes &amp; Kits</a>
-      <a href="/list.html">Quick List</a>
-      <a href="/budget.html">Budget</a>
-      <a href="/cart.html" class="cart-pill">&#128722; Cart <span class="count" id="cart-count">0</span></a>
-    </nav>
-  </div>
-</header>
+<header class="signboard" id="site-header"></header>
 
-<main>
+<main id="main">
   <div class="wrap">
     <div class="auth-card">
       <h2>Welcome back</h2>
@@ -38,17 +28,12 @@
         </div>
         <button type="submit" class="btn btn-primary btn-block" id="login-btn">Log in</button>
       </form>
-      <div class="switch">New to FreshCart? <a href="/register.html">Create an account</a></div>
+      <div class="switch">New to NammaBasket? <a href="/register.html">Create an account</a></div>
     </div>
   </div>
 </main>
 
-<footer>
-  <div class="wrap">
-    FreshCart &mdash; a student full-stack demo project. Built with Spring Boot, PostgreSQL, and vanilla JS by
-    <a href="https://github.com/suryaprasanth740" target="_blank" rel="noopener">Surya Prasanth</a>.
-  </div>
-</footer>
+<footer class="site-footer" id="site-footer"></footer>
 
 <script src="/js/api.js"></script>
 <script src="/js/nav.js"></script>
