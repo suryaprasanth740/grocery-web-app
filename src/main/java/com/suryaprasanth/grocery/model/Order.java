@@ -97,6 +97,37 @@ public class Order {
     @Column(name = "delivered_at")
     private LocalDateTime deliveredAt;
 
+    // ---- Marketplace ----
+
+    /** The shop that fulfils this order. Old FreshCart orders are linked to the demo shop at startup. */
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shop_id")
+    private Shop shop;
+
+    /** The "Place order" press this order came from (null for old FreshCart orders). */
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "checkout_id")
+    private Checkout checkout;
+
+    /** Delivery or pickup. Null on old orders = delivery. */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 10)
+    private Fulfilment fulfilment;
+
+    /** Why the shop rejected the order, shown to the buyer. */
+    @Column(name = "rejection_reason", length = 300)
+    private String rejectionReason;
+
+    /**
+     * True once this order's stock has gone back to the shelf (cancel / failed payment).
+     * Checked before releasing, so stock is never returned twice.
+     */
+    @JsonIgnore
+    @Column(name = "stock_released")
+    private Boolean stockReleased = Boolean.FALSE;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("id ASC")
     private List<OrderItem> items = new ArrayList<>();
@@ -124,6 +155,50 @@ public class Order {
     public BigDecimal issueRefundTotal() {
         return issues.stream().map(OrderIssue::getRefundAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
+
+    @JsonProperty("shopId")
+    public Long shopId() { return shop == null ? null : shop.getId(); }
+
+    @JsonProperty("shopName")
+    public String shopName() { return shop == null ? null : shop.getName(); }
+
+    @JsonProperty("shopSlug")
+    public String shopSlug() { return shop == null ? null : shop.getSlug(); }
+
+    @JsonProperty("shopPhone")
+    public String shopPhone() { return shop == null ? null : shop.getPhone(); }
+
+    @JsonProperty("shopAddress")
+    public String shopAddress() { return shop == null ? null : shop.getAddressLine(); }
+
+    @JsonProperty("checkoutId")
+    public Long checkoutId() { return checkout == null ? null : checkout.getId(); }
+
+    /** What one UPI payment covers: the whole checkout (all shops), or just this order for old orders. */
+    @JsonProperty("checkoutTotal")
+    public BigDecimal checkoutTotal() { return checkout == null ? totalAmount : checkout.getTotalAmount(); }
+
+    /** How many shop orders the same checkout created (1 for a single-shop basket). */
+    @JsonProperty("ordersInCheckout")
+    public int ordersInCheckout() { return checkout == null ? 1 : checkout.getOrders().size(); }
+
+    /** The buyer may cancel before the shop starts preparing. */
+    @JsonProperty("canCancel")
+    public boolean canCancel() {
+        return status == OrderStatus.PLACED || status == OrderStatus.ACCEPTED || status == OrderStatus.PAYMENT_PENDING;
+    }
+
+    @JsonProperty("fulfilment")
+    public Fulfilment getFulfilment() { return fulfilment == null ? Fulfilment.DELIVERY : fulfilment; }
+    public void setFulfilment(Fulfilment fulfilment) { this.fulfilment = fulfilment; }
+    public Shop getShop() { return shop; }
+    public void setShop(Shop shop) { this.shop = shop; }
+    public Checkout getCheckout() { return checkout; }
+    public void setCheckout(Checkout checkout) { this.checkout = checkout; }
+    public String getRejectionReason() { return rejectionReason; }
+    public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
+    public boolean isStockReleased() { return Boolean.TRUE.equals(stockReleased); }
+    public void setStockReleased(boolean stockReleased) { this.stockReleased = stockReleased; }
 
     public void touch() {
         this.updatedAt = LocalDateTime.now();

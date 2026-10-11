@@ -94,15 +94,16 @@ class OrderLifecycleTest extends ApiTestSupport {
     }
 
     @Test
-    @DisplayName("Cancel after packing is refused; cancelling a PAID order refunds it")
+    @DisplayName("Cancel once the shop starts preparing is refused; cancelling a PAID order refunds it")
     void cancelRules() throws Exception {
         MockHttpSession admin = adminSession();
         MockHttpSession s = newCustomer();
         Product p = newProduct("80.00", 10);
 
-        long packed = placeOrder(s, p, 1, "COD", null).get("id").asLong();
-        setStatus(admin, packed, "PACKED");
-        assertEquals(409, status(call("POST", "/api/orders/" + packed + "/cancel", s, null)));
+        long preparing = placeOrder(s, p, 1, "COD", null).get("id").asLong();
+        setStatus(admin, preparing, "ACCEPTED");
+        setStatus(admin, preparing, "PREPARING");
+        assertEquals(409, status(call("POST", "/api/orders/" + preparing + "/cancel", s, null)));
 
         long upi = placeOrder(s, p, 1, "UPI", null).get("id").asLong();
         pay(s, upi, "SUCCESS");
@@ -113,9 +114,7 @@ class OrderLifecycleTest extends ApiTestSupport {
     // ---------------- Report missing item ----------------
 
     private void deliver(MockHttpSession admin, long id) throws Exception {
-        setStatus(admin, id, "PACKED");
-        setStatus(admin, id, "OUT_FOR_DELIVERY");
-        assertEquals(200, status(setStatus(admin, id, "DELIVERED")));
+        deliverOrder(admin, id);
     }
 
     @Test

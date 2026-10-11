@@ -14,6 +14,7 @@ import com.suryaprasanth.grocery.repository.CategoryRepository;
 import com.suryaprasanth.grocery.repository.CouponRepository;
 import com.suryaprasanth.grocery.repository.ProductRepository;
 import com.suryaprasanth.grocery.repository.ShopRepository;
+import com.suryaprasanth.grocery.repository.OrderRepository;
 import com.suryaprasanth.grocery.repository.UserRepository;
 import com.suryaprasanth.grocery.util.PasswordUtil;
 import org.slf4j.Logger;
@@ -41,13 +42,14 @@ public class DataInitializer implements CommandLineRunner {
     private final CouponRepository couponRepository;
     private final UserRepository userRepository;
     private final ShopRepository shopRepository;
+    private final OrderRepository orderRepository;
     private final String adminEmail;
     private final String adminPassword;
     private final boolean refreshExpiredDemoStock;
 
     public DataInitializer(CategoryRepository categoryRepository, ProductRepository productRepository,
                            CouponRepository couponRepository, UserRepository userRepository,
-                           ShopRepository shopRepository,
+                           ShopRepository shopRepository, OrderRepository orderRepository,
                            @Value("${app.admin.email:admin@freshcart.com}") String adminEmail,
                            @Value("${app.admin.password:}") String adminPassword,
                            @Value("${app.demo.refresh-expired-stock:true}") boolean refreshExpiredDemoStock) {
@@ -56,6 +58,7 @@ public class DataInitializer implements CommandLineRunner {
         this.couponRepository = couponRepository;
         this.userRepository = userRepository;
         this.shopRepository = shopRepository;
+        this.orderRepository = orderRepository;
         this.adminEmail = adminEmail;
         this.adminPassword = adminPassword;
         this.refreshExpiredDemoStock = refreshExpiredDemoStock;
@@ -278,6 +281,14 @@ public class DataInitializer implements CommandLineRunner {
         int moved = productRepository.assignShopWhereMissing(shop);
         if (moved > 0) {
             log.info("Moved {} product(s) without a shop into {}", moved, shop.getName());
+        }
+        int oldOrders = orderRepository.assignShopWhereMissing(shop);
+        if (oldOrders > 0) {
+            log.info("Linked {} old order(s) to {}", oldOrders, shop.getName());
+        }
+        int packed = orderRepository.renamePackedToPreparing();
+        if (packed > 0) {
+            log.info("Moved {} order(s) from the old PACKED step to PREPARING", packed);
         }
     }
 

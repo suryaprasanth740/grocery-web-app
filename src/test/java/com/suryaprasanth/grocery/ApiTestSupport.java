@@ -220,14 +220,27 @@ public abstract class ApiTestSupport {
         return call("POST", "/api/orders/checkout", s, body);
     }
 
-    /** Cart with one product, then a successful order. Returns the order JSON. */
+    /**
+     * Cart with one product, then a successful checkout. A one-shop basket gives one order;
+     * returns that order's JSON (the checkout response holds it in "orders").
+     */
     protected JsonNode placeOrder(MockHttpSession s, Product p, int qty, String payment, String coupon) throws Exception {
         addToCart(s, p, qty);
         MvcResult r = checkout(s, checkoutBody(s, payment, coupon));
         if (status(r) != 200) {
             throw new IllegalStateException("checkout failed: " + r.getResponse().getContentAsString());
         }
-        return body(r);
+        return body(r).get("orders").get(0);
+    }
+
+    /** Takes a delivery order through every step to DELIVERED, as the admin. */
+    protected void deliverOrder(MockHttpSession admin, long orderId) throws Exception {
+        for (String step : new String[]{"ACCEPTED", "PREPARING", "OUT_FOR_DELIVERY", "DELIVERED"}) {
+            MvcResult r = setStatus(admin, orderId, step);
+            if (status(r) != 200) {
+                throw new IllegalStateException(step + " failed: " + r.getResponse().getContentAsString());
+            }
+        }
     }
 
     protected MvcResult setStatus(MockHttpSession admin, long orderId, String statusName) throws Exception {

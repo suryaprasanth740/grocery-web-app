@@ -51,8 +51,9 @@ public class CouponService {
             throw bad("Add items worth Rs " + more.toPlainString() + " more to use " + coupon.getCode()
                     + " (minimum order Rs " + coupon.getMinOrder().toPlainString() + ").");
         }
-        long used = orderRepository.countByUserIdAndCouponCodeIgnoreCaseAndStatusNotIn(
-                user.getId(), coupon.getCode(), NOT_COUNTED);
+        // A basket from three shops is split into three orders, but it is still ONE use of the coupon.
+        long used = orderRepository.countCheckoutsUsingCoupon(user.getId(), coupon.getCode(), NOT_COUNTED)
+                + orderRepository.countOldOrdersUsingCoupon(user.getId(), coupon.getCode(), NOT_COUNTED);
         if (used >= coupon.getPerUserLimit()) {
             throw bad("You have already used coupon " + coupon.getCode() + ".");
         }

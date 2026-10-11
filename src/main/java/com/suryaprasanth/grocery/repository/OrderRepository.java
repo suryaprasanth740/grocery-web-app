@@ -2,7 +2,14 @@ package com.suryaprasanth.grocery.repository;
 
 import com.suryaprasanth.grocery.model.Order;
 import com.suryaprasanth.grocery.model.OrderStatus;
+import com.suryaprasanth.grocery.model.Shop;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -15,11 +22,49 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     List<Order> findAllByOrderByCreatedAtDesc();
 
+    /** Old FreshCart orders kept their request id on the order itself. */
     Optional<Order> findByUserIdAndRequestId(Long userId, String requestId);
 
     List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, LocalDateTime before);
 
-    /** How many live (not cancelled / failed) orders this user placed with a coupon. */
-    long countByUserIdAndCouponCodeIgnoreCaseAndStatusNotIn(Long userId, String couponCode,
-                                                            Collection<OrderStatus> ignored);
+    // ---------- Coupon use: one checkout counts once, however many shops it was split into ----------
+
+    @Query("select count(distinct o.checkout.id) from Order o where o.user.id = :userId and o.checkout is not null"
+            + " and upper(o.couponCode) = upper(:code) and o.status not in :ignored")
+    long countCheckoutsUsingCoupon(@Param("userId") Long userId, @Param("code") String code,
+                                   @Param("ignored") Collection<OrderStatus> ignored);
+
+    @Query("select count(o) from Order o where o.user.id = :userId and o.checkout is null"
+            + " and upper(o.couponCode) = upper(:code) and o.status not in :ignored")
+    long countOldOrdersUsingCoupon(@Param("userId") Long userId, @Param("code") String code,
+                                   @Param("ignored") Collection<OrderStatus> ignored);
+
+    // ---------- Seller side: only ever this shop's orders ----------
+
+    @Query(value = "select o from Order o where o.shop.id = :shopId and o.status in :statuses",
+            countQuery = "select count(o) from Order o where o.shop.id = :shopId and o.status in :statuses")
+    Page<Order> findForShop(@Param("shopId") Long shopId, @Param("statuses") Collection<OrderStatus> statuses,
+                            Pageable pageable);
+
+    @Query("select o from Order o where o.id = :id and o.shop.id = :shopId")
+    Optional<Order> findForShop(@Param("id") Long id, @Param("shopId") Long shopId);
+
+    @Query("select count(o) from Order o where o.shop.id = :shopId and o.status in :statuses")
+    long countForShop(@Param("shopId") Long shopId, @Param("statuses") Collection<OrderStatus> statuses);
+
+    @Query("select o from Order o where o.shop.id = :shopId and o.createdAt >= :since and o.status in :statuses order by o.createdAt desc")
+    List<Order> findForShopSince(@Param("shopId") Long shopId, @Param("since") LocalDateTime since,
+                                 @Param("statuses") Collection<OrderStatus> statuses);
+
+    // ---------- One-time upgrades of FreshCart rows ----------
+
+    @Transactional
+    @Modifying
+    @Query("update Order o set o.shop = :shop where o.shop is null")
+    int assignShopWhereMissing(@Param("shop") Shop shop);
+
+    @Transactional
+    @Modifying
+    @Query(value = "update orders set status = 'PREPARING' where status = 'PACKED'", nativeQuery = true)
+    int renamePackedToPreparing();
 }

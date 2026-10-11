@@ -58,7 +58,7 @@ class SecurityAndAdminTest extends ApiTestSupport {
         MockHttpSession s = newCustomer();
         long id = placeOrder(s, newProduct("50.00", 10), 1, "COD", null).get("id").asLong();
         assertEquals(409, status(setStatus(admin, id, "DELIVERED")));
-        assertEquals(200, status(setStatus(admin, id, "PACKED")));
+        assertEquals(200, status(setStatus(admin, id, "ACCEPTED")));
     }
 
     @Test

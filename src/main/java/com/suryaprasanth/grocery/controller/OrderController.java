@@ -1,5 +1,8 @@
 package com.suryaprasanth.grocery.controller;
 
+import com.suryaprasanth.grocery.dto.BulkAddResult;
+import com.suryaprasanth.grocery.model.Checkout;
+import com.suryaprasanth.grocery.repository.CheckoutRepository;
 import com.suryaprasanth.grocery.dto.Bill;
 import com.suryaprasanth.grocery.dto.CheckoutRequest;
 import com.suryaprasanth.grocery.dto.IssueRequest;
@@ -25,34 +28,48 @@ public class OrderController {
     private final OrderService orderService;
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
+    private final CheckoutRepository checkoutRepository;
 
-    public OrderController(OrderService orderService, OrderRepository orderRepository, UserRepository userRepository) {
+    public OrderController(OrderService orderService, OrderRepository orderRepository, UserRepository userRepository,
+                           CheckoutRepository checkoutRepository) {
+        this.checkoutRepository = checkoutRepository;
         this.orderService = orderService;
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
     }
 
-    /** The bill for the current cart, calculated on the server (used by cart + checkout pages). */
+    /** The bill for the current cart, split by shop, calculated on the server (cart + checkout pages). */
     @PostMapping("/quote")
     public Bill quote(@Valid @RequestBody(required = false) QuoteRequest request, HttpSession session) {
         User user = SessionUtil.requireBuyer(session, userRepository);
-        return orderService.quote(user, request == null ? null : request.getCouponCode());
+        if (request == null) {
+            return orderService.quote(user, null);
+        }
+        return orderService.quote(user, request.getCouponCode(), request.getFulfilment(), request.getPincode());
     }
 
+    /** Places the basket: one checkout, with one order per shop in "orders". */
     @PostMapping("/checkout")
-    public Order checkout(@Valid @RequestBody CheckoutRequest request, HttpSession session) {
+    public Checkout checkout(@Valid @RequestBody CheckoutRequest request, HttpSession session) {
         User user = SessionUtil.requireBuyer(session, userRepository);
         try {
             return orderService.placeOrder(user, request);
         } catch (RuntimeException ex) {
-            // Double click: the first request created the order while this one was waiting.
-            // Give back the same order instead of an error.
-            Optional<Order> alreadyPlaced = orderRepository.findByUserIdAndRequestId(user.getId(), request.getRequestId());
+            // Double click: the first request created the checkout while this one was waiting.
+            // Give back the same checkout instead of an error.
+            Optional<Checkout> alreadyPlaced = checkoutRepository.findByUserIdAndRequestId(user.getId(), request.getRequestId());
             if (alreadyPlaced.isPresent()) {
                 return alreadyPlaced.get();
             }
             throw ex;
         }
+    }
+
+    /** "Order again": puts the items of a past order back in the cart (skipping what can't be bought). */
+    @PostMapping("/{id}/reorder")
+    public BulkAddResult reorder(@PathVariable Long id, HttpSession session) {
+        User user = SessionUtil.requireBuyer(session, userRepository);
+        return orderService.reorder(user, id);
     }
 
     @GetMapping

@@ -58,7 +58,8 @@ class CheckoutFeaturesTest extends ApiTestSupport {
         body.put("pincode", "110001");
         MvcResult r = checkout(s, body);
         assertEquals(400, status(r));
-        assertTrue(body(r).get("message").asText().contains("don't deliver"));
+        // Each shop has its own delivery area now, so the message names the shop.
+        assertTrue(body(r).get("message").asText().contains("doesn't deliver to 110001"));
     }
 
     // ---------------- Bill ----------------
@@ -88,7 +89,7 @@ class CheckoutFeaturesTest extends ApiTestSupport {
         addToCart(s, product, 2);
         JsonNode bill = quote(s, null);
         MvcResult r = checkout(s, checkoutBody(s, "COD", null));
-        JsonNode order = body(r);
+        JsonNode order = body(r).get("orders").get(0); // one shop in the basket = one order
         assertMoney(bill.get("total").asText(), order.get("totalAmount"));
         assertMoney("270.00", order.get("totalAmount")); // 240 + 30 delivery
         assertMoney("30.00", order.get("deliveryFee"));

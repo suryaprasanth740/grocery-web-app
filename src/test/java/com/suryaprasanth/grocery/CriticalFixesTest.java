@@ -87,7 +87,8 @@ class CriticalFixesTest extends ApiTestSupport {
 
         assertEquals(200, status(first));
         assertEquals(200, status(second));
-        assertEquals(body(first).get("id").asLong(), body(second).get("id").asLong(), "same order returned");
+        assertEquals(body(first).get("checkoutId").asLong(), body(second).get("checkoutId").asLong(), "same checkout returned");
+        assertEquals(body(first).get("orders").get(0).get("id").asLong(), body(second).get("orders").get(0).get("id").asLong());
         assertEquals(1, orderRepository.findByUserIdOrderByCreatedAtDesc(userOf(s).getId()).size());
         assertEquals(8, stockOf(product), "stock taken only once");
     }

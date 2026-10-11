@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 /** A reason the person on the other side will read, e.g. why a shop application was rejected. */
 public class ReasonRequest {
 
-    @NotBlank(message = "Give a reason. The shop owner will see it.")
+    @NotBlank(message = "Give a reason. The other person will see it.")
     @Size(min = 5, max = 300, message = "Reason must be 5 to 300 characters")
     private String reason;
 

@@ -85,4 +85,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @Query("select p from Product p where p.shop.id = :shopId and (p.active is null or p.active = true) and p.stock <= :limit order by p.stock, p.name")
     List<Product> findLowStock(@Param("shopId") Long shopId, @Param("limit") int limit);
+
+    @Query("select count(p) from Product p where p.shop.id = :shopId and (p.active is null or p.active = true)")
+    long countActiveInShop(@Param("shopId") Long shopId);
 }

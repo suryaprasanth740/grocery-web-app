@@ -11,9 +11,17 @@ import java.math.BigDecimal;
 
 public class CheckoutRequest {
 
-    @NotBlank(message = "Shipping address is required")
+    /** Needed when at least one shop delivers; pickup-only baskets can leave it empty. */
     @Size(min = 10, max = 300, message = "Address must be between 10 and 300 characters")
     private String shippingAddress;
+
+    /** Delivery or pickup per shop id, e.g. {"12": "PICKUP"}. Shops not listed use delivery when they offer it. */
+    private java.util.Map<Long, com.suryaprasanth.grocery.model.Fulfilment> fulfilment = new java.util.HashMap<>();
+
+    public java.util.Map<Long, com.suryaprasanth.grocery.model.Fulfilment> getFulfilment() { return fulfilment; }
+    public void setFulfilment(java.util.Map<Long, com.suryaprasanth.grocery.model.Fulfilment> fulfilment) {
+        this.fulfilment = fulfilment == null ? new java.util.HashMap<>() : fulfilment;
+    }
 
     @NotBlank(message = "PIN code is required")
     @Pattern(regexp = "^[1-9][0-9]{5}$", message = "Enter a valid 6-digit PIN code")

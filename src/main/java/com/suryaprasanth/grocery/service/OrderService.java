@@ -2,11 +2,13 @@ package com.suryaprasanth.grocery.service;
 
 import com.suryaprasanth.grocery.config.ShopRules;
 import com.suryaprasanth.grocery.dto.Bill;
+import com.suryaprasanth.grocery.dto.BulkAddResult;
+import com.suryaprasanth.grocery.dto.CartRequest;
 import com.suryaprasanth.grocery.dto.CheckoutRequest;
 import com.suryaprasanth.grocery.dto.IssueRequest;
-import com.suryaprasanth.grocery.dto.PincodeCheck;
 import com.suryaprasanth.grocery.model.*;
 import com.suryaprasanth.grocery.repository.CartItemRepository;
+import com.suryaprasanth.grocery.repository.CheckoutRepository;
 import com.suryaprasanth.grocery.repository.OrderRepository;
 import com.suryaprasanth.grocery.repository.ProductRepository;
 import org.slf4j.Logger;
@@ -20,7 +22,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,27 +38,39 @@ public class OrderService {
 
     private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
-    /** Which status can follow which. Anything else is refused. */
-    private static final Map<OrderStatus, Set<OrderStatus>> ADMIN_TRANSITIONS = Map.of(
-            OrderStatus.PLACED, EnumSet.of(OrderStatus.PACKED, OrderStatus.CANCELLED),
-            OrderStatus.PACKED, EnumSet.of(OrderStatus.OUT_FOR_DELIVERY, OrderStatus.CANCELLED),
-            OrderStatus.OUT_FOR_DELIVERY, EnumSet.of(OrderStatus.DELIVERED));
+    /**
+     * Which status can follow which, for the shop (and admins helping out). Anything else is
+     * refused with 409. Delivery-only and pickup-only steps are checked separately.
+     */
+    private static final Map<OrderStatus, Set<OrderStatus>> TRANSITIONS = Map.of(
+            OrderStatus.PLACED, EnumSet.of(OrderStatus.ACCEPTED, OrderStatus.CANCELLED),
+            OrderStatus.ACCEPTED, EnumSet.of(OrderStatus.PREPARING, OrderStatus.CANCELLED),
+            OrderStatus.PREPARING, EnumSet.of(OrderStatus.OUT_FOR_DELIVERY, OrderStatus.READY_FOR_PICKUP),
+            OrderStatus.PACKED, EnumSet.of(OrderStatus.OUT_FOR_DELIVERY, OrderStatus.CANCELLED), // old FreshCart rows
+            OrderStatus.OUT_FOR_DELIVERY, EnumSet.of(OrderStatus.DELIVERED),
+            OrderStatus.READY_FOR_PICKUP, EnumSet.of(OrderStatus.DELIVERED));
+
+    /** The buyer may cancel before the shop starts preparing. */
+    private static final Set<OrderStatus> BUYER_CAN_CANCEL =
+            EnumSet.of(OrderStatus.PAYMENT_PENDING, OrderStatus.PLACED, OrderStatus.ACCEPTED);
 
     private final OrderRepository orderRepository;
+    private final CheckoutRepository checkoutRepository;
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
     private final BillingService billingService;
-    private final DeliveryService deliveryService;
     private final ShopRules rules;
+    private final CartService cartService;
 
-    public OrderService(OrderRepository orderRepository, CartItemRepository cartItemRepository,
-                        ProductRepository productRepository, BillingService billingService,
-                        DeliveryService deliveryService, ShopRules rules) {
+    public OrderService(OrderRepository orderRepository, CheckoutRepository checkoutRepository,
+                        CartItemRepository cartItemRepository, ProductRepository productRepository,
+                        BillingService billingService, ShopRules rules, CartService cartService) {
+        this.cartService = cartService;
         this.orderRepository = orderRepository;
+        this.checkoutRepository = checkoutRepository;
         this.cartItemRepository = cartItemRepository;
         this.productRepository = productRepository;
         this.billingService = billingService;
-        this.deliveryService = deliveryService;
         this.rules = rules;
     }
 
@@ -64,8 +80,13 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public Bill quote(User user, String couponCode) {
+        return quote(user, couponCode, Map.of(), null);
+    }
+
+    @Transactional(readOnly = true)
+    public Bill quote(User user, String couponCode, Map<Long, Fulfilment> fulfilment, String pincode) {
         List<CartItem> items = cartItemRepository.findByUserIdOrderByIdAsc(user.getId());
-        return billingService.buildBill(user, items, couponCode, false);
+        return billingService.buildBill(user, items, couponCode, false, fulfilment, pincode);
     }
 
     // =====================================================================
@@ -73,120 +94,154 @@ public class OrderService {
     // =====================================================================
 
     /**
-     * Places an order. Every step is inside ONE database transaction: if any step fails,
-     * nothing is saved (no stock taken, cart not emptied).
+     * Places the basket as one checkout with one order per shop. Every step is inside ONE
+     * database transaction: if any step fails (for any shop), nothing is saved: no stock taken,
+     * no order created, cart not emptied.
      */
     @Transactional
-    public Order placeOrder(User user, CheckoutRequest request) {
-        // 1. Duplicate protection: same request id already used -> return that order.
-        var existing = orderRepository.findByUserIdAndRequestId(user.getId(), request.getRequestId());
+    public Checkout placeOrder(User user, CheckoutRequest request) {
+        // 1. Duplicate protection: same request id already used -> return that checkout.
+        var existing = checkoutRepository.findByUserIdAndRequestId(user.getId(), request.getRequestId());
         if (existing.isPresent()) {
             return existing.get();
         }
 
-        // 2. PIN code must be one we deliver to.
-        PincodeCheck pin = deliveryService.check(request.getPincode());
-        if (!pin.serviceable()) {
-            throw error(HttpStatus.BAD_REQUEST, pin.message());
-        }
-
-        // 3. Build the bill on the server. Never trust prices sent by the browser.
+        // 2. Build the bill on the server, with the buyer's delivery/pickup choices and PIN code.
+        //    Never trust prices sent by the browser.
         List<CartItem> items = cartItemRepository.findByUserIdOrderByIdAsc(user.getId());
         if (items.isEmpty()) {
             throw error(HttpStatus.BAD_REQUEST, "Your cart is empty");
         }
-        Bill bill = billingService.buildBill(user, items, request.getCouponCode(), true);
+        Bill bill = billingService.buildBill(user, items, request.getCouponCode(), true,
+                request.getFulfilment(), request.getPincode());
         if (!bill.problems().isEmpty()) {
             throw error(HttpStatus.BAD_REQUEST, bill.problems().get(0));
         }
+        boolean anyDelivery = bill.shops().stream().anyMatch(sb -> Fulfilment.DELIVERY.name().equals(sb.fulfilment()));
+        if (anyDelivery && (request.getShippingAddress() == null || request.getShippingAddress().isBlank())) {
+            throw error(HttpStatus.BAD_REQUEST, "Enter a delivery address");
+        }
 
-        // 4. The customer must have seen the same total (price changed / coupon expired meanwhile?).
+        // 3. The buyer must have seen the same total (price changed / coupon expired meanwhile?).
         if (bill.total().compareTo(request.getExpectedTotal().setScale(2, RoundingMode.HALF_UP)) != 0) {
             throw error(HttpStatus.CONFLICT, "Your bill changed (new total Rs " + bill.total().toPlainString()
                     + "). Please review it and place the order again.");
         }
 
-        // 5. Cash on delivery limit.
+        // 4. Cash on delivery limit (on the whole basket).
         if (request.getPaymentMethod() == PaymentMethod.COD && !bill.codAllowed()) {
             throw error(HttpStatus.BAD_REQUEST, "Cash on delivery is available only for orders up to Rs "
                     + bill.codMaxAmount().toPlainString() + ". Please pay by UPI.");
         }
 
-        // 6. Empty the cart in one statement. If another checkout for the same cart is running
+        // 5. Empty the cart in one statement. If another checkout for the same cart is running
         //    (second tab, double click), only one of them can delete the rows.
         int removed = cartItemRepository.deleteAllForUser(user.getId());
         if (removed != items.size()) {
             throw error(HttpStatus.CONFLICT, "Your cart changed or is already being checked out. Please refresh.");
         }
 
-        // 7. Reserve stock with an atomic UPDATE ... WHERE stock >= qty.
-        Order order = new Order();
-        for (CartItem item : items) {
-            Product product = item.getProduct();
-            int updated = productRepository.reserveStock(product.getId(), item.getQuantity());
-            if (updated == 0) {
-                // Throwing rolls back everything done above, including the cart delete.
-                throw error(HttpStatus.CONFLICT, "Sorry, " + product.getName()
-                        + " just went out of stock. Please update your cart.");
-            }
-            order.getItems().add(new OrderItem(order, product, item.getQuantity()));
-        }
+        // 6. The checkout: what belongs to the whole press of "Place order".
+        Checkout checkout = new Checkout();
+        checkout.setUser(user);
+        checkout.setRequestId(request.getRequestId());
+        checkout.setTotalAmount(bill.total());
+        checkout.setPaymentMethod(request.getPaymentMethod());
+        checkout = checkoutRepository.save(checkout);
 
-        // 8. Save the order with the full bill.
-        order.setUser(user);
-        order.setRequestId(request.getRequestId());
-        order.setShippingAddress(request.getShippingAddress().trim());
-        order.setPincode(pin.pincode());
-        order.setSubstitutionPreference(request.getSubstitutionPreference() != null
-                ? request.getSubstitutionPreference() : SubstitutionPreference.REFUND_ITEM);
-        order.setSubtotal(bill.subtotal());
-        order.setDiscount(bill.discount());
-        order.setCouponCode(bill.couponCode());
-        order.setDeliveryFee(bill.deliveryFee());
-        order.setGstIncluded(bill.gstIncluded());
-        order.setTotalAmount(bill.total());
-        order.setPaymentMethod(request.getPaymentMethod());
-        if (request.getPaymentMethod() == PaymentMethod.UPI) {
-            order.setStatus(OrderStatus.PAYMENT_PENDING);
-            order.setPaymentStatus(PaymentStatus.PENDING);
-            order.setStatusNote("Complete the UPI payment within " + rules.getUpiTimeoutMinutes() + " minutes.");
-        } else {
-            order.setStatus(OrderStatus.PLACED);
-            order.setPaymentStatus(PaymentStatus.COD_PENDING);
+        // 7. One order per shop. Stock is reserved with an atomic UPDATE ... WHERE stock >= qty.
+        Map<Long, List<CartItem>> byShop = new LinkedHashMap<>();
+        for (CartItem item : items) {
+            byShop.computeIfAbsent(item.getProduct().getShop().getId(), k -> new ArrayList<>()).add(item);
         }
-        return orderRepository.saveAndFlush(order);
+        for (var shopBill : bill.shops()) {
+            Order order = new Order();
+            Shop shop = null;
+            for (CartItem item : byShop.get(shopBill.shopId())) {
+                Product product = item.getProduct();
+                shop = product.getShop();
+                int updated = productRepository.reserveStock(product.getId(), item.getQuantity());
+                if (updated == 0) {
+                    // Throwing rolls back everything done above, for every shop, including the cart delete.
+                    throw error(HttpStatus.CONFLICT, "Sorry, " + product.getName()
+                            + " just went out of stock. Please update your cart.");
+                }
+                order.getItems().add(new OrderItem(order, product, item.getQuantity()));
+            }
+            Fulfilment fulfilment = Fulfilment.valueOf(shopBill.fulfilment());
+            order.setUser(user);
+            order.setShop(shop);
+            order.setCheckout(checkout);
+            order.setFulfilment(fulfilment);
+            order.setShippingAddress(fulfilment == Fulfilment.DELIVERY ? request.getShippingAddress().trim() : null);
+            order.setPincode(request.getPincode());
+            order.setSubstitutionPreference(request.getSubstitutionPreference() != null
+                    ? request.getSubstitutionPreference() : SubstitutionPreference.REFUND_ITEM);
+            order.setSubtotal(shopBill.subtotal());
+            order.setDiscount(shopBill.discount());
+            order.setCouponCode(shopBill.discount().signum() > 0 || bill.couponCode() != null ? bill.couponCode() : null);
+            order.setDeliveryFee(shopBill.deliveryFee());
+            order.setGstIncluded(shopBill.gstIncluded());
+            order.setTotalAmount(shopBill.total());
+            order.setPaymentMethod(request.getPaymentMethod());
+            if (request.getPaymentMethod() == PaymentMethod.UPI) {
+                order.setStatus(OrderStatus.PAYMENT_PENDING);
+                order.setPaymentStatus(PaymentStatus.PENDING);
+                order.setStatusNote("Complete the UPI payment within " + rules.getUpiTimeoutMinutes() + " minutes.");
+            } else {
+                order.setStatus(OrderStatus.PLACED);
+                order.setPaymentStatus(PaymentStatus.COD_PENDING);
+            }
+            checkout.getOrders().add(orderRepository.save(order));
+        }
+        orderRepository.flush();
+        return checkout;
     }
 
     // =====================================================================
     // Demo UPI payment
     // =====================================================================
 
+    /**
+     * Result from the demo UPI screen. One payment covers every shop order of the same checkout,
+     * so success, failure, time-out and late-payment refunds apply to all of them together.
+     */
     @Transactional
     public Order pay(User user, Long orderId, boolean success) {
         Order order = getOwnedOrder(user, orderId);
+        List<Order> group = ordersPaidTogether(order);
 
-        // Payment came back too late: expire the order first.
-        if (order.getStatus() == OrderStatus.PAYMENT_PENDING && isPaymentTimedOut(order)) {
-            failPayment(order, "Payment was not completed within " + rules.getUpiTimeoutMinutes()
-                    + " minutes, so the order was cancelled.");
+        // Payment came back too late: expire the orders first.
+        for (Order o : group) {
+            if (o.getStatus() == OrderStatus.PAYMENT_PENDING && isPaymentTimedOut(o)) {
+                failPayment(o, "Payment was not completed within " + rules.getUpiTimeoutMinutes()
+                        + " minutes, so the order was cancelled.");
+            }
         }
 
         switch (order.getStatus()) {
             case PAYMENT_PENDING -> {
-                if (success) {
-                    order.setStatus(OrderStatus.PLACED);
-                    order.setPaymentStatus(PaymentStatus.PAID);
-                    order.setStatusNote("Payment received. Thank you!");
-                } else {
-                    failPayment(order, "UPI payment failed. No money was taken. Your items are back in your cart.");
+                for (Order o : group) {
+                    if (o.getStatus() != OrderStatus.PAYMENT_PENDING) continue;
+                    if (success) {
+                        o.setStatus(OrderStatus.PLACED);
+                        o.setPaymentStatus(PaymentStatus.PAID);
+                        o.setStatusNote("Payment received. Thank you!");
+                    } else {
+                        failPayment(o, "UPI payment failed. No money was taken. Your items are back in your cart.");
+                    }
                 }
             }
             case PAYMENT_FAILED -> {
-                if (success && order.getPaymentStatus() != PaymentStatus.REFUNDED) {
-                    // The famous "money deducted but order failed" case: refund automatically.
-                    order.setPaymentStatus(PaymentStatus.REFUNDED);
-                    order.setStatusNote("Your payment of Rs " + order.getTotalAmount().toPlainString()
-                            + " arrived after the order expired. A full refund has been started (3-5 working days).");
+                if (success) {
+                    for (Order o : group) {
+                        if (o.getStatus() == OrderStatus.PAYMENT_FAILED && o.getPaymentStatus() != PaymentStatus.REFUNDED) {
+                            // The famous "money deducted but order failed" case: refund automatically.
+                            o.setPaymentStatus(PaymentStatus.REFUNDED);
+                            o.setStatusNote("Your payment of Rs " + o.getTotalAmount().toPlainString()
+                                    + " arrived after the order expired. A full refund has been started (3-5 working days).");
+                        }
+                    }
                 }
                 // A second "failed" message changes nothing. We return instead of throwing,
                 // because throwing would roll back the time-out handling done just above.
@@ -221,12 +276,47 @@ public class OrderService {
     @Transactional
     public Order cancelByCustomer(User user, Long orderId) {
         Order order = getOwnedOrder(user, orderId);
-        if (order.getStatus() != OrderStatus.PLACED && order.getStatus() != OrderStatus.PAYMENT_PENDING) {
+        if (!BUYER_CAN_CANCEL.contains(order.getStatus())) {
             throw error(HttpStatus.CONFLICT, "This order is already " + readable(order.getStatus())
                     + " and can no longer be cancelled.");
         }
-        cancel(order, "Cancelled by you.");
+        if (order.getStatus() == OrderStatus.PAYMENT_PENDING) {
+            // One UPI payment covers all shops of this checkout, so an unpaid checkout is cancelled as a whole.
+            for (Order o : ordersPaidTogether(order)) {
+                if (o.getStatus() == OrderStatus.PAYMENT_PENDING) cancel(o, "Cancelled by you.");
+            }
+        } else {
+            cancel(order, "Cancelled by you.");
+        }
         return order;
+    }
+
+    /**
+     * "Order again": puts the items of a past order back into the cart, using today's prices and
+     * the normal cart checks. Items no longer sold or out of stock are skipped with the reason.
+     */
+    @Transactional
+    public BulkAddResult reorder(User user, Long orderId) {
+        Order order = getOwnedOrder(user, orderId);
+        List<CartRequest> requests = new ArrayList<>();
+        List<String> gone = new ArrayList<>();
+        for (OrderItem item : order.getItems()) {
+            if (item.getProductId() == null) {
+                gone.add(item.getProductName() + " is no longer sold");
+                continue;
+            }
+            CartRequest r = new CartRequest();
+            r.setProductId(item.getProductId());
+            r.setQuantity(item.getQuantity());
+            requests.add(r);
+        }
+        BulkAddResult result = cartService.addMany(user, requests);
+        if (gone.isEmpty()) {
+            return result;
+        }
+        List<String> skipped = new ArrayList<>(gone);
+        skipped.addAll(result.skipped());
+        return new BulkAddResult(result.added(), skipped, result.cart());
     }
 
     // =====================================================================
@@ -282,25 +372,71 @@ public class OrderService {
     // Admin
     // =====================================================================
 
+    /** Admins can move any shop's order (e.g. the platform's own demo shop, or to help a seller). */
     @Transactional
     public Order adminUpdateStatus(Long orderId, OrderStatus next) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Order not found"));
-        Set<OrderStatus> allowed = ADMIN_TRANSITIONS.getOrDefault(order.getStatus(), Set.of());
+        return moveTo(order, next, "Cancelled by NammaBasket support. Sorry for the trouble.");
+    }
+
+    // =====================================================================
+    // Seller: only orders of the seller's own shop
+    // =====================================================================
+
+    @Transactional(readOnly = true)
+    public Order getShopOrder(Shop shop, Long orderId) {
+        // Another shop's order answers 404, exactly like an order that doesn't exist.
+        return orderRepository.findForShop(orderId, shop.getId())
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Order not found in your shop"));
+    }
+
+    @Transactional
+    public Order sellerUpdateStatus(Shop shop, Long orderId, OrderStatus next) {
+        Order order = getShopOrder(shop, orderId);
+        if (next == OrderStatus.CANCELLED) {
+            throw error(HttpStatus.BAD_REQUEST, "To turn an order down, reject it with a reason.");
+        }
+        return moveTo(order, next, null);
+    }
+
+    /** The shop turns the order down before preparing it. The buyer sees the reason; stock goes back. */
+    @Transactional
+    public Order sellerReject(Shop shop, Long orderId, String reason) {
+        Order order = getShopOrder(shop, orderId);
+        if (order.getStatus() != OrderStatus.PLACED && order.getStatus() != OrderStatus.ACCEPTED) {
+            throw error(HttpStatus.CONFLICT, "Only new or accepted orders can be rejected (this one is "
+                    + readable(order.getStatus()) + ").");
+        }
+        order.setRejectionReason(reason.trim());
+        cancel(order, "Rejected by " + shop.getName() + ": " + reason.trim());
+        return order;
+    }
+
+    /** Applies one step of the life cycle after checking it is allowed for this order. */
+    private Order moveTo(Order order, OrderStatus next, String cancelNote) {
+        Set<OrderStatus> allowed = TRANSITIONS.getOrDefault(order.getStatus(), Set.of());
         if (!allowed.contains(next)) {
             throw error(HttpStatus.CONFLICT, "Cannot change order #" + order.getId() + " from "
-                    + order.getStatus() + " to " + next + ".");
+                    + readable(order.getStatus()) + " to " + readable(next) + ".");
+        }
+        if (next == OrderStatus.OUT_FOR_DELIVERY && order.getFulfilment() != Fulfilment.DELIVERY) {
+            throw error(HttpStatus.CONFLICT, "Order #" + order.getId() + " is for pickup: mark it ready for pickup instead.");
+        }
+        if (next == OrderStatus.READY_FOR_PICKUP && order.getFulfilment() != Fulfilment.PICKUP) {
+            throw error(HttpStatus.CONFLICT, "Order #" + order.getId() + " is for delivery: mark it out for delivery instead.");
         }
         if (next == OrderStatus.CANCELLED) {
-            cancel(order, "Cancelled by the store. Sorry for the trouble.");
+            cancel(order, cancelNote);
             return order;
         }
         order.setStatus(next);
         order.setStatusNote(null);
+        order.touch();
         if (next == OrderStatus.DELIVERED) {
             order.setDeliveredAt(LocalDateTime.now());
             if (order.getPaymentMethod() == PaymentMethod.COD) {
-                order.setPaymentStatus(PaymentStatus.PAID); // cash collected at the door
+                order.setPaymentStatus(PaymentStatus.PAID); // cash collected at the door / counter
             }
         }
         return order;
@@ -320,6 +456,11 @@ public class OrderService {
         return order;
     }
 
+    /** All shop orders covered by the same UPI payment (just this one for old orders). */
+    private List<Order> ordersPaidTogether(Order order) {
+        return order.getCheckout() == null ? List.of(order) : order.getCheckout().getOrders();
+    }
+
     private boolean isPaymentTimedOut(Order order) {
         return order.getCreatedAt().isBefore(LocalDateTime.now().minusMinutes(rules.getUpiTimeoutMinutes()));
     }
@@ -335,6 +476,7 @@ public class OrderService {
     private void cancel(Order order, String note) {
         releaseStock(order);
         order.setStatus(OrderStatus.CANCELLED);
+        order.touch();
         if (order.getPaymentStatus() == PaymentStatus.PAID) {
             order.setPaymentStatus(PaymentStatus.REFUNDED);
             note = note + " Refund of Rs " + order.getTotalAmount().toPlainString()
@@ -345,7 +487,12 @@ public class OrderService {
         order.setStatusNote(note);
     }
 
+    /** Puts the order's items back on the shelf, exactly once (the flag stops a second release). */
     private void releaseStock(Order order) {
+        if (order.isStockReleased()) {
+            return;
+        }
+        order.setStockReleased(true);
         for (OrderItem item : order.getItems()) {
             if (item.getProductId() != null) {
                 productRepository.releaseStock(item.getProductId(), item.getQuantity());

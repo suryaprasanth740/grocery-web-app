@@ -1,17 +1,24 @@
 package com.suryaprasanth.grocery.model;
 
 /**
- * Life cycle of an order.
+ * Life cycle of one shop's order.
  *
- * PAYMENT_PENDING -> PLACED -> PACKED -> OUT_FOR_DELIVERY -> DELIVERED
- *        |              |        |
- *        v              v        v
- *  PAYMENT_FAILED    CANCELLED (customer can cancel only while PLACED; admin also while PACKED)
+ * DELIVERY: PLACED -> ACCEPTED -> PREPARING -> OUT_FOR_DELIVERY -> DELIVERED
+ * PICKUP:   PLACED -> ACCEPTED -> PREPARING -> READY_FOR_PICKUP -> DELIVERED (handed over)
+ *
+ * Before PREPARING the buyer can cancel, and the shop can reject (with a reason): both end in CANCELLED.
+ * UPI orders start as PAYMENT_PENDING and become PLACED once paid, or PAYMENT_FAILED.
+ * PACKED is the old FreshCart step; existing PACKED orders are moved to PREPARING at startup.
  */
 public enum OrderStatus {
     PAYMENT_PENDING,
     PLACED,
+    ACCEPTED,
+    PREPARING,
+    /** @deprecated old FreshCart step, kept so old rows can still be read */
+    @Deprecated
     PACKED,
+    READY_FOR_PICKUP,
     OUT_FOR_DELIVERY,
     DELIVERED,
     CANCELLED,

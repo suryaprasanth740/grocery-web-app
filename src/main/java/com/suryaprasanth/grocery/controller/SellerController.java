@@ -7,6 +7,16 @@ import com.suryaprasanth.grocery.model.Shop;
 import com.suryaprasanth.grocery.model.StoredImage;
 import com.suryaprasanth.grocery.service.ImageService;
 import com.suryaprasanth.grocery.service.SellerProductService;
+import com.suryaprasanth.grocery.service.SellerDashboardService;
+import com.suryaprasanth.grocery.service.OrderService;
+import com.suryaprasanth.grocery.dto.ReasonRequest;
+import com.suryaprasanth.grocery.dto.StatusUpdateRequest;
+import com.suryaprasanth.grocery.model.Order;
+import com.suryaprasanth.grocery.model.OrderStatus;
+import com.suryaprasanth.grocery.repository.OrderRepository;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
@@ -37,9 +47,17 @@ public class SellerController {
     private final ShopService shopService;
     private final SellerProductService productService;
     private final ImageService imageService;
+    private final OrderService orderService;
+    private final OrderRepository orderRepository;
+    private final SellerDashboardService dashboardService;
 
     public SellerController(UserRepository userRepository, ShopService shopService,
-                            SellerProductService productService, ImageService imageService) {
+                            SellerProductService productService, ImageService imageService,
+                            OrderService orderService, OrderRepository orderRepository,
+                            SellerDashboardService dashboardService) {
+        this.orderService = orderService;
+        this.orderRepository = orderRepository;
+        this.dashboardService = dashboardService;
         this.userRepository = userRepository;
         this.shopService = shopService;
         this.productService = productService;
@@ -135,5 +153,60 @@ public class SellerController {
         body.put("url", image.getUrl());
         body.put("sizeBytes", image.getSizeBytes());
         return ResponseEntity.status(HttpStatus.CREATED).body(body);
+    }
+
+    // ---------------- Orders (only this shop's) ----------------
+
+    /** ?status=new|active|done|cancelled|all, newest first, 20 per page. */
+    @GetMapping("/orders")
+    public Map<String, Object> orders(@RequestParam(defaultValue = "all") String status,
+                                      @RequestParam(defaultValue = "0") int page,
+                                      @RequestParam(defaultValue = "20") int size,
+                                      HttpSession session) {
+        Shop shop = myShopEntity(session);
+        Set<OrderStatus> statuses = switch (status.toLowerCase()) {
+            case "new" -> SellerDashboardService.NEW;
+            case "active" -> SellerDashboardService.IN_PROGRESS;
+            case "done" -> SellerDashboardService.DONE;
+            case "cancelled" -> SellerDashboardService.CANCELLED;
+            case "all" -> SellerDashboardService.VISIBLE_TO_SHOP;
+            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status must be new, active, done, cancelled or all");
+        };
+        Page<Order> result = orderRepository.findForShop(shop.getId(), statuses,
+                PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 50),
+                        Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id"))));
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("items", result.getContent());
+        body.put("page", result.getNumber());
+        body.put("totalPages", result.getTotalPages());
+        body.put("totalItems", result.getTotalElements());
+        return body;
+    }
+
+    @GetMapping("/orders/{id}")
+    public Order order(@PathVariable Long id, HttpSession session) {
+        Order order = orderService.getShopOrder(myShopEntity(session), id);
+        if (!SellerDashboardService.VISIBLE_TO_SHOP.contains(order.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found in your shop");
+        }
+        return order;
+    }
+
+    /** Body: {"status": "ACCEPTED" | "PREPARING" | "OUT_FOR_DELIVERY" | "READY_FOR_PICKUP" | "DELIVERED"} */
+    @PutMapping("/orders/{id}/status")
+    public Order setOrderStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request, HttpSession session) {
+        return orderService.sellerUpdateStatus(myShopEntity(session), id, request.getStatus());
+    }
+
+    /** Turn an order down before preparing it. The buyer sees the reason and their stock/money comes back. */
+    @PostMapping("/orders/{id}/reject")
+    public Order rejectOrder(@PathVariable Long id, @Valid @RequestBody ReasonRequest request, HttpSession session) {
+        return orderService.sellerReject(myShopEntity(session), id, request.getReason());
+    }
+
+    /** Dashboard numbers: order counts, sales today/this week, last 7 days, best sellers, low stock. */
+    @GetMapping("/summary")
+    public Map<String, Object> summary(HttpSession session) {
+        return dashboardService.summary(myShopEntity(session));
     }
 }
