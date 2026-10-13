@@ -1,0 +1,66 @@
+# Helper: exports the database schema Hibernate expects (see tools/schema/README.md).
+name: Schema export
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "tools/schema/**"
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: schema
+          POSTGRES_USER: schema
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U schema"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: Build
+        run: mvn -B -q -DskipTests package
+      - name: Start the app with Hibernate creating the tables
+        env:
+          DB_URL: jdbc:postgresql://localhost:5432/schema
+          DB_USER: schema
+          DB_PASSWORD: ci-only-password
+          DEMO_SHOPS: "false"
+        run: |
+          nohup java -jar target/*.jar \
+            --spring.flyway.enabled=false \
+            --spring.jpa.hibernate.ddl-auto=create \
+            --spring.jpa.properties.jakarta.persistence.schema-generation.scripts.action=create \
+            --spring.jpa.properties.jakarta.persistence.schema-generation.scripts.create-target=hibernate-create.sql \
+            --spring.jpa.properties.hibernate.hbm2ddl.delimiter=";" \
+            --spring.jpa.properties.hibernate.format_sql=true > app.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:8080/api/categories > /dev/null && break; sleep 2; done
+          tail -5 app.log
+      - name: Dump the schema
+        run: |
+          PGPASSWORD=ci-only-password pg_dump -h localhost -U schema --schema-only --no-owner --no-privileges schema > pg_dump.sql
+          wc -l hibernate-create.sql pg_dump.sql
+      - name: Publish to the schema-export branch
+        run: |
+          cp hibernate-create.sql pg_dump.sql app.log /tmp/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan schema-export
+          git rm -rfq . && git clean -fdxq
+          cp /tmp/hibernate-create.sql /tmp/pg_dump.sql /tmp/app.log .
+          git add -A && git commit -qm "Schema export for ${GITHUB_SHA::7}"
+          git push -fq origin schema-export
