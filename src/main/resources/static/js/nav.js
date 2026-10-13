@@ -227,7 +227,7 @@ async function initNav() {
       authArea.innerHTML = `
         ${user.role === 'ADMIN' ? '<a href="/admin.html" style="margin-right:18px;">Admin</a>' : ''}
         ${user.role === 'SELLER' ? '<a href="/seller.html" style="margin-right:18px;">My shop</a>' : ''}
-        <span style="margin-right:18px;">Hi, ${escapeHtml(user.name.split(' ')[0])}</span>
+        <span class="nav-hello">Hi, ${escapeHtml(user.name.split(' ')[0])}</span>
         <button class="linklike" id="nav-logout-btn">Log out</button>
       `;
       document.getElementById('nav-logout-btn').addEventListener('click', async () => {
