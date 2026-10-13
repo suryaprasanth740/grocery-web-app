@@ -126,11 +126,14 @@ def candidates(items):
     for item in items:
         prefer = ["File:" + f if not f.startswith("File:") else f for f in item.get("prefer", [])]
         seen, picks = set(), []
-        for c in by_titles(prefer, tile) + search(item["query"], tile):
+        found = by_titles(prefer, tile)
+        for q in item.get("queries") or [item["query"]]:
+            found += search(q, tile, limit=10)
+        for c in found:
             if c["title"] not in seen:
                 seen.add(c["title"])
                 picks.append(c)
-            if len(picks) == 5:
+            if len(picks) == item.get("max", 5):
                 break
         found_all[item["slug"]] = picks
         print(f"{item['slug']}: {len(picks)} candidates", flush=True)
@@ -140,7 +143,8 @@ def candidates(items):
     f_big, f_small = font(22), font(16)
     for s in range(0, len(slugs), per_sheet):
         chunk = slugs[s:s + per_sheet]
-        sheet = Image.new("RGB", (label_w + 5 * (tile + 10), len(chunk) * (tile + 14)), "white")
+        cols = max(len(found_all[s]) for s in chunk) or 1
+        sheet = Image.new("RGB", (label_w + cols * (tile + 10), len(chunk) * (tile + 14)), "white")
         d = ImageDraw.Draw(sheet)
         for row, slug in enumerate(chunk):
             y = row * (tile + 14)

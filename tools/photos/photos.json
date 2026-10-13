@@ -71,7 +71,13 @@
    "query": "yogurt bowl",
    "prefer": [
     "A bowl of frozen yogurt.jpg"
-   ]
+   ],
+   "queries": [
+    "yogurt bowl",
+    "yoghurt spoon bowl white",
+    "curd yogurt"
+   ],
+   "max": 8
   },
   {
    "slug": "whole-wheat-bread",
@@ -177,7 +183,13 @@
   {
    "slug": "potatoes",
    "name": "Potatoes",
-   "query": "potatoes heap"
+   "query": "potatoes heap",
+   "queries": [
+    "potatoes tubers",
+    "raw potatoes",
+    "potato vegetable market"
+   ],
+   "max": 8
   },
   {
    "slug": "carrots",
@@ -212,7 +224,13 @@
   {
    "slug": "fresh-oranges",
    "name": "Fresh Oranges",
-   "query": "oranges fruit pile"
+   "query": "oranges fruit pile",
+   "queries": [
+    "oranges fruit",
+    "orange fruit whole",
+    "citrus sinensis fruit"
+   ],
+   "max": 8
   },
   {
    "slug": "mango-leaves",
@@ -232,7 +250,13 @@
   {
    "slug": "paneer",
    "name": "Paneer",
-   "query": "paneer cubes"
+   "query": "paneer cubes",
+   "queries": [
+    "paneer",
+    "paneer cubes raw",
+    "cottage cheese india paneer"
+   ],
+   "max": 8
   },
   {
    "slug": "ghee",
@@ -242,7 +266,13 @@
   {
    "slug": "sona-masoori-rice",
    "name": "Sona Masoori Rice",
-   "query": "white rice grains raw"
+   "query": "white rice grains raw",
+   "queries": [
+    "raw white rice grains",
+    "uncooked rice",
+    "rice grains closeup"
+   ],
+   "max": 8
   },
   {
    "slug": "whole-wheat-atta",
@@ -277,7 +307,13 @@
   {
    "slug": "sambar-powder",
    "name": "Sambar Powder",
-   "query": "sambar powder spice"
+   "query": "sambar powder spice",
+   "queries": [
+    "sambar powder",
+    "masala powder bowl",
+    "spice powder heap india"
+   ],
+   "max": 8
   },
   {
    "slug": "turmeric-powder",
@@ -307,7 +343,13 @@
   {
    "slug": "assam-tea-powder",
    "name": "Assam Tea Powder",
-   "query": "black tea leaves CTC"
+   "query": "black tea leaves CTC",
+   "queries": [
+    "black tea leaves loose",
+    "CTC tea granules",
+    "dry tea leaves"
+   ],
+   "max": 8
   },
   {
    "slug": "clay-diyas",
@@ -322,12 +364,24 @@
   {
    "slug": "agarbatti",
    "name": "Agarbatti",
-   "query": "incense sticks burning"
+   "query": "incense sticks burning",
+   "queries": [
+    "agarbatti",
+    "incense sticks bundle",
+    "incense sticks"
+   ],
+   "max": 8
   },
   {
    "slug": "camphor",
    "name": "Camphor",
-   "query": "camphor tablets"
+   "query": "camphor tablets",
+   "queries": [
+    "camphor tablets",
+    "karpooram",
+    "camphor aarti"
+   ],
+   "max": 8
   },
   {
    "slug": "brinjal",
@@ -342,7 +396,13 @@
   {
    "slug": "french-beans",
    "name": "French Beans",
-   "query": "green beans vegetable"
+   "query": "green beans vegetable",
+   "queries": [
+    "green beans raw",
+    "french beans vegetable",
+    "haricot vert"
+   ],
+   "max": 8
   },
   {
    "slug": "cauliflower",
@@ -382,7 +442,13 @@
   {
    "slug": "drumsticks",
    "name": "Drumsticks",
-   "query": "drumstick moringa pods vegetable"
+   "query": "drumstick moringa pods vegetable",
+   "queries": [
+    "drumstick vegetable",
+    "moringa pods",
+    "moringa oleifera fruit"
+   ],
+   "max": 8
   },
   {
    "slug": "alphonso-mangoes",
@@ -422,17 +488,35 @@
   {
    "slug": "ragi-flour",
    "name": "Ragi Flour",
-   "query": "finger millet ragi flour"
+   "query": "finger millet ragi flour",
+   "queries": [
+    "ragi flour",
+    "finger millet flour",
+    "millet flour bowl"
+   ],
+   "max": 8
   },
   {
    "slug": "idli-rice",
    "name": "Idli Rice",
-   "query": "parboiled rice grains"
+   "query": "parboiled rice grains",
+   "queries": [
+    "parboiled rice",
+    "idli rice",
+    "rice grains sack market"
+   ],
+   "max": 8
   },
   {
    "slug": "urad-dal",
    "name": "Urad Dal",
-   "query": "urad dal white split"
+   "query": "urad dal white split",
+   "queries": [
+    "urad dal",
+    "black gram split",
+    "vigna mungo dal"
+   ],
+   "max": 8
   },
   {
    "slug": "chana-dal",
@@ -452,7 +536,13 @@
   {
    "slug": "besan",
    "name": "Besan",
-   "query": "besan gram flour"
+   "query": "besan gram flour",
+   "queries": [
+    "besan",
+    "gram flour",
+    "chickpea flour"
+   ],
+   "max": 8
   },
   {
    "slug": "groundnut-oil",
@@ -467,7 +557,13 @@
   {
    "slug": "red-chilli-powder",
    "name": "Red Chilli Powder",
-   "query": "red chilli powder"
+   "query": "red chilli powder",
+   "queries": [
+    "chili powder",
+    "red chilli powder heap",
+    "kashmiri chilli powder"
+   ],
+   "max": 8
   },
   {
    "slug": "black-pepper",
@@ -497,7 +593,13 @@
   {
    "slug": "buttermilk",
    "name": "Buttermilk",
-   "query": "buttermilk chaas glass"
+   "query": "buttermilk chaas glass",
+   "queries": [
+    "buttermilk glass",
+    "chaas",
+    "lassi glass"
+   ],
+   "max": 8
   },
   {
    "slug": "idli-dosa-batter",
@@ -517,7 +619,13 @@
   {
    "slug": "khari-biscuits",
    "name": "Khari Biscuits",
-   "query": "khari puff pastry biscuit"
+   "query": "khari puff pastry biscuit",
+   "queries": [
+    "khari biscuit",
+    "puff pastry biscuits",
+    "khari"
+   ],
+   "max": 8
   },
   {
    "slug": "banana-chips",
@@ -527,7 +635,13 @@
   {
    "slug": "kodubale",
    "name": "Kodubale",
-   "query": "kodubale snack"
+   "query": "kodubale snack",
+   "queries": [
+    "murukku",
+    "chakli snack",
+    "kodubale"
+   ],
+   "max": 8
   },
   {
    "slug": "mysore-pak",
@@ -547,7 +661,13 @@
   {
    "slug": "ragi-malt",
    "name": "Ragi Malt",
-   "query": "ragi malt drink"
+   "query": "ragi malt drink",
+   "queries": [
+    "ragi porridge",
+    "ragi java",
+    "finger millet porridge"
+   ],
+   "max": 8
   },
   {
    "slug": "bun",
@@ -558,6 +678,40 @@
    "slug": "coconut-cookies",
    "name": "Coconut Cookies",
    "query": "coconut cookies"
+  },
+  {
+   "slug": "peanut-laddu",
+   "name": "Peanut Chikki",
+   "query": "chikki",
+   "queries": [
+    "peanut chikki",
+    "chikki",
+    "groundnut brittle"
+   ],
+   "max": 8
   }
+ ],
+ "only": [
+  "greek-yogurt",
+  "potatoes",
+  "fresh-oranges",
+  "paneer",
+  "sona-masoori-rice",
+  "sambar-powder",
+  "assam-tea-powder",
+  "agarbatti",
+  "camphor",
+  "french-beans",
+  "drumsticks",
+  "ragi-flour",
+  "idli-rice",
+  "urad-dal",
+  "besan",
+  "red-chilli-powder",
+  "buttermilk",
+  "khari-biscuits",
+  "kodubale",
+  "ragi-malt",
+  "peanut-laddu"
  ]
 }
