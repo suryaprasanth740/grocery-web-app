@@ -1295,7 +1295,8 @@ a.stars-line:hover b { text-decoration: underline; }
 .nav-links .bell-list a { white-space: normal; font-weight: 400; }
 .nav-links .bell-list a b { font-weight: 700; }
 .nav-links .bell-pop .linklike { white-space: nowrap; }
-.nav-hello { margin-right: 18px; }
+/* The signed-in links sit directly in the header's flex row (each one its own item, spaced by the gap) */
+#nav-auth-area { display: contents; }
 /* Phones: the greeting is dropped so the header takes two rows instead of three */
 @media (max-width: 720px) { .nav-hello { display: none; } }
 main:focus { outline: none; }
