@@ -1,683 +1,500 @@
 {
- "mode": "candidates",
+ "mode": "final",
  "items": [
   {
    "slug": "fresh-bananas",
    "name": "Fresh Bananas",
-   "query": "bananas bunch yellow",
-   "prefer": [
-    "Banana bunch in a banana farm at Chinawal.jpg"
-   ]
+   "file": "File:DFC 4184 Bunches of ripe bananas neatly arranged at a bustling market stall ready for shoppers.jpg"
   },
   {
    "slug": "red-apples",
    "name": "Red Apples",
-   "query": "red apples",
-   "prefer": [
-    "Red Apple.jpg"
-   ]
+   "file": "File:Red Apple.jpg"
   },
   {
    "slug": "tomatoes",
    "name": "Tomatoes",
-   "query": "tomatoes red vegetable",
-   "prefer": [
-    "Tomato je.jpg"
-   ]
+   "file": "File:Tomato je.jpg"
   },
   {
    "slug": "onions",
    "name": "Onions",
-   "query": "red onions india",
-   "prefer": [
-    "Harvested vegetables(Onions).jpg"
-   ]
+   "file": "File:India - Koyambedu Market - Onions 08 (3987045248).jpg"
   },
   {
    "slug": "spinach-bunch",
    "name": "Spinach Bunch",
-   "query": "spinach leaves bunch",
-   "prefer": [
-    "Spinach leaves.jpg"
-   ]
+   "file": "File:Spinach leaves.jpg"
   },
   {
    "slug": "full-cream-milk",
    "name": "Full Cream Milk",
-   "query": "glass of milk",
-   "prefer": [
-    "Glass Milk Bottles.tif"
-   ]
+   "file": "File:Glass Milk Bottles.tif"
   },
   {
    "slug": "farm-eggs",
    "name": "Farm Eggs",
-   "query": "brown eggs",
-   "prefer": [
-    "Egg cartons with chicken eggs 03.jpg"
-   ]
+   "file": "File:Egg cartons with chicken eggs 03.jpg"
   },
   {
    "slug": "cheddar-cheese",
    "name": "Cheddar Cheese",
-   "query": "cheddar cheese block",
-   "prefer": [
-    "Montgomerys cheddar cheese.jpg"
-   ]
+   "file": "File:Montgomerys cheddar cheese.jpg"
   },
   {
    "slug": "greek-yogurt",
    "name": "Greek Yogurt",
-   "query": "yogurt bowl",
-   "prefer": [
-    "A bowl of frozen yogurt.jpg"
-   ],
-   "queries": [
-    "yogurt bowl",
-    "yoghurt spoon bowl white",
-    "curd yogurt"
-   ],
-   "max": 8
+   "file": "File:Yoghurt in bowl 011715.jpg"
   },
   {
    "slug": "whole-wheat-bread",
    "name": "Whole Wheat Bread",
-   "query": "whole wheat bread loaf sliced",
-   "prefer": [
-    "Vegan no-knead whole wheat bread loaf, sliced, September 2010.jpg"
-   ]
+   "file": "File:Vegan Nine Grain Whole Wheat Bread.jpg"
   },
   {
    "slug": "butter-croissants",
    "name": "Butter Croissants",
-   "query": "croissants",
-   "prefer": [
-    "Croissants au beurre (18953292873).jpg"
-   ]
+   "file": "File:Croissants au beurre (18953292873).jpg"
   },
   {
    "slug": "chocolate-muffins",
    "name": "Chocolate Muffins",
-   "query": "chocolate muffins",
-   "prefer": [
-    "Vegan oatmeal chocolate chip muffins.jpg"
-   ]
+   "file": "File:Chocolate muffin bake.jpg"
   },
   {
    "slug": "orange-juice",
    "name": "Orange Juice",
-   "query": "glass of orange juice",
-   "prefer": [
-    "Orange juice 1 edit1.jpg"
-   ]
+   "file": "File:Orange juice 1 edit1.jpg"
   },
   {
    "slug": "filter-coffee-powder",
    "name": "Filter Coffee Powder",
-   "query": "south indian filter coffee",
-   "prefer": [
-    "Indian filter coffee in Dabarah.jpg"
-   ]
+   "file": "File:Foaming filter coffee.jpg"
   },
   {
    "slug": "green-tea-bags",
    "name": "Green Tea Bags",
-   "query": "green tea cup",
-   "prefer": [
-    "Canister with bags of green tea.jpg"
-   ]
+   "file": "File:White cup with green tea in it.jpg"
   },
   {
    "slug": "potato-chips",
    "name": "Potato Chips",
-   "query": "potato chips bowl",
-   "prefer": [
-    "Potato-Chips.jpg"
-   ]
+   "file": "File:Potato-Chips.jpg"
   },
   {
    "slug": "mixed-nuts",
    "name": "Mixed Nuts",
-   "query": "mixed nuts cashew almond",
-   "prefer": [
-    "Almonds - in shell, shell cracked open, shelled, blanched.jpg"
-   ]
+   "file": "File:Fancy raw mixed nuts macro.jpg"
   },
   {
    "slug": "digestive-biscuits",
    "name": "Digestive Biscuits",
-   "query": "digestive biscuits",
-   "prefer": [
-    "Digestive biscuits.jpg"
-   ]
+   "file": "File:Bowl of digestive biscuits.jpg"
   },
   {
    "slug": "basmati-rice",
    "name": "Basmati Rice",
-   "query": "basmati rice grains",
-   "prefer": [
-    "Grano de arroz basmati integral, 2020-06-12, DD 01-11 FS.jpg"
-   ]
+   "file": "File:Basmati Rice India, raw.jpg"
   },
   {
    "slug": "toor-dal",
    "name": "Toor Dal",
-   "query": "toor dal pigeon pea split",
-   "prefer": [
-    "Tadka Daal (Indian lentil curry).jpg"
-   ]
+   "file": "File:Tur Dal.JPG"
   },
   {
    "slug": "sunflower-cooking-oil",
    "name": "Sunflower Cooking Oil",
-   "query": "sunflower oil bottle",
-   "prefer": [
-    "Bottle 1 liter Sunflower refined oil.jpg"
-   ]
+   "file": "File:Bottle 1 liter Sunflower refined oil.jpg"
   },
   {
    "slug": "iodized-salt",
    "name": "Iodized Salt",
-   "query": "table salt bowl"
+   "file": "File:Comparison of Table Salt with Kitchen Salt.png"
   },
   {
    "slug": "potatoes",
    "name": "Potatoes",
-   "query": "potatoes heap",
-   "queries": [
-    "solanum tuberosum tubers",
-    "potatoes harvest basket",
-    "new potatoes"
-   ],
-   "max": 8
+   "file": "File:Solanum tuberosum 15-p.bot-solana.tuber-01.jpg"
   },
   {
    "slug": "carrots",
    "name": "Carrots",
-   "query": "carrots orange fresh"
+   "file": "File:Fresh orange carrots.jpg"
   },
   {
    "slug": "green-chillies",
    "name": "Green Chillies",
-   "query": "green chillies india"
+   "file": "File:Green chillies variety.jpg"
   },
   {
    "slug": "coriander-leaves",
    "name": "Coriander Leaves",
-   "query": "coriander leaves bunch"
+   "file": "File:Bunches of coriander leaves.jpg"
   },
   {
    "slug": "ginger",
    "name": "Ginger",
-   "query": "ginger root rhizome"
+   "file": "File:Ginger rhizome.jpg"
   },
   {
    "slug": "lemons",
    "name": "Lemons",
-   "query": "lemons citrus"
+   "file": "File:Lemon.jpg"
   },
   {
    "slug": "fresh-coconut",
    "name": "Fresh Coconut",
-   "query": "coconut whole brown"
+   "file": "File:Coconuts - single and cracked open.jpg"
   },
   {
    "slug": "fresh-oranges",
    "name": "Fresh Oranges",
-   "query": "oranges fruit pile",
-   "queries": [
-    "oranges fruit",
-    "orange fruit whole",
-    "citrus sinensis fruit"
-   ],
-   "max": 8
+   "file": "File:Oranges - whole-halved-segment.jpg"
   },
   {
    "slug": "mango-leaves",
    "name": "Mango Leaves",
-   "query": "mango leaves"
+   "file": "File:Mango Leaves in Bangladesh.jpg"
   },
   {
    "slug": "toned-milk",
    "name": "Toned Milk",
-   "query": "milk pouring jug"
+   "file": "File:Milk Pitcher With Lid.jpg"
   },
   {
    "slug": "fresh-curd",
    "name": "Fresh Curd",
-   "query": "curd dahi bowl"
+   "file": "File:Plain Curd Rice.jpg"
   },
   {
    "slug": "paneer",
    "name": "Paneer",
-   "query": "paneer cubes",
-   "queries": [
-    "paneer",
-    "paneer cubes raw",
-    "cottage cheese india paneer"
-   ],
-   "max": 8
+   "file": "File:Panir Paneer Indian cheese fresh.jpg"
   },
   {
    "slug": "ghee",
    "name": "Ghee",
-   "query": "ghee clarified butter"
+   "file": "File:Butterschmalz-3.jpg"
   },
   {
    "slug": "sona-masoori-rice",
    "name": "Sona Masoori Rice",
-   "query": "white rice grains raw",
-   "queries": [
-    "raw white rice grains",
-    "uncooked rice",
-    "rice grains closeup"
-   ],
-   "max": 8
+   "file": "File:Thai jasmine rice uncooked periodic.jpg"
   },
   {
    "slug": "whole-wheat-atta",
    "name": "Whole Wheat Atta",
-   "query": "atta wheat flour"
+   "file": "File:Atta flour.jpg"
   },
   {
    "slug": "sugar",
    "name": "Sugar",
-   "query": "white sugar granulated"
+   "file": "File:Granulated White Sugar with Large Crystals, Bright Side Light.jpg"
   },
   {
    "slug": "jaggery",
    "name": "Jaggery",
-   "query": "jaggery blocks"
+   "file": "File:Organic Chemical free Kolhapur Jaggery Dhep (Block) - 1 Kg each.jpg"
   },
   {
    "slug": "bombay-rava",
    "name": "Bombay Rava",
-   "query": "semolina sooji"
+   "file": "File:Semolina Sooji (49684140806).jpg"
   },
   {
    "slug": "moong-dal",
    "name": "Moong Dal",
-   "query": "moong dal yellow split"
+   "file": "File:Moong Dal.jpg"
   },
   {
    "slug": "tamarind",
    "name": "Tamarind",
-   "query": "tamarind pulp pods"
+   "file": "File:Tamarind (marketed).jpg"
   },
   {
    "slug": "sambar-powder",
    "name": "Sambar Powder",
-   "query": "sambar powder spice",
-   "queries": [
-    "sambar powder",
-    "masala powder bowl",
-    "spice powder heap india"
-   ],
-   "max": 8
+   "file": "File:Sambar powder.jpg"
   },
   {
    "slug": "turmeric-powder",
    "name": "Turmeric Powder",
-   "query": "turmeric powder"
+   "file": "File:Curcuma longa roots.jpg"
   },
   {
    "slug": "mustard-seeds",
    "name": "Mustard Seeds",
-   "query": "black mustard seeds"
+   "file": "File:Black mustard seeds.jpg"
   },
   {
    "slug": "cardamom",
    "name": "Cardamom",
-   "query": "green cardamom pods"
+   "file": "File:Green Cardamom Pods.jpg"
   },
   {
    "slug": "cashews",
    "name": "Cashews",
-   "query": "cashew nuts"
+   "file": "File:CASHEW NUTS.jpg"
   },
   {
    "slug": "roasted-peanuts",
    "name": "Roasted Peanuts",
-   "query": "roasted peanuts"
+   "file": "File:Dry Roasted Virginia Peanuts.jpg"
   },
   {
    "slug": "assam-tea-powder",
    "name": "Assam Tea Powder",
-   "query": "black tea leaves CTC",
-   "queries": [
-    "black tea leaves loose",
-    "CTC tea granules",
-    "dry tea leaves"
-   ],
-   "max": 8
+   "file": "File:Nepal-dhankuta.jpg"
   },
   {
    "slug": "clay-diyas",
    "name": "Clay Diyas",
-   "query": "diya clay lamp oil"
+   "file": "File:DiwaliOilLampCrop.JPG"
   },
   {
    "slug": "marigold-flowers",
    "name": "Marigold Flowers",
-   "query": "marigold flowers garland"
+   "file": "File:Marigold Flowers as garland in India.jpg"
   },
   {
    "slug": "agarbatti",
    "name": "Agarbatti",
-   "query": "incense sticks burning",
-   "queries": [
-    "agarbatti",
-    "incense sticks bundle",
-    "incense sticks"
-   ],
-   "max": 8
+   "file": "File:Agarbatti - Musk fragrance.jpg"
   },
   {
    "slug": "camphor",
    "name": "Camphor",
-   "query": "camphor tablets",
-   "queries": [
-    "camphor cubes",
-    "camphor",
-    "kapur"
-   ],
-   "max": 8
+   "file": "File:Camphor Cubes.jpg"
   },
   {
    "slug": "brinjal",
    "name": "Brinjal",
-   "query": "brinjal eggplant purple"
+   "file": "File:Eggplant 3.jpg"
   },
   {
    "slug": "lady-s-finger",
    "name": "Lady's Finger",
-   "query": "okra lady finger vegetable"
+   "file": "File:Lady's fingers (Okra) in Chennai.JPG"
   },
   {
    "slug": "french-beans",
    "name": "French Beans",
-   "query": "green beans vegetable",
-   "queries": [
-    "phaseolus vulgaris pods",
-    "green beans",
-    "string beans"
-   ],
-   "max": 8
+   "file": "File:Bohnen - Phaseolus vulgaris - Rhizoctonia solani - Howard F. Schwartz.jpg"
   },
   {
    "slug": "cauliflower",
    "name": "Cauliflower",
-   "query": "cauliflower head"
+   "file": "File:Liat Portal for Foodie Disorder - Cauliflower from San Francisco farmers market.jpg"
   },
   {
    "slug": "cabbage",
    "name": "Cabbage",
-   "query": "green cabbage head"
+   "file": "File:Cabbage in a stack.jpg"
   },
   {
    "slug": "cucumber",
    "name": "Cucumber",
-   "query": "cucumbers fresh"
+   "file": "File:Fresh cucumbers.jpg"
   },
   {
    "slug": "beetroot",
    "name": "Beetroot",
-   "query": "beetroot vegetable"
+   "file": "File:Beetroot jm26647.jpg"
   },
   {
    "slug": "garlic",
    "name": "Garlic",
-   "query": "garlic bulbs"
+   "file": "File:Garlic bulbs of Salem.jpg"
   },
   {
    "slug": "curry-leaves",
    "name": "Curry Leaves",
-   "query": "curry leaves Murraya koenigii"
+   "file": "File:20260317 Murraya koenigii 02.jpg"
   },
   {
    "slug": "mint-leaves",
    "name": "Mint Leaves",
-   "query": "mint leaves bunch"
+   "file": "File:Liat Portal for Foodie Disorder - Fresh Mint from San Francisco Farmers Market.jpg"
   },
   {
    "slug": "drumsticks",
    "name": "Drumsticks",
-   "query": "drumstick moringa pods vegetable",
-   "queries": [
-    "drumstick vegetable",
-    "moringa pods",
-    "moringa oleifera fruit"
-   ],
-   "max": 8
+   "file": "File:Moringa oleifera of Salem.jpg"
   },
   {
    "slug": "alphonso-mangoes",
    "name": "Alphonso Mangoes",
-   "query": "alphonso mangoes"
+   "file": "File:Alphonso mango.jpg"
   },
   {
    "slug": "pomegranate",
    "name": "Pomegranate",
-   "query": "pomegranate fruit"
+   "file": "File:Pomegranate fruit - whole and piece with arils.jpg"
   },
   {
    "slug": "papaya",
    "name": "Papaya",
-   "query": "papaya fruit cut"
+   "file": "File:03 Preparing papaya fruit - papaya peeled and cut in half.jpg"
   },
   {
    "slug": "guava",
    "name": "Guava",
-   "query": "guava fruit"
+   "file": "File:Guava ID.jpg"
   },
   {
    "slug": "green-grapes",
    "name": "Green Grapes",
-   "query": "green grapes bunch"
+   "file": "File:A bunch of grapes.jpg"
   },
   {
    "slug": "watermelon",
    "name": "Watermelon",
-   "query": "watermelon slice"
+   "file": "File:Sliced Watermelon.jpg"
   },
   {
    "slug": "sweet-corn",
    "name": "Sweet Corn",
-   "query": "sweet corn cob"
+   "file": "File:Boiled sweet corn on the cob in Indonesia.jpg"
   },
   {
    "slug": "ragi-flour",
    "name": "Ragi Flour",
-   "query": "finger millet ragi flour",
-   "queries": [
-    "ragi flour",
-    "finger millet flour",
-    "millet flour bowl"
-   ],
-   "max": 8
+   "file": "File:Food grain finger millet.jpg"
   },
   {
    "slug": "idli-rice",
    "name": "Idli Rice",
-   "query": "parboiled rice grains",
-   "queries": [
-    "parboiled rice",
-    "idli rice",
-    "rice grains sack market"
-   ],
-   "max": 8
+   "file": "File:Riso parboiled.jpg"
   },
   {
    "slug": "urad-dal",
    "name": "Urad Dal",
-   "query": "urad dal white split",
-   "queries": [
-    "urad dal",
-    "black gram split",
-    "vigna mungo dal"
-   ],
-   "max": 8
+   "file": "File:Vigna mungo without skin.jpg"
   },
   {
    "slug": "chana-dal",
    "name": "Chana Dal",
-   "query": "chana dal split chickpea"
+   "file": "File:Split Chickpeas.jpg"
   },
   {
    "slug": "rajma",
    "name": "Rajma",
-   "query": "kidney beans red"
+   "file": "File:Red kidney beans 2024-11-27.jpg"
   },
   {
    "slug": "poha",
    "name": "Poha",
-   "query": "poha flattened rice"
+   "file": "File:Poha.jpg"
   },
   {
    "slug": "besan",
    "name": "Besan",
-   "query": "besan gram flour",
-   "queries": [
-    "besan",
-    "gram flour",
-    "chickpea flour"
-   ],
-   "max": 8
+   "file": "File:Gram flour AvL.jpg"
   },
   {
    "slug": "groundnut-oil",
    "name": "Groundnut Oil",
-   "query": "groundnut oil peanut oil"
+   "file": "File:Groundnut oil.jpg"
   },
   {
    "slug": "cumin-seeds",
    "name": "Cumin Seeds",
-   "query": "cumin seeds"
+   "file": "File:Seeds of Cumin.jpg"
   },
   {
    "slug": "red-chilli-powder",
    "name": "Red Chilli Powder",
-   "query": "red chilli powder",
-   "queries": [
-    "chili powder",
-    "red chilli powder heap",
-    "kashmiri chilli powder"
-   ],
-   "max": 8
+   "file": "File:Byadgi chili powder.jpg"
   },
   {
    "slug": "black-pepper",
    "name": "Black Pepper",
-   "query": "black peppercorns"
+   "file": "File:Black Peppercorns (4422070187).jpg"
   },
   {
    "slug": "coconut-oil",
    "name": "Coconut Oil",
-   "query": "coconut oil"
+   "file": "File:Coconut and oil.jpg"
   },
   {
    "slug": "vermicelli",
    "name": "Vermicelli",
-   "query": "vermicelli semiya"
+   "file": "File:Semiya 2.jpg"
   },
   {
    "slug": "rock-salt",
    "name": "Rock Salt",
-   "query": "rock salt crystals"
+   "file": "File:Pink rock salt crystal 4.jpg"
   },
   {
    "slug": "butter",
    "name": "Butter",
-   "query": "butter block"
+   "file": "File:Block of butter 20200928 080213.jpg"
   },
   {
    "slug": "buttermilk",
    "name": "Buttermilk",
-   "query": "buttermilk chaas glass",
-   "queries": [
-    "buttermilk glass",
-    "chaas",
-    "lassi glass"
-   ],
-   "max": 8
+   "file": "File:Buttermilk-(right)-and-Milk-(left).jpg"
   },
   {
    "slug": "idli-dosa-batter",
    "name": "Idli Dosa Batter",
-   "query": "idli batter"
+   "file": "File:Idli Batter.JPG"
   },
   {
    "slug": "milk-bread",
    "name": "Milk Bread",
-   "query": "white bread loaf"
+   "file": "File:Tin Loaf - one slash in the crust.jpg"
   },
   {
    "slug": "rusk",
    "name": "Rusk",
-   "query": "rusk toast biscuit"
+   "file": "File:Zwieback-1.jpg"
   },
   {
    "slug": "banana-chips",
    "name": "Banana Chips",
-   "query": "banana chips kerala"
+   "file": "File:Kerala banana chips Upperi varuthath.jpg"
   },
   {
    "slug": "mysore-pak",
    "name": "Mysore Pak",
-   "query": "mysore pak sweet"
+   "file": "File:Mysore pak.jpg"
   },
   {
    "slug": "mixture-namkeen",
    "name": "Mixture Namkeen",
-   "query": "bombay mix namkeen"
+   "file": "File:Namkeen 05.jpg"
   },
   {
    "slug": "ragi-malt",
    "name": "Ragi Malt",
-   "query": "ragi malt drink",
-   "queries": [
-    "ragi porridge",
-    "ragi java",
-    "finger millet porridge"
-   ],
-   "max": 8
+   "file": "File:Raggi java.jpg"
   },
   {
    "slug": "bun",
    "name": "Bun",
-   "query": "sweet bun bakery"
+   "file": "File:HK Shek Tong Tsui 石塘咀 STT Queen's Road West Bakery 生命物麵包店 food shop 椰絲 甜麵 Coconut sweet breads 椰賓 Buns September 2021 SS2.jpg"
   },
   {
    "slug": "coconut-cookies",
    "name": "Coconut Cookies",
-   "query": "coconut cookies"
+   "file": "File:Coconut cookies-.jpg"
   },
   {
    "slug": "murukku",
    "name": "Murukku",
-   "query": "murukku"
+   "file": "File:A Traditional Tamil Snack Murukku.jpg"
   },
   {
    "slug": "peanut-chikki",
    "name": "Peanut Chikki",
-   "query": "chikki"
+   "file": "File:Peanut Chikki.JPG"
   },
   {
-   "slug": "khari-biscuits",
-   "name": "Khari Biscuits",
-   "query": "nankhatai",
-   "queries": [
-    "nankhatai",
-    "puff pastry",
-    "biscuits plate tea india"
-   ],
-   "max": 8
+   "slug": "nankhatai",
+   "name": "Nankhatai",
+   "file": "File:Nankhatai.jpg"
   }
- ],
- "only": [
-  "potatoes",
-  "french-beans",
-  "camphor",
-  "khari-biscuits"
  ]
 }
