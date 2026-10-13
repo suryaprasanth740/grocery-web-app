@@ -1,0 +1,53 @@
+# Checks the deployed site with the read-only browser tests (e2e/tests/pages.spec.js):
+# every public page loads without errors, passes the accessibility scan, fits a phone screen,
+# sends the security headers. Creates no accounts or orders, so it is safe on the live site.
+name: Live site check
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Site to check"
+        default: "https://nammabasket.onrender.com"
+  push:
+    paths:
+      - ".github/workflows/live-check.yml"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BASE_URL: ${{ github.event.inputs.url || 'https://nammabasket.onrender.com' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+      - name: Wake the free server (can take a minute)
+        run: |
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/categories")
+            [ "$code" = "200" ] && { echo "Awake after ${i}x5 s"; exit 0; }
+            sleep 5
+          done
+          echo "::error title=Live site::$BASE_URL did not answer"; exit 1
+      - name: Install Playwright
+        working-directory: e2e
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Run the read-only checks
+        working-directory: e2e
+        run: |
+          mkdir -p screenshots
+          set -o pipefail
+          npx playwright test tests/pages.spec.js 2>&1 | tee e2e.log
+      - name: Result
+        if: always()
+        working-directory: e2e
+        run: |
+          totals=$(grep -E "^\s+[0-9]+ (passed|failed|flaky|skipped)" e2e.log | sed 's/^ *//' | paste -sd', ' -)
+          echo "::notice title=Live site check ($BASE_URL)::${totals:-no tests ran}"
+          fails=$(sed 's/\x1b\[[0-9;]*m//g' e2e.log | grep -E "✘|^\s+\+ +\"" | head -30 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+          [ -n "$fails" ] && echo "::error title=Live site problems::$fails" || true
