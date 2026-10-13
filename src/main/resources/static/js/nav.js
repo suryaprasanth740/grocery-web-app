@@ -92,7 +92,6 @@ function renderHeader() {
         <a href="/products.html">Groceries</a>
         <a href="/recipes.html">Recipes &amp; Kits</a>
         <a href="/list.html">Quick List</a>
-        <a href="/budget.html">Budget</a>
         <a href="/orders.html" id="nav-orders" style="display:none">My Orders</a>
         <a href="/saved.html" id="nav-saved" style="display:none">Saved</a>
         <span class="bell-wrap" id="bell-wrap" hidden>
@@ -184,6 +183,7 @@ function renderFooter() {
             <li><a href="/products.html">All groceries</a></li>
             <li><a href="/recipes.html">Recipes &amp; festival kits</a></li>
             <li><a href="/list.html">Paste a shopping list</a></li>
+            <li><a href="/budget.html">Monthly budget</a></li>
             <li><a href="/orders.html">My orders</a></li>
             <li><a href="/saved.html">Saved for later</a></li>
             <li><a href="/sell.html">Sell on NammaBasket</a></li>

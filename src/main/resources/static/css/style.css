@@ -1290,3 +1290,5 @@ a.stars-line:hover b { text-decoration: underline; }
 }
 .confirm-banner h1 { font-size: 1.6rem; }
 .shop-board .stars-line, .shop-board .stars-line .muted { color: rgba(255,255,255,0.92); }
+.nav-links a, .nav-links #nav-auth-area span, .nav-links #nav-auth-area button { white-space: nowrap; }
+@media (min-width: 721px) { .nav-links { gap: 18px; } }

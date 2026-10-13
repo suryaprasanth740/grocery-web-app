@@ -224,6 +224,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout --orphan ci-screenshots
           git rm -rfq .
+          git clean -fdxq          # also drop the build output (target/, app.log, node_modules)
           cp /tmp/shots/*.png .
           echo "Screenshots from the browser tests of ${GITHUB_SHA} on ${GITHUB_REF_NAME}." > README.md
           git add -A

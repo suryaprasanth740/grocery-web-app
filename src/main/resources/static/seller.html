@@ -275,7 +275,7 @@ function sellerOrderHtml(o) {
         ${Number(o.discount) > 0 ? `<div class="order-line"><span>Coupon (paid by NammaBasket)</span><span>&minus; ${formatRupees(o.discount)}</span></div>` : ''}
         <div class="order-line"><b>Total</b><b>${formatRupees(o.totalAmount)}</b></div>
       </div>
-      ${o.status === 'DELIVERED' ? `<a class="linklike small" href="/invoice.html?id=${o.id}&as=seller">View invoice</a>` : ''}
+      ${o.status === 'DELIVERED' ? `<div class="action-row" style="margin:12px 0 0;"><a class="btn btn-outline btn-sm" href="/invoice.html?id=${o.id}&as=seller">View invoice</a></div>` : ''}
       ${actions.length || canReject ? `<div class="action-row" style="margin:12px 0 0;">
         ${actions.map(([step, label]) => `<button class="btn btn-primary btn-sm" data-order="${o.id}" data-step="${step}">${label}</button>`).join('')}
         ${canReject ? `<button class="btn btn-outline danger btn-sm" data-reject="${o.id}">Reject</button>` : ''}
