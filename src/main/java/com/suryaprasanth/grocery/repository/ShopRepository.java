@@ -28,4 +28,9 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
 
     @EntityGraph(attributePaths = "owner")
     Optional<Shop> findBySlug(String slug);
+
+    /** Locks the shop row until the transaction ends, so two checkouts can't both take the last place in a slot. */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select s from Shop s where s.id = :id")
+    java.util.Optional<Shop> lockById(@org.springframework.data.repository.query.Param("id") Long id);
 }

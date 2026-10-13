@@ -11,6 +11,7 @@ import com.suryaprasanth.grocery.repository.CartItemRepository;
 import com.suryaprasanth.grocery.repository.CheckoutRepository;
 import com.suryaprasanth.grocery.repository.OrderRepository;
 import com.suryaprasanth.grocery.repository.ProductRepository;
+import com.suryaprasanth.grocery.repository.ShopRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -61,11 +62,19 @@ public class OrderService {
     private final BillingService billingService;
     private final ShopRules rules;
     private final CartService cartService;
+    private final SlotService slotService;
+    private final NotificationService notificationService;
+    private final ShopRepository shopRepository;
 
     public OrderService(OrderRepository orderRepository, CheckoutRepository checkoutRepository,
                         CartItemRepository cartItemRepository, ProductRepository productRepository,
-                        BillingService billingService, ShopRules rules, CartService cartService) {
+                        BillingService billingService, ShopRules rules, CartService cartService,
+                        SlotService slotService, NotificationService notificationService,
+                        ShopRepository shopRepository) {
         this.cartService = cartService;
+        this.slotService = slotService;
+        this.notificationService = notificationService;
+        this.shopRepository = shopRepository;
         this.orderRepository = orderRepository;
         this.checkoutRepository = checkoutRepository;
         this.cartItemRepository = cartItemRepository;
@@ -134,6 +143,23 @@ public class OrderService {
                     + bill.codMaxAmount().toPlainString() + ". Please pay by UPI.");
         }
 
+        // 4b. Time slots. Each chosen shop is locked (in id order, so two checkouts never wait on
+        //     each other in a circle) and then its slot is checked, including how many places are left.
+        Map<Long, SlotService.Chosen> slots = new java.util.TreeMap<>();
+        java.util.Set<Long> basketShops = new java.util.HashSet<>();
+        bill.shops().forEach(sb -> basketShops.add(sb.shopId()));
+        for (var entry : new java.util.TreeMap<>(request.getSlots()).entrySet()) {
+            if (entry.getValue() == null || entry.getValue().isBlank()) {
+                continue;
+            }
+            if (!basketShops.contains(entry.getKey())) {
+                throw error(HttpStatus.BAD_REQUEST, "A time slot was chosen for a shop that isn't in your basket");
+            }
+            Shop locked = shopRepository.lockById(entry.getKey())
+                    .orElseThrow(() -> error(HttpStatus.BAD_REQUEST, "Shop not found"));
+            slots.put(entry.getKey(), slotService.check(locked, entry.getValue()));
+        }
+
         // 5. Empty the cart in one statement. If another checkout for the same cart is running
         //    (second tab, double click), only one of them can delete the rows.
         int removed = cartItemRepository.deleteAllForUser(user.getId());
@@ -184,6 +210,10 @@ public class OrderService {
             order.setGstIncluded(shopBill.gstIncluded());
             order.setTotalAmount(shopBill.total());
             order.setPaymentMethod(request.getPaymentMethod());
+            SlotService.Chosen slot = slots.get(shopBill.shopId());
+            if (slot != null) {
+                order.setSlot(slot.date(), slot.start(), slot.end());
+            }
             if (request.getPaymentMethod() == PaymentMethod.UPI) {
                 order.setStatus(OrderStatus.PAYMENT_PENDING);
                 order.setPaymentStatus(PaymentStatus.PENDING);
@@ -193,6 +223,9 @@ public class OrderService {
                 order.setPaymentStatus(PaymentStatus.COD_PENDING);
             }
             checkout.getOrders().add(orderRepository.save(order));
+            if (order.getStatus() == OrderStatus.PLACED) {
+                notificationService.newOrderForShop(order);
+            }
         }
         orderRepository.flush();
         return checkout;
@@ -227,6 +260,7 @@ public class OrderService {
                         o.setStatus(OrderStatus.PLACED);
                         o.setPaymentStatus(PaymentStatus.PAID);
                         o.setStatusNote("Payment received. Thank you!");
+                        notificationService.newOrderForShop(o);
                     } else {
                         failPayment(o, "UPI payment failed. No money was taken. Your items are back in your cart.");
                     }
@@ -410,6 +444,7 @@ public class OrderService {
         }
         order.setRejectionReason(reason.trim());
         cancel(order, "Rejected by " + shop.getName() + ": " + reason.trim());
+        notificationService.orderChanged(order);
         return order;
     }
 
@@ -428,6 +463,7 @@ public class OrderService {
         }
         if (next == OrderStatus.CANCELLED) {
             cancel(order, cancelNote);
+            notificationService.orderChanged(order);
             return order;
         }
         order.setStatus(next);
@@ -439,6 +475,7 @@ public class OrderService {
                 order.setPaymentStatus(PaymentStatus.PAID); // cash collected at the door / counter
             }
         }
+        notificationService.orderChanged(order);
         return order;
     }
 

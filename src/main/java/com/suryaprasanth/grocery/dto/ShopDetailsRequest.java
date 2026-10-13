@@ -70,6 +70,25 @@ public class ShopDetailsRequest {
     @DecimalMax(value = "97.5", message = "Location must be inside India")
     private Double longitude;
 
+    /** Optional 15-character GST number, e.g. 29ABCDE1234F1Z5 (29 = Karnataka). Printed on invoices. */
+    @Pattern(regexp = "(?i)|[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]",
+            message = "GSTIN must look like 29ABCDE1234F1Z5 (15 characters), or be left empty")
+    private String gstin;
+
+    /** Let buyers pick a 2-hour delivery/pickup slot. */
+    private boolean slotsEnabled;
+
+    @Min(value = 1, message = "A slot must take at least 1 order")
+    @Max(value = 50, message = "A slot can take at most 50 orders")
+    private Integer slotCapacity;
+
+    public String getGstin() { return gstin; }
+    public void setGstin(String gstin) { this.gstin = gstin; }
+    public boolean isSlotsEnabled() { return slotsEnabled; }
+    public void setSlotsEnabled(boolean slotsEnabled) { this.slotsEnabled = slotsEnabled; }
+    public Integer getSlotCapacity() { return slotCapacity; }
+    public void setSlotCapacity(Integer slotCapacity) { this.slotCapacity = slotCapacity; }
+
     public String getLogoUrl() { return logoUrl; }
     public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
     public Double getLatitude() { return latitude; }

@@ -76,4 +76,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("select o from Order o where o.createdAt >= :since and o.status in :statuses")
     List<Order> findPlacedSince(@Param("since") LocalDateTime since, @Param("statuses") Collection<OrderStatus> statuses);
+
+    /** Orders already booked into one slot of a shop (cancelled and failed ones don't count). */
+    @Query("select count(o) from Order o where o.shop.id = :shopId and o.slotDate = :date and o.slotStart = :start"
+            + " and o.status not in :ignored")
+    long countInSlot(@Param("shopId") Long shopId, @Param("date") java.time.LocalDate date,
+                     @Param("start") java.time.LocalTime start, @Param("ignored") Collection<OrderStatus> ignored);
 }

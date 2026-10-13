@@ -115,6 +115,25 @@ public class Shop {
     @Version
     private Long version;
 
+    /** GST registration number, shown on invoices. Optional: small shops may not be registered. */
+    @Column(length = 15)
+    private String gstin;
+
+    /** When on, buyers can choose a 2-hour delivery or pickup slot (today or tomorrow). Null = off. */
+    @Column(name = "slots_enabled")
+    private Boolean slotsEnabled = Boolean.FALSE;
+
+    /** How many orders the shop can handle in one slot. */
+    @Column(name = "slot_capacity")
+    private Integer slotCapacity = 10;
+
+    /** Running totals of the visible reviews of this shop's products. */
+    @Column(name = "rating_count")
+    private Integer ratingCount = 0;
+
+    @Column(name = "rating_total")
+    private Integer ratingTotal = 0;
+
     public Shop() {
     }
 
@@ -229,6 +248,24 @@ public class Shop {
     public void setLatitude(Double latitude) { this.latitude = latitude; }
     public Double getLongitude() { return longitude; }
     public void setLongitude(Double longitude) { this.longitude = longitude; }
+
+    public String getGstin() { return gstin; }
+    public void setGstin(String gstin) { this.gstin = gstin; }
+    public boolean isSlotsEnabled() { return slotsEnabled != null && slotsEnabled; }
+    public void setSlotsEnabled(boolean slotsEnabled) { this.slotsEnabled = slotsEnabled; }
+    public int getSlotCapacity() { return slotCapacity == null ? 10 : slotCapacity; }
+    public void setSlotCapacity(int slotCapacity) { this.slotCapacity = slotCapacity; }
+    public int getRatingCount() { return ratingCount == null ? 0 : ratingCount; }
+
+    /** Average stars of the shop's product reviews (one decimal), or null with no reviews. */
+    public Double getRatingAverage() {
+        return getRatingCount() == 0 ? null : Math.round(10.0 * (ratingTotal == null ? 0 : ratingTotal) / ratingCount) / 10.0;
+    }
+
+    public void addRating(int stars, int sign) {
+        ratingCount = Math.max(0, getRatingCount() + sign);
+        ratingTotal = Math.max(0, (ratingTotal == null ? 0 : ratingTotal) + sign * stars);
+    }
 
     /** Straight-line distance in km (haversine formula), or null if either position is unknown. */
     public Double distanceKmFrom(Double lat, Double lng) {

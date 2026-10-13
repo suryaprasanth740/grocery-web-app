@@ -40,7 +40,12 @@ public record ShopView(
         Double latitude,
         Double longitude,
         /** Only in buyer search results when the buyer shared their location. */
-        Double distanceKm
+        Double distanceKm,
+        String gstin,
+        boolean slotsEnabled,
+        int slotCapacity,
+        Double ratingAverage,
+        int ratingCount
 ) {
     private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -63,6 +68,7 @@ public record ShopView(
                 s.getCreatedAt(), s.getApprovedAt(),
                 includeOwner ? s.getOwner().getName() : null,
                 includeOwner ? s.getOwner().getEmail() : null,
-                s.getLogoUrl(), s.getLatitude(), s.getLongitude(), distanceKm);
+                s.getLogoUrl(), s.getLatitude(), s.getLongitude(), distanceKm,
+                s.getGstin(), s.isSlotsEnabled(), s.getSlotCapacity(), s.getRatingAverage(), s.getRatingCount());
     }
 }

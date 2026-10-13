@@ -46,13 +46,16 @@ public class DataInitializer implements CommandLineRunner {
     private final String adminEmail;
     private final String adminPassword;
     private final boolean refreshExpiredDemoStock;
+    private final MarketplaceDemoData marketplaceDemoData;
 
     public DataInitializer(CategoryRepository categoryRepository, ProductRepository productRepository,
                            CouponRepository couponRepository, UserRepository userRepository,
                            ShopRepository shopRepository, OrderRepository orderRepository,
                            @Value("${app.admin.email:admin@freshcart.com}") String adminEmail,
                            @Value("${app.admin.password:}") String adminPassword,
-                           @Value("${app.demo.refresh-expired-stock:true}") boolean refreshExpiredDemoStock) {
+                           @Value("${app.demo.refresh-expired-stock:true}") boolean refreshExpiredDemoStock,
+                           MarketplaceDemoData marketplaceDemoData) {
+        this.marketplaceDemoData = marketplaceDemoData;
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
         this.couponRepository = couponRepository;
@@ -74,7 +77,6 @@ public class DataInitializer implements CommandLineRunner {
             seed();
         }
         ensureExtraProducts();
-        backfillProductImages();
         backfillShelfLifeAndGst();
         if (couponRepository.count() == 0) {
             seedCoupons();
@@ -82,6 +84,7 @@ public class DataInitializer implements CommandLineRunner {
         ensureAdminAccount();
         ensureDemoShop();
         backfillEmailKeys();
+        marketplaceDemoData.run();
     }
 
     /** Accounts made before the one-account-per-Gmail rule get their email key here. */
@@ -373,49 +376,15 @@ public class DataInitializer implements CommandLineRunner {
                 new BigDecimal("22.00"), "1 kg", "🧂", images.get("Iodized Salt"), 60, staples));
     }
 
-    /**
-     * Runs on every startup. Fills in imageUrl for products that don't have one yet
-     * (matched by name) without touching anything else - safe to run against a
-     * database that was already seeded by an earlier version of this app.
-     */
-    private void backfillProductImages() {
-        Map<String, String> images = productImages();
-        for (Product p : productRepository.findAll()) {
-            if ((p.getImageUrl() == null || p.getImageUrl().isBlank()) && images.containsKey(p.getName())) {
-                p.setImageUrl(images.get(p.getName()));
-                productRepository.save(p);
+    private Map<String, String> productImages() {
+        // Photos are bundled in /img/products (see MarketplaceDemoData and img/products/credits.json).
+        Map<String, String> m = new HashMap<>();
+        for (String name : SHELF_LIFE_AND_GST.keySet()) {
+            String photo = MarketplaceDemoData.bundledPhoto(name);
+            if (photo != null) {
+                m.put(name, photo);
             }
         }
-    }
-
-    /**
-     * Real product photos (Wikimedia Commons, freely licensed), keyed by product name.
-     * Iodized Salt has no entry on purpose - the storefront falls back to its emoji icon
-     * for that one, since a clean photo of plain table salt wasn't available.
-     */
-    private Map<String, String> productImages() {
-        Map<String, String> m = new HashMap<>();
-        m.put("Fresh Bananas", "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/45/Banana_bunch_in_a_banana_farm_at_Chinawal.jpg/500px-Banana_bunch_in_a_banana_farm_at_Chinawal.jpg");
-        m.put("Red Apples", "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/15/Red_Apple.jpg/500px-Red_Apple.jpg");
-        m.put("Tomatoes", "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/89/Tomato_je.jpg/500px-Tomato_je.jpg");
-        m.put("Onions", "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/20/Harvested_vegetables%28Onions%29.jpg/500px-Harvested_vegetables%28Onions%29.jpg");
-        m.put("Spinach Bunch", "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/Spinach_leaves.jpg/500px-Spinach_leaves.jpg");
-        m.put("Full Cream Milk", "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f2/Glass_Milk_Bottles.tif/lossy-page1-500px-Glass_Milk_Bottles.tif.jpg");
-        m.put("Farm Eggs", "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/83/Egg_cartons_with_chicken_eggs_03.jpg/500px-Egg_cartons_with_chicken_eggs_03.jpg");
-        m.put("Cheddar Cheese", "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2e/Montgomerys_cheddar_cheese.jpg/500px-Montgomerys_cheddar_cheese.jpg");
-        m.put("Greek Yogurt", "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e7/A_bowl_of_frozen_yogurt.jpg/500px-A_bowl_of_frozen_yogurt.jpg");
-        m.put("Whole Wheat Bread", "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/79/Vegan_no-knead_whole_wheat_bread_loaf%2C_sliced%2C_September_2010.jpg/500px-Vegan_no-knead_whole_wheat_bread_loaf%2C_sliced%2C_September_2010.jpg");
-        m.put("Butter Croissants", "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/dc/Croissants_au_beurre_%2818953292873%29.jpg/500px-Croissants_au_beurre_%2818953292873%29.jpg");
-        m.put("Chocolate Muffins", "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c2/Vegan_oatmeal_chocolate_chip_muffins.jpg/500px-Vegan_oatmeal_chocolate_chip_muffins.jpg");
-        m.put("Orange Juice", "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/67/Orange_juice_1_edit1.jpg/500px-Orange_juice_1_edit1.jpg");
-        m.put("Filter Coffee Powder", "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/84/Indian_filter_coffee_in_Dabarah.jpg/500px-Indian_filter_coffee_in_Dabarah.jpg");
-        m.put("Green Tea Bags", "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8d/Canister_with_bags_of_green_tea.jpg/500px-Canister_with_bags_of_green_tea.jpg");
-        m.put("Potato Chips", "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/69/Potato-Chips.jpg/500px-Potato-Chips.jpg");
-        m.put("Mixed Nuts", "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/37/Almonds_-_in_shell%2C_shell_cracked_open%2C_shelled%2C_blanched.jpg/500px-Almonds_-_in_shell%2C_shell_cracked_open%2C_shelled%2C_blanched.jpg");
-        m.put("Digestive Biscuits", "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/47/Digestive_biscuits.jpg/500px-Digestive_biscuits.jpg");
-        m.put("Basmati Rice", "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ae/Grano_de_arroz_basmati_integral%2C_2020-06-12%2C_DD_01-11_FS.jpg/500px-Grano_de_arroz_basmati_integral%2C_2020-06-12%2C_DD_01-11_FS.jpg");
-        m.put("Toor Dal", "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0f/Tadka_Daal_%28Indian_lentil_curry%29.jpg/500px-Tadka_Daal_%28Indian_lentil_curry%29.jpg");
-        m.put("Sunflower Cooking Oil", "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/33/Bottle_1_liter_Sunflower_refined_oil.jpg/500px-Bottle_1_liter_Sunflower_refined_oil.jpg");
         return m;
     }
 }

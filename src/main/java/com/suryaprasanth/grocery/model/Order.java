@@ -128,6 +128,16 @@ public class Order {
     @Column(name = "stock_released")
     private Boolean stockReleased = Boolean.FALSE;
 
+    /** The 2-hour slot the buyer chose for delivery or pickup. All null = "as soon as possible". */
+    @Column(name = "slot_date")
+    private java.time.LocalDate slotDate;
+
+    @Column(name = "slot_start")
+    private java.time.LocalTime slotStart;
+
+    @Column(name = "slot_end")
+    private java.time.LocalTime slotEnd;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("id ASC")
     private List<OrderItem> items = new ArrayList<>();
@@ -199,6 +209,16 @@ public class Order {
     public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
     public boolean isStockReleased() { return Boolean.TRUE.equals(stockReleased); }
     public void setStockReleased(boolean stockReleased) { this.stockReleased = stockReleased; }
+
+    public java.time.LocalDate getSlotDate() { return slotDate; }
+    public java.time.LocalTime getSlotStart() { return slotStart; }
+    public java.time.LocalTime getSlotEnd() { return slotEnd; }
+
+    public void setSlot(java.time.LocalDate date, java.time.LocalTime start, java.time.LocalTime end) {
+        this.slotDate = date;
+        this.slotStart = start;
+        this.slotEnd = end;
+    }
 
     public void touch() {
         this.updatedAt = LocalDateTime.now();

@@ -39,8 +39,11 @@ public class ShopService {
     private final AuditService auditService;
     private final ImageService imageService;
 
+    private final NotificationService notificationService;
+
     public ShopService(ShopRepository shopRepository, AccountService accountService, AuditService auditService,
-                       ImageService imageService) {
+                       ImageService imageService, NotificationService notificationService) {
+        this.notificationService = notificationService;
         this.shopRepository = shopRepository;
         this.accountService = accountService;
         this.auditService = auditService;
@@ -124,6 +127,8 @@ public class ShopService {
         shop.setStatusReason(null);
         shop.setApprovedAt(LocalDateTime.now());
         auditService.record(admin, "SHOP_APPROVED", "SHOP", shop.getId(), shop.getName());
+        notificationService.notify(shop.getOwner(), "Your shop is approved",
+                shop.getName() + " is now live. Add your products and start taking orders.", "/seller.html");
         return shopRepository.save(shop);
     }
 
@@ -134,6 +139,7 @@ public class ShopService {
         shop.setStatus(ShopStatus.REJECTED);
         shop.setStatusReason(reason.trim());
         auditService.record(admin, "SHOP_REJECTED", "SHOP", shop.getId(), shop.getName() + ": " + reason.trim());
+        notificationService.notify(shop.getOwner(), "Your application needs changes", reason.trim(), "/seller.html");
         return shopRepository.save(shop);
     }
 
@@ -144,6 +150,7 @@ public class ShopService {
         shop.setStatus(ShopStatus.SUSPENDED);
         shop.setStatusReason(reason.trim());
         auditService.record(admin, "SHOP_SUSPENDED", "SHOP", shop.getId(), shop.getName() + ": " + reason.trim());
+        notificationService.notify(shop.getOwner(), "Your shop is suspended", reason.trim(), "/seller.html");
         return shopRepository.save(shop);
     }
 
@@ -154,6 +161,8 @@ public class ShopService {
         shop.setStatus(ShopStatus.APPROVED);
         shop.setStatusReason(null);
         auditService.record(admin, "SHOP_REACTIVATED", "SHOP", shop.getId(), shop.getName());
+        notificationService.notify(shop.getOwner(), "Your shop is live again",
+                shop.getName() + " can take orders again.", "/seller.html");
         return shopRepository.save(shop);
     }
 
@@ -200,6 +209,11 @@ public class ShopService {
         }
         shop.setLatitude(r.getLatitude());
         shop.setLongitude(r.getLongitude());
+        shop.setGstin(r.getGstin() == null || r.getGstin().isBlank() ? null : r.getGstin().trim().toUpperCase(Locale.ROOT));
+        shop.setSlotsEnabled(r.isSlotsEnabled());
+        if (r.getSlotCapacity() != null) {
+            shop.setSlotCapacity(r.getSlotCapacity());
+        }
         // A brand-new shop has no id yet, so it can't own photos; the logo is added afterwards.
         if (shop.getId() != null) {
             shop.setLogoUrl(imageService.checkSellerImageUrl(shop.getId(), r.getLogoUrl()));

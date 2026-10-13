@@ -35,7 +35,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @SpringBootTest(properties = {
         "app.admin.email=admin@test.local",
         "app.admin.password=Admin@12345",
-        "app.demo.refresh-expired-stock=false"
+        "app.demo.refresh-expired-stock=false",
+        "app.demo.marketplace-shops=false"
 })
 @AutoConfigureMockMvc
 public abstract class ApiTestSupport {
@@ -144,11 +145,21 @@ public abstract class ApiTestSupport {
     protected SellerAccount newPendingSeller(String pincode, String extraPincodes) throws Exception {
         MockHttpSession session = new MockHttpSession();
         String email = "shop" + COUNTER.incrementAndGet() + "-" + UUID.randomUUID().toString().substring(0, 8) + "@test.local";
-        Map<String, Object> f = new HashMap<>();
+        Map<String, Object> f = shopDetails(pincode, extraPincodes);
         f.put("ownerName", "Shop Owner");
         f.put("email", email);
         f.put("password", "kirana123");
-        f.put("shopName", "Test Kirana " + COUNTER.get());
+        MvcResult r = call("POST", "/api/auth/register-seller", session, f);
+        if (status(r) != 201) {
+            throw new IllegalStateException("seller sign-up failed: " + r.getResponse().getContentAsString());
+        }
+        return new SellerAccount(session, body(r).get("shop").get("id").asLong(), email);
+    }
+
+    /** A valid shop details form (open all day). Tests change single fields. */
+    protected Map<String, Object> shopDetails(String pincode, String extraPincodes) {
+        Map<String, Object> f = new HashMap<>();
+        f.put("shopName", "Test Kirana " + COUNTER.incrementAndGet());
         f.put("category", "KIRANA");
         f.put("phone", "9876543210");
         f.put("addressLine", "1, Test Street, Bengaluru");
@@ -160,11 +171,34 @@ public abstract class ApiTestSupport {
         f.put("offersPickup", true);
         f.put("deliveryFee", 20);
         f.put("minOrderAmount", 0);
-        MvcResult r = call("POST", "/api/auth/register-seller", session, f);
-        if (status(r) != 201) {
-            throw new IllegalStateException("seller sign-up failed: " + r.getResponse().getContentAsString());
+        return f;
+    }
+
+    /** Turns on 2-hour time slots for this seller's shop, with the given places per slot. */
+    protected void enableSlots(SellerAccount seller, int capacity, String gstin) throws Exception {
+        Map<String, Object> f = shopDetails("560073", "");
+        f.put("slotsEnabled", true);
+        f.put("slotCapacity", capacity);
+        f.put("gstin", gstin);
+        MvcResult r = call("PUT", "/api/seller/shop", seller.session(), f);
+        if (status(r) != 200) {
+            throw new IllegalStateException("shop update failed: " + r.getResponse().getContentAsString());
         }
-        return new SellerAccount(session, body(r).get("shop").get("id").asLong(), email);
+    }
+
+    /**
+     * Checkout of the buyer's current basket with delivery/pickup and slot choices per shop id.
+     * The expected total comes from a quote with the same choices, like the checkout page does.
+     */
+    protected MvcResult checkoutWith(MockHttpSession buyer, String payment, Map<Long, String> fulfilment,
+                                     Map<Long, String> slots) throws Exception {
+        Map<String, Object> body = checkoutBody(buyer, payment, null);
+        Map<String, Object> q = new HashMap<>();
+        q.put("fulfilment", fulfilment);
+        body.put("fulfilment", fulfilment);
+        body.put("slots", slots);
+        body.put("expectedTotal", body(call("POST", "/api/orders/quote", buyer, q)).get("total").decimalValue());
+        return checkout(buyer, body);
     }
 
     /** A valid seller product form. Tests change single fields. */

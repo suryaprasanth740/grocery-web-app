@@ -69,6 +69,13 @@ public class Product {
     @Column(name = "active")
     private Boolean active = Boolean.TRUE;
 
+    /** Running totals of the visible buyer reviews, so lists can show the average without extra queries. */
+    @Column(name = "rating_count")
+    private Integer ratingCount = 0;
+
+    @Column(name = "rating_total")
+    private Integer ratingTotal = 0;
+
     /** A product that expires today or earlier cannot be sold. */
     public static final int MIN_DAYS_OF_SHELF_LIFE = 1;
     /** Shown as "Expires soon" when this close to the date. */
@@ -231,6 +238,22 @@ public class Product {
         }
         return mrp.subtract(price).multiply(BigDecimal.valueOf(100))
                 .divide(mrp, 0, java.math.RoundingMode.DOWN).intValue();
+    }
+
+    /** Number of visible reviews. */
+    @JsonProperty("ratingCount")
+    public int getRatingCount() { return ratingCount == null ? 0 : ratingCount; }
+
+    /** Average stars (one decimal), or null when nobody has reviewed it yet. */
+    @JsonProperty("ratingAverage")
+    public Double getRatingAverage() {
+        return getRatingCount() == 0 ? null : Math.round(10.0 * (ratingTotal == null ? 0 : ratingTotal) / ratingCount) / 10.0;
+    }
+
+    /** Adds (+1) or removes (-1) one review's stars from the running totals. */
+    public void addRating(int stars, int sign) {
+        ratingCount = Math.max(0, getRatingCount() + sign);
+        ratingTotal = Math.max(0, (ratingTotal == null ? 0 : ratingTotal) + sign * stars);
     }
 
     /** Can a buyer see and add this product: switched on, and its shop approved with an active owner. */

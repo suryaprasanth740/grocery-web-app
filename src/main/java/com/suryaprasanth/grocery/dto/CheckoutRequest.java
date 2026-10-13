@@ -23,6 +23,14 @@ public class CheckoutRequest {
         this.fulfilment = fulfilment == null ? new java.util.HashMap<>() : fulfilment;
     }
 
+    /** Optional time slot per shop id, e.g. {"12": "2026-10-14T17:00"}. Shops not listed: as soon as possible. */
+    private java.util.Map<Long, String> slots = new java.util.HashMap<>();
+
+    public java.util.Map<Long, String> getSlots() { return slots; }
+    public void setSlots(java.util.Map<Long, String> slots) {
+        this.slots = slots == null ? new java.util.HashMap<>() : slots;
+    }
+
     @NotBlank(message = "PIN code is required")
     @Pattern(regexp = "^[1-9][0-9]{5}$", message = "Enter a valid 6-digit PIN code")
     private String pincode;

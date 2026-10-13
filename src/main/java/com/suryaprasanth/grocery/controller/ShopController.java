@@ -31,8 +31,11 @@ public class ShopController {
 
     private final ShopRepository shopRepository;
     private final ProductRepository productRepository;
+    private final com.suryaprasanth.grocery.service.SlotService slotService;
 
-    public ShopController(ShopRepository shopRepository, ProductRepository productRepository) {
+    public ShopController(ShopRepository shopRepository, ProductRepository productRepository,
+                          com.suryaprasanth.grocery.service.SlotService slotService) {
+        this.slotService = slotService;
         this.shopRepository = shopRepository;
         this.productRepository = productRepository;
     }
@@ -70,5 +73,14 @@ public class ShopController {
         body.put("shop", ShopView.forBuyer(shop, shop.distanceKmFrom(lat, lng)));
         body.put("products", productRepository.findBuyableByShop(shop.getId()));
         return body;
+    }
+
+    /** Today's and tomorrow's delivery/pickup slots with places left (empty when the shop has no slots). */
+    @GetMapping("/{id:\\d+}/slots")
+    public Map<String, Object> slots(@PathVariable Long id) {
+        Shop shop = shopRepository.findById(id)
+                .filter(Shop::isVisibleToBuyers)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shop not found"));
+        return slotService.availability(shop);
     }
 }
