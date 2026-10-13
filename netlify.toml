@@ -12,7 +12,7 @@
 # Proxy the REST API to the Spring Boot backend on Render (status 200 = rewrite, not redirect).
 [[redirects]]
   from = "/api/*"
-  to = "https://grocery-web-app-fb3j.onrender.com/api/:splat"
+  to = "https://nammabasket.onrender.com/api/:splat"
   status = 200
   force = true
 

@@ -7,7 +7,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://grocery-web-app-fb3j.onrender.com/api/:path*"
+      "destination": "https://nammabasket.onrender.com/api/:path*"
     }
   ],
   "headers": [
