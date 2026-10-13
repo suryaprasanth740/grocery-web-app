@@ -108,6 +108,9 @@ function renderHeader() {
       </nav>
     </div>`;
   wireLocationPicker();
+  // "Skip to content" moves keyboard focus into the page, not just the scroll position.
+  const main = document.getElementById('main');
+  if (main && !main.hasAttribute('tabindex')) main.setAttribute('tabindex', '-1');
 }
 
 function wireLocationPicker() {
@@ -131,7 +134,8 @@ function wireLocationPicker() {
       input.focus();
     }
   });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  // Escape closes the box and puts keyboard focus back on the button that opened it.
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && pop.classList.contains('open')) { close(); btn.focus(); } });
   document.addEventListener('click', (e) => { if (!pop.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close(); });
 
   form.addEventListener('submit', async (e) => {
@@ -290,7 +294,7 @@ function initBell() {
     btn.setAttribute('aria-expanded', String(open));
     if (open) loadBell();
   });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && pop.classList.contains('open')) { close(); btn.focus(); } });
   document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) close(); });
   document.getElementById('bell-all').addEventListener('click', async () => {
     await API.readAllNotifications().catch(() => null);

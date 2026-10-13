@@ -68,3 +68,23 @@ test('Hostile shop or product text is shown as text and never runs as code (XSS)
   expect(result.shownShop).toBe('<b>Shop</b>');
   expect(errors).toEqual([]);
 });
+
+test('Keyboard only: skip link, PIN code box and Escape all work without a mouse', async ({ page }) => {
+  await page.goto('/');
+  await page.keyboard.press('Tab');
+  await expect(page.locator(':focus')).toHaveText('Skip to content');
+  await page.keyboard.press('Enter');
+  await expect.poll(() => page.evaluate(() => document.activeElement.id)).toBe('main');
+
+  await page.locator('#loc-btn').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#loc-btn')).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('#loc-input')).toBeFocused();
+  await page.keyboard.type('560073');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#loc-msg')).toContainText('560073');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#loc-btn')).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('#loc-btn')).toBeFocused();
+  await expect(page.locator('#loc-label')).toHaveText('560073');
+});

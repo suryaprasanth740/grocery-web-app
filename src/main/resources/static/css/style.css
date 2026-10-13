@@ -1298,3 +1298,4 @@ a.stars-line:hover b { text-decoration: underline; }
 .nav-hello { margin-right: 18px; }
 /* Phones: the greeting is dropped so the header takes two rows instead of three */
 @media (max-width: 720px) { .nav-hello { display: none; } }
+main:focus { outline: none; }
