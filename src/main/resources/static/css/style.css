@@ -1292,3 +1292,6 @@ a.stars-line:hover b { text-decoration: underline; }
 .shop-board .stars-line, .shop-board .stars-line .muted { color: rgba(255,255,255,0.92); }
 .nav-links a, .nav-links #nav-auth-area span, .nav-links #nav-auth-area button { white-space: nowrap; }
 @media (min-width: 721px) { .nav-links { gap: 18px; } }
+.nav-links .bell-list a { white-space: normal; font-weight: 400; }
+.nav-links .bell-list a b { font-weight: 700; }
+.nav-links .bell-pop .linklike { white-space: nowrap; }
