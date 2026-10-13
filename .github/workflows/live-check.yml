@@ -8,7 +8,7 @@ on:
     inputs:
       url:
         description: "Site to check"
-        default: "https://nammabasket.onrender.com"
+        default: "https://nammabasket.vercel.app"
   push:
     paths:
       - ".github/workflows/live-check.yml"
@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      BASE_URL: ${{ github.event.inputs.url || 'https://nammabasket.onrender.com' }}
+      BASE_URL: ${{ github.event.inputs.url || 'https://nammabasket.vercel.app' }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
