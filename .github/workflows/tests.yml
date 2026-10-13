@@ -226,7 +226,8 @@ jobs:
         if: failure()
         run: |
           {
-            grep -E "✘|Error:|expect\(|Expected|Received|at .*spec\.js" e2e/e2e.log | head -80
+            grep -E "^\s+\+ +\"" e2e/e2e.log | sed 's/\x1b\[[0-9;]*m//g' | sort | uniq -c | sort -rn | head -40
+            grep -E "✘|Error:|Expected|Received|at .*spec\.js" e2e/e2e.log | sed 's/\x1b\[[0-9;]*m//g' | head -60
             echo "---- app log (errors) ----"
             grep -E "ERROR|Exception" app.log | head -20
           } > failures.txt || true
