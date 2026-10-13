@@ -137,7 +137,7 @@ test.describe.serial('Marketplace journeys', () => {
     await expect(page.locator('#bell-list')).toContainText(`New order #${orderId}`);
     await page.keyboard.press('Escape');
 
-    await page.getByRole('tab', { name: /Orders/ }).click();
+    await page.getByRole('button', { name: /^Orders/ }).click();
     // "New" shows only orders waiting to be accepted; "All" keeps the order on screen through every step.
     await page.locator('[data-filter="all"]').click();
     const order = page.locator('article', { hasText: `Order #${orderId}` });

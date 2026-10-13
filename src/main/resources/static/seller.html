@@ -19,11 +19,11 @@
   </section>
 
   <div class="wrap" id="dash" hidden>
-    <div class="tabs" role="tablist" style="margin-top:20px;">
-      <button class="tab active" role="tab" data-tab="overview">Overview</button>
-      <button class="tab" role="tab" data-tab="orders">Orders <span id="new-badge"></span></button>
-      <button class="tab" role="tab" data-tab="products">Products</button>
-      <button class="tab" role="tab" data-tab="details">Shop details</button>
+    <div class="tabs" role="group" aria-label="Shop dashboard sections" style="margin-top:20px;">
+      <button class="tab active" aria-pressed="true" data-tab="overview">Overview</button>
+      <button class="tab" aria-pressed="false" data-tab="orders">Orders <span id="new-badge"></span></button>
+      <button class="tab" aria-pressed="false" data-tab="products">Products</button>
+      <button class="tab" aria-pressed="false" data-tab="details">Shop details</button>
     </div>
     <div id="status-panel"></div>
     <div id="tab-root" style="padding-bottom:64px;"></div>
@@ -72,14 +72,14 @@ async function load() {
     return;
   }
   document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
+    document.querySelectorAll('.tab').forEach(x => { x.classList.toggle('active', x === t); x.setAttribute('aria-pressed', String(x === t)); });
     tab = t.dataset.tab;
     renderTab();
   }));
   // Links like /seller.html#orders (from the notification bell) open that tab.
   const fromHash = document.querySelector(`.tab[data-tab="${location.hash.slice(1)}"]`);
   if (fromHash) {
-    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === fromHash));
+    document.querySelectorAll('.tab').forEach(x => { x.classList.toggle('active', x === fromHash); x.setAttribute('aria-pressed', String(x === fromHash)); });
     tab = fromHash.dataset.tab;
   }
   renderFrame();
@@ -230,7 +230,13 @@ async function renderOrders(root) {
     btn.disabled = true;
     try {
       await API.setOrderStep(Number(btn.dataset.order), btn.dataset.step);
-      showToast(`Order #${btn.dataset.order} updated`, 'ok');
+      // An accepted order leaves "New"; follow it to "In progress" so the next step is one tap away.
+      if (orderFilter === 'new' && btn.dataset.step === 'ACCEPTED') {
+        orderFilter = 'active';
+        showToast(`Order #${btn.dataset.order} accepted. It's now under "In progress".`, 'ok');
+      } else {
+        showToast(`Order #${btn.dataset.order} updated`, 'ok');
+      }
       renderTab();
     } catch (e) { showToast(e.message, 'error'); btn.disabled = false; }
   }));

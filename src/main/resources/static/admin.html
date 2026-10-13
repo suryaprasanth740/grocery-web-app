@@ -16,18 +16,18 @@
     <div class="section-heading" style="margin-top:34px;">
       <h1>Admin panel</h1>
     </div>
-    <div class="tabs" role="tablist">
-      <button class="tab active" data-tab="applications">Shop applications <span id="pending-count"></span></button>
-      <button class="tab" data-tab="shops">All shops</button>
-      <button class="tab" data-tab="accounts">Accounts</button>
-      <button class="tab" data-tab="orders">Orders</button>
-      <button class="tab" data-tab="products">Products</button>
-      <button class="tab" data-tab="reports">Buyer reports <span id="report-count"></span></button>
-      <button class="tab" data-tab="reviews">Reviews</button>
-      <button class="tab" data-tab="issues">Missing items</button>
-      <button class="tab" data-tab="categories">Categories</button>
-      <button class="tab" data-tab="coupons">Promotions</button>
-      <button class="tab" data-tab="audit">Activity log</button>
+    <div class="tabs" role="group" aria-label="Admin sections">
+      <button class="tab active" aria-pressed="true" data-tab="applications">Shop applications <span id="pending-count"></span></button>
+      <button class="tab" aria-pressed="false" data-tab="shops">All shops</button>
+      <button class="tab" aria-pressed="false" data-tab="accounts">Accounts</button>
+      <button class="tab" aria-pressed="false" data-tab="orders">Orders</button>
+      <button class="tab" aria-pressed="false" data-tab="products">Products</button>
+      <button class="tab" aria-pressed="false" data-tab="reports">Buyer reports <span id="report-count"></span></button>
+      <button class="tab" aria-pressed="false" data-tab="reviews">Reviews</button>
+      <button class="tab" aria-pressed="false" data-tab="issues">Missing items</button>
+      <button class="tab" aria-pressed="false" data-tab="categories">Categories</button>
+      <button class="tab" aria-pressed="false" data-tab="coupons">Promotions</button>
+      <button class="tab" aria-pressed="false" data-tab="audit">Activity log</button>
     </div>
     <div class="admin-stats" id="admin-stats"></div>
     <div id="admin-error"></div>
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   renderStats();
   document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
+    document.querySelectorAll('.tab').forEach(x => { x.classList.toggle('active', x === t); x.setAttribute('aria-pressed', String(x === t)); });
     activeTab = t.dataset.tab;
     render();
   }));
