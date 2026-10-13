@@ -32,7 +32,11 @@ function watchErrors(page) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => {
-    if (m.type() === 'error' && /Content Security Policy/i.test(m.text())) errors.push(m.text());
+    const text = m.text();
+    // The axe scanner itself re-downloads stylesheets with fetch() to check colours; the policy
+    // (rightly) blocks that for Google Fonts. Pages never do this, so it isn't counted.
+    const fromAxe = /connect-src/.test(text) && /fonts\.googleapis\.com/.test(text);
+    if (m.type() === 'error' && /Content Security Policy/i.test(text) && !fromAxe) errors.push(text);
   });
   return errors;
 }
