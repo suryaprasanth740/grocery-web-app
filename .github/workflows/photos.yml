@@ -1,0 +1,52 @@
+# Collects freely licensed product photos (Wikimedia Commons) into the app.
+# Runs only when tools/photos/ changes. See tools/photos/fetch_photos.py.
+#  - mode "candidates": pushes review sheets to the photo-review branch (not merged anywhere)
+#  - mode "final": commits the chosen photos and credits.json to this branch
+name: Product photos
+
+on:
+  push:
+    paths:
+      - "tools/photos/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  photos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Pillow
+        run: pip install pillow==10.4.0
+
+      - name: Collect photos
+        run: python tools/photos/fetch_photos.py
+
+      - name: Save the result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mode=$(python -c "import json;print(json.load(open('tools/photos/photos.json'))['mode'])")
+          if [ "$mode" = "candidates" ]; then
+            mv review /tmp/review
+            git checkout --orphan photo-review
+            git rm -rfq .
+            cp -r /tmp/review/. .
+            git add -A
+            git commit -qm "Photo candidates for review"
+            git push -f origin photo-review
+          else
+            git add src/main/resources/static/img/products
+            git diff --cached --quiet && { echo "No photo changes"; exit 0; }
+            git commit -qm "Product photos from Wikimedia Commons (see img/products/credits.json)"
+            git pull --rebase origin "$GITHUB_REF_NAME"
+            git push origin "HEAD:$GITHUB_REF_NAME"
+          fi

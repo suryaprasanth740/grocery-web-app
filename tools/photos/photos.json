@@ -1,0 +1,563 @@
+{
+ "mode": "candidates",
+ "items": [
+  {
+   "slug": "fresh-bananas",
+   "name": "Fresh Bananas",
+   "query": "bananas bunch yellow",
+   "prefer": [
+    "Banana bunch in a banana farm at Chinawal.jpg"
+   ]
+  },
+  {
+   "slug": "red-apples",
+   "name": "Red Apples",
+   "query": "red apples",
+   "prefer": [
+    "Red Apple.jpg"
+   ]
+  },
+  {
+   "slug": "tomatoes",
+   "name": "Tomatoes",
+   "query": "tomatoes red vegetable",
+   "prefer": [
+    "Tomato je.jpg"
+   ]
+  },
+  {
+   "slug": "onions",
+   "name": "Onions",
+   "query": "red onions india",
+   "prefer": [
+    "Harvested vegetables(Onions).jpg"
+   ]
+  },
+  {
+   "slug": "spinach-bunch",
+   "name": "Spinach Bunch",
+   "query": "spinach leaves bunch",
+   "prefer": [
+    "Spinach leaves.jpg"
+   ]
+  },
+  {
+   "slug": "full-cream-milk",
+   "name": "Full Cream Milk",
+   "query": "glass of milk",
+   "prefer": [
+    "Glass Milk Bottles.tif"
+   ]
+  },
+  {
+   "slug": "farm-eggs",
+   "name": "Farm Eggs",
+   "query": "brown eggs",
+   "prefer": [
+    "Egg cartons with chicken eggs 03.jpg"
+   ]
+  },
+  {
+   "slug": "cheddar-cheese",
+   "name": "Cheddar Cheese",
+   "query": "cheddar cheese block",
+   "prefer": [
+    "Montgomerys cheddar cheese.jpg"
+   ]
+  },
+  {
+   "slug": "greek-yogurt",
+   "name": "Greek Yogurt",
+   "query": "yogurt bowl",
+   "prefer": [
+    "A bowl of frozen yogurt.jpg"
+   ]
+  },
+  {
+   "slug": "whole-wheat-bread",
+   "name": "Whole Wheat Bread",
+   "query": "whole wheat bread loaf sliced",
+   "prefer": [
+    "Vegan no-knead whole wheat bread loaf, sliced, September 2010.jpg"
+   ]
+  },
+  {
+   "slug": "butter-croissants",
+   "name": "Butter Croissants",
+   "query": "croissants",
+   "prefer": [
+    "Croissants au beurre (18953292873).jpg"
+   ]
+  },
+  {
+   "slug": "chocolate-muffins",
+   "name": "Chocolate Muffins",
+   "query": "chocolate muffins",
+   "prefer": [
+    "Vegan oatmeal chocolate chip muffins.jpg"
+   ]
+  },
+  {
+   "slug": "orange-juice",
+   "name": "Orange Juice",
+   "query": "glass of orange juice",
+   "prefer": [
+    "Orange juice 1 edit1.jpg"
+   ]
+  },
+  {
+   "slug": "filter-coffee-powder",
+   "name": "Filter Coffee Powder",
+   "query": "south indian filter coffee",
+   "prefer": [
+    "Indian filter coffee in Dabarah.jpg"
+   ]
+  },
+  {
+   "slug": "green-tea-bags",
+   "name": "Green Tea Bags",
+   "query": "green tea cup",
+   "prefer": [
+    "Canister with bags of green tea.jpg"
+   ]
+  },
+  {
+   "slug": "potato-chips",
+   "name": "Potato Chips",
+   "query": "potato chips bowl",
+   "prefer": [
+    "Potato-Chips.jpg"
+   ]
+  },
+  {
+   "slug": "mixed-nuts",
+   "name": "Mixed Nuts",
+   "query": "mixed nuts cashew almond",
+   "prefer": [
+    "Almonds - in shell, shell cracked open, shelled, blanched.jpg"
+   ]
+  },
+  {
+   "slug": "digestive-biscuits",
+   "name": "Digestive Biscuits",
+   "query": "digestive biscuits",
+   "prefer": [
+    "Digestive biscuits.jpg"
+   ]
+  },
+  {
+   "slug": "basmati-rice",
+   "name": "Basmati Rice",
+   "query": "basmati rice grains",
+   "prefer": [
+    "Grano de arroz basmati integral, 2020-06-12, DD 01-11 FS.jpg"
+   ]
+  },
+  {
+   "slug": "toor-dal",
+   "name": "Toor Dal",
+   "query": "toor dal pigeon pea split",
+   "prefer": [
+    "Tadka Daal (Indian lentil curry).jpg"
+   ]
+  },
+  {
+   "slug": "sunflower-cooking-oil",
+   "name": "Sunflower Cooking Oil",
+   "query": "sunflower oil bottle",
+   "prefer": [
+    "Bottle 1 liter Sunflower refined oil.jpg"
+   ]
+  },
+  {
+   "slug": "iodized-salt",
+   "name": "Iodized Salt",
+   "query": "table salt bowl"
+  },
+  {
+   "slug": "potatoes",
+   "name": "Potatoes",
+   "query": "potatoes heap"
+  },
+  {
+   "slug": "carrots",
+   "name": "Carrots",
+   "query": "carrots orange fresh"
+  },
+  {
+   "slug": "green-chillies",
+   "name": "Green Chillies",
+   "query": "green chillies india"
+  },
+  {
+   "slug": "coriander-leaves",
+   "name": "Coriander Leaves",
+   "query": "coriander leaves bunch"
+  },
+  {
+   "slug": "ginger",
+   "name": "Ginger",
+   "query": "ginger root rhizome"
+  },
+  {
+   "slug": "lemons",
+   "name": "Lemons",
+   "query": "lemons citrus"
+  },
+  {
+   "slug": "fresh-coconut",
+   "name": "Fresh Coconut",
+   "query": "coconut whole brown"
+  },
+  {
+   "slug": "fresh-oranges",
+   "name": "Fresh Oranges",
+   "query": "oranges fruit pile"
+  },
+  {
+   "slug": "mango-leaves",
+   "name": "Mango Leaves",
+   "query": "mango leaves"
+  },
+  {
+   "slug": "toned-milk",
+   "name": "Toned Milk",
+   "query": "milk pouring jug"
+  },
+  {
+   "slug": "fresh-curd",
+   "name": "Fresh Curd",
+   "query": "curd dahi bowl"
+  },
+  {
+   "slug": "paneer",
+   "name": "Paneer",
+   "query": "paneer cubes"
+  },
+  {
+   "slug": "ghee",
+   "name": "Ghee",
+   "query": "ghee clarified butter"
+  },
+  {
+   "slug": "sona-masoori-rice",
+   "name": "Sona Masoori Rice",
+   "query": "white rice grains raw"
+  },
+  {
+   "slug": "whole-wheat-atta",
+   "name": "Whole Wheat Atta",
+   "query": "atta wheat flour"
+  },
+  {
+   "slug": "sugar",
+   "name": "Sugar",
+   "query": "white sugar granulated"
+  },
+  {
+   "slug": "jaggery",
+   "name": "Jaggery",
+   "query": "jaggery blocks"
+  },
+  {
+   "slug": "bombay-rava",
+   "name": "Bombay Rava",
+   "query": "semolina sooji"
+  },
+  {
+   "slug": "moong-dal",
+   "name": "Moong Dal",
+   "query": "moong dal yellow split"
+  },
+  {
+   "slug": "tamarind",
+   "name": "Tamarind",
+   "query": "tamarind pulp pods"
+  },
+  {
+   "slug": "sambar-powder",
+   "name": "Sambar Powder",
+   "query": "sambar powder spice"
+  },
+  {
+   "slug": "turmeric-powder",
+   "name": "Turmeric Powder",
+   "query": "turmeric powder"
+  },
+  {
+   "slug": "mustard-seeds",
+   "name": "Mustard Seeds",
+   "query": "black mustard seeds"
+  },
+  {
+   "slug": "cardamom",
+   "name": "Cardamom",
+   "query": "green cardamom pods"
+  },
+  {
+   "slug": "cashews",
+   "name": "Cashews",
+   "query": "cashew nuts"
+  },
+  {
+   "slug": "roasted-peanuts",
+   "name": "Roasted Peanuts",
+   "query": "roasted peanuts"
+  },
+  {
+   "slug": "assam-tea-powder",
+   "name": "Assam Tea Powder",
+   "query": "black tea leaves CTC"
+  },
+  {
+   "slug": "clay-diyas",
+   "name": "Clay Diyas",
+   "query": "diya clay lamp oil"
+  },
+  {
+   "slug": "marigold-flowers",
+   "name": "Marigold Flowers",
+   "query": "marigold flowers garland"
+  },
+  {
+   "slug": "agarbatti",
+   "name": "Agarbatti",
+   "query": "incense sticks burning"
+  },
+  {
+   "slug": "camphor",
+   "name": "Camphor",
+   "query": "camphor tablets"
+  },
+  {
+   "slug": "brinjal",
+   "name": "Brinjal",
+   "query": "brinjal eggplant purple"
+  },
+  {
+   "slug": "lady-s-finger",
+   "name": "Lady's Finger",
+   "query": "okra lady finger vegetable"
+  },
+  {
+   "slug": "french-beans",
+   "name": "French Beans",
+   "query": "green beans vegetable"
+  },
+  {
+   "slug": "cauliflower",
+   "name": "Cauliflower",
+   "query": "cauliflower head"
+  },
+  {
+   "slug": "cabbage",
+   "name": "Cabbage",
+   "query": "green cabbage head"
+  },
+  {
+   "slug": "cucumber",
+   "name": "Cucumber",
+   "query": "cucumbers fresh"
+  },
+  {
+   "slug": "beetroot",
+   "name": "Beetroot",
+   "query": "beetroot vegetable"
+  },
+  {
+   "slug": "garlic",
+   "name": "Garlic",
+   "query": "garlic bulbs"
+  },
+  {
+   "slug": "curry-leaves",
+   "name": "Curry Leaves",
+   "query": "curry leaves Murraya koenigii"
+  },
+  {
+   "slug": "mint-leaves",
+   "name": "Mint Leaves",
+   "query": "mint leaves bunch"
+  },
+  {
+   "slug": "drumsticks",
+   "name": "Drumsticks",
+   "query": "drumstick moringa pods vegetable"
+  },
+  {
+   "slug": "alphonso-mangoes",
+   "name": "Alphonso Mangoes",
+   "query": "alphonso mangoes"
+  },
+  {
+   "slug": "pomegranate",
+   "name": "Pomegranate",
+   "query": "pomegranate fruit"
+  },
+  {
+   "slug": "papaya",
+   "name": "Papaya",
+   "query": "papaya fruit cut"
+  },
+  {
+   "slug": "guava",
+   "name": "Guava",
+   "query": "guava fruit"
+  },
+  {
+   "slug": "green-grapes",
+   "name": "Green Grapes",
+   "query": "green grapes bunch"
+  },
+  {
+   "slug": "watermelon",
+   "name": "Watermelon",
+   "query": "watermelon slice"
+  },
+  {
+   "slug": "sweet-corn",
+   "name": "Sweet Corn",
+   "query": "sweet corn cob"
+  },
+  {
+   "slug": "ragi-flour",
+   "name": "Ragi Flour",
+   "query": "finger millet ragi flour"
+  },
+  {
+   "slug": "idli-rice",
+   "name": "Idli Rice",
+   "query": "parboiled rice grains"
+  },
+  {
+   "slug": "urad-dal",
+   "name": "Urad Dal",
+   "query": "urad dal white split"
+  },
+  {
+   "slug": "chana-dal",
+   "name": "Chana Dal",
+   "query": "chana dal split chickpea"
+  },
+  {
+   "slug": "rajma",
+   "name": "Rajma",
+   "query": "kidney beans red"
+  },
+  {
+   "slug": "poha",
+   "name": "Poha",
+   "query": "poha flattened rice"
+  },
+  {
+   "slug": "besan",
+   "name": "Besan",
+   "query": "besan gram flour"
+  },
+  {
+   "slug": "groundnut-oil",
+   "name": "Groundnut Oil",
+   "query": "groundnut oil peanut oil"
+  },
+  {
+   "slug": "cumin-seeds",
+   "name": "Cumin Seeds",
+   "query": "cumin seeds"
+  },
+  {
+   "slug": "red-chilli-powder",
+   "name": "Red Chilli Powder",
+   "query": "red chilli powder"
+  },
+  {
+   "slug": "black-pepper",
+   "name": "Black Pepper",
+   "query": "black peppercorns"
+  },
+  {
+   "slug": "coconut-oil",
+   "name": "Coconut Oil",
+   "query": "coconut oil"
+  },
+  {
+   "slug": "vermicelli",
+   "name": "Vermicelli",
+   "query": "vermicelli semiya"
+  },
+  {
+   "slug": "rock-salt",
+   "name": "Rock Salt",
+   "query": "rock salt crystals"
+  },
+  {
+   "slug": "butter",
+   "name": "Butter",
+   "query": "butter block"
+  },
+  {
+   "slug": "buttermilk",
+   "name": "Buttermilk",
+   "query": "buttermilk chaas glass"
+  },
+  {
+   "slug": "idli-dosa-batter",
+   "name": "Idli Dosa Batter",
+   "query": "idli batter"
+  },
+  {
+   "slug": "milk-bread",
+   "name": "Milk Bread",
+   "query": "white bread loaf"
+  },
+  {
+   "slug": "rusk",
+   "name": "Rusk",
+   "query": "rusk toast biscuit"
+  },
+  {
+   "slug": "khari-biscuits",
+   "name": "Khari Biscuits",
+   "query": "khari puff pastry biscuit"
+  },
+  {
+   "slug": "banana-chips",
+   "name": "Banana Chips",
+   "query": "banana chips kerala"
+  },
+  {
+   "slug": "kodubale",
+   "name": "Kodubale",
+   "query": "kodubale snack"
+  },
+  {
+   "slug": "mysore-pak",
+   "name": "Mysore Pak",
+   "query": "mysore pak sweet"
+  },
+  {
+   "slug": "groundnut-chikki",
+   "name": "Groundnut Chikki",
+   "query": "chikki peanut brittle"
+  },
+  {
+   "slug": "mixture-namkeen",
+   "name": "Mixture Namkeen",
+   "query": "bombay mix namkeen"
+  },
+  {
+   "slug": "ragi-malt",
+   "name": "Ragi Malt",
+   "query": "ragi malt drink"
+  },
+  {
+   "slug": "bun",
+   "name": "Bun",
+   "query": "sweet bun bakery"
+  },
+  {
+   "slug": "coconut-cookies",
+   "name": "Coconut Cookies",
+   "query": "coconut cookies"
+  }
+ ]
+}
