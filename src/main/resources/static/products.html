@@ -106,7 +106,7 @@ function renderCategories() {
   const allChip = `<button class="category-chip ${!activeCategoryId ? 'active' : ''}" data-cat=""><span class="emoji">&#128722;</span><span>All</span></button>`;
   const chips = categories.map(c => `
     <button class="category-chip ${activeCategoryId === c.id ? 'active' : ''}" data-cat="${c.id}">
-      <span class="emoji">${c.icon || '\u{1F6D2}'}</span><span>${escapeHtml(c.name)}</span>
+      <span class="emoji">${escapeHtml(c.icon || '\u{1F6D2}')}</span><span>${escapeHtml(c.name)}</span>
     </button>
   `).join('');
   row.innerHTML = allChip + chips;

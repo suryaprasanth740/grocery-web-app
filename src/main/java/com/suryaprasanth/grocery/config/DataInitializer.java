@@ -47,6 +47,8 @@ public class DataInitializer implements CommandLineRunner {
     private final String adminPassword;
     private final boolean refreshExpiredDemoStock;
     private final MarketplaceDemoData marketplaceDemoData;
+    /** True for the local in-memory database (nothing there is real or kept). */
+    private final boolean inMemoryDatabase;
 
     public DataInitializer(CategoryRepository categoryRepository, ProductRepository productRepository,
                            CouponRepository couponRepository, UserRepository userRepository,
@@ -54,7 +56,9 @@ public class DataInitializer implements CommandLineRunner {
                            @Value("${app.admin.email:admin@nammabasket.local}") String adminEmail,
                            @Value("${app.admin.password:}") String adminPassword,
                            @Value("${app.demo.refresh-expired-stock:true}") boolean refreshExpiredDemoStock,
+                           @Value("${spring.datasource.url:}") String datasourceUrl,
                            MarketplaceDemoData marketplaceDemoData) {
+        this.inMemoryDatabase = datasourceUrl.startsWith("jdbc:h2:mem:");
         this.marketplaceDemoData = marketplaceDemoData;
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
@@ -295,19 +299,35 @@ public class DataInitializer implements CommandLineRunner {
         }
     }
 
-    /** Creates the admin account once. The password comes from ADMIN_PASSWORD, or is random. */
+    /**
+     * Creates the admin account once. ADMIN_PASSWORD is the source of truth: if it is set and the
+     * admin's password differs (e.g. it was random before), the admin's password is updated to it.
+     * A random password is only ever printed for the local in-memory database, never for a real one,
+     * because anyone who can read the server logs could then log in as admin.
+     */
     private void ensureAdminAccount() {
-        if (userRepository.existsByEmailIgnoreCase(adminEmail)) {
+        boolean passwordGiven = adminPassword != null && !adminPassword.isBlank();
+        User existing = userRepository.findByEmailIgnoreCase(adminEmail.trim()).orElse(null);
+        if (existing != null) {
+            if (passwordGiven && !PasswordUtil.matches(adminPassword, existing.getPasswordHash())) {
+                existing.setPasswordHash(PasswordUtil.hash(adminPassword));
+                userRepository.save(existing);
+                log.info("Admin {}: password updated from ADMIN_PASSWORD", adminEmail);
+            }
             return;
         }
         String password = adminPassword;
-        if (password == null || password.isBlank()) {
+        if (!passwordGiven) {
             byte[] bytes = new byte[9];
             new SecureRandom().nextBytes(bytes);
             password = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
             log.warn("============================================================");
-            log.warn(" ADMIN_PASSWORD is not set. Created admin {} with password: {}", adminEmail, password);
-            log.warn(" Set ADMIN_PASSWORD in your environment to choose your own.");
+            if (inMemoryDatabase) {
+                log.warn(" ADMIN_PASSWORD is not set. Local admin {} has password: {}", adminEmail, password);
+            } else {
+                log.warn(" ADMIN_PASSWORD is not set, so admin {} got a random password that is NOT shown.", adminEmail);
+                log.warn(" To log in as admin, set ADMIN_PASSWORD and restart the app.");
+            }
             log.warn("============================================================");
         }
         User admin = new User("NammaBasket Admin", adminEmail.trim().toLowerCase(), PasswordUtil.hash(password));

@@ -6,6 +6,7 @@
 //   4. An admin hides that review, and the rating disappears again.
 // Demo shops and their products come from MarketplaceDemoData.java.
 const { test, expect } = require('@playwright/test');
+const { checkA11y, watchErrors } = require('./helpers');
 
 const ADMIN = { email: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD };
 const SELLER = { email: 'lakshmi.provisions@demo.nammabasket.in', password: process.env.DEMO_SELLER_PASSWORD };
@@ -17,12 +18,6 @@ const SECOND = 'Nankhatai';                    // sold by Gokula Dairy & Bakery
 const SHOTS = 'screenshots';
 const COMMENT = `Fresh, fine flour. Good for ragi mudde (${Date.now()})`; // unique, so a re-run finds its own review
 
-/** Uncaught script errors fail the test (failed network calls such as a 401 are expected and ignored). */
-function watchErrors(page) {
-  const errors = [];
-  page.on('pageerror', (e) => errors.push(e.message));
-  return errors;
-}
 
 async function logIn(page, who, next) {
   await page.goto('/login.html' + (next ? '?next=' + encodeURIComponent(next) : ''));
@@ -64,6 +59,7 @@ test.describe.serial('Marketplace journeys', () => {
     await expect(buyer.locator('.shop-card')).toHaveCount(4);
     await expect(buyer.locator('.shop-card', { hasText: 'Sri Lakshmi Provisions' })).toBeVisible();
     await buyer.screenshot({ path: `${SHOTS}/01-shops.png`, fullPage: true });
+    await checkA11y(buyer, 'shops');
     expect(errors).toEqual([]);
   });
 
@@ -73,6 +69,7 @@ test.describe.serial('Marketplace journeys', () => {
     await expect(img).toHaveAttribute('src', /^\/img\/products\/ragi-flour\.jpg$/);
     await expect.poll(() => img.evaluate((el) => el.complete && el.naturalWidth)).toBeGreaterThan(100);
     await buyer.screenshot({ path: `${SHOTS}/02-shop-page.png`, fullPage: true });
+    await checkA11y(buyer, 'shop-page');
   });
 
   test('Heart saves a product; Saved page moves it to the cart', async () => {
@@ -86,6 +83,7 @@ test.describe.serial('Marketplace journeys', () => {
     const row = buyer.locator('.saved-item', { hasText: SECOND });
     await expect(row).toBeVisible();
     await buyer.screenshot({ path: `${SHOTS}/03-saved.png`, fullPage: true });
+    await checkA11y(buyer, 'saved');
     await row.getByRole('button', { name: `Move ${SECOND} to cart` }).click();
     await expect(buyer.locator('.empty-state')).toContainText('Nothing saved yet');
     await expect(buyer.locator('#cart-count')).toHaveText('1');
@@ -101,6 +99,7 @@ test.describe.serial('Marketplace journeys', () => {
     await expect(buyer.getByText('Sri Lakshmi Provisions').first()).toBeVisible();
     await expect(buyer.getByText('Gokula Dairy & Bakery').first()).toBeVisible();
     await buyer.screenshot({ path: `${SHOTS}/04-cart.png`, fullPage: true });
+    await checkA11y(buyer, 'cart');
 
     await buyer.goto('/checkout.html');
     await expect(buyer.locator('#pincode')).toHaveValue('560041');
@@ -112,6 +111,7 @@ test.describe.serial('Marketplace journeys', () => {
     await slot.selectOption(value);
     await buyer.check('input[name="pay"][value="COD"]');
     await buyer.screenshot({ path: `${SHOTS}/05-checkout.png`, fullPage: true });
+    await checkA11y(buyer, 'checkout');
     await Promise.all([buyer.waitForURL(/\/order\.html\?id=\d+/), buyer.click('#place-order-btn')]);
 
     await expect(buyer.locator('.confirm-banner')).toContainText('2 orders, one per shop');
@@ -123,6 +123,7 @@ test.describe.serial('Marketplace journeys', () => {
     await buyer.goto(`/order.html?id=${orderId}`);
     await expect(buyer.getByText('Delivery slot:')).toBeVisible();
     await buyer.screenshot({ path: `${SHOTS}/06-order.png`, fullPage: true });
+    await checkA11y(buyer, 'order');
     expect(errors).toEqual([]);
   });
 
@@ -146,11 +147,13 @@ test.describe.serial('Marketplace journeys', () => {
       await expect(page.locator('#toast')).toBeVisible();
     }
     await page.screenshot({ path: `${SHOTS}/07-seller-orders.png`, fullPage: true });
+    await checkA11y(page, 'seller-orders');
     await page.locator('article', { hasText: `Order #${orderId}` }).getByRole('link', { name: 'View invoice' }).click();
     await expect(page.locator('.inv-title h1')).toHaveText(/Tax invoice/i);
     await expect(page.locator('.invoice')).toContainText('29AAPFL1234K1Z5');
     await expect(page.locator('.invoice')).toContainText(PRODUCT);
     await page.screenshot({ path: `${SHOTS}/08-invoice.png`, fullPage: true });
+    await checkA11y(page, 'invoice');
     expect(errors).toEqual([]);
     await ctx.close();
   });
@@ -170,12 +173,14 @@ test.describe.serial('Marketplace journeys', () => {
     await form.getByRole('button', { name: 'Send' }).click();
     await expect(form.locator('.field-msg')).toHaveText('Thanks! Your review is saved.');
     await buyer.screenshot({ path: `${SHOTS}/10-review.png`, fullPage: true });
+    await checkA11y(buyer, 'order-review');
 
     await buyer.goto(`/shop.html?s=${RICE_SHOP}`);
     await expect(card(buyer, PRODUCT).locator('.rating-btn')).toContainText('4');
     await card(buyer, PRODUCT).locator('.rating-btn').click();
     await expect(buyer.locator('#reviews-dialog')).toContainText(COMMENT);
     await buyer.screenshot({ path: `${SHOTS}/11-reviews-dialog.png` });
+    await checkA11y(buyer, 'reviews-dialog');
     await buyer.keyboard.press('Escape');
     await expect(buyer.locator('#shop-reviews')).toContainText('What buyers say');
   });
@@ -190,6 +195,7 @@ test.describe.serial('Marketplace journeys', () => {
     await row.getByRole('button', { name: 'Hide' }).click();
     await expect(page.locator('tr', { hasText: COMMENT })).toContainText('hidden');
     await page.screenshot({ path: `${SHOTS}/12-admin-reviews.png`, fullPage: true });
+    await checkA11y(page, 'admin-reviews');
     await ctx.close();
 
     await buyer.goto(`/shop.html?s=${RICE_SHOP}`);
@@ -204,5 +210,31 @@ test.describe.serial('Marketplace journeys', () => {
     await expect(buyer.locator('#toast')).toContainText('Saved for later');
     await buyer.goto('/saved.html');
     await expect(buyer.locator('.saved-item', { hasText: SECOND })).toBeVisible();
+  });
+
+  test('Logged-in pages fit a phone screen (375 px) and pass the accessibility scan', async ({ browser }) => {
+    const pages = [['/cart.html', 'cart'], ['/checkout.html', 'checkout'], ['/orders.html', 'orders'],
+      [`/order.html?id=${orderId}`, 'order'], ['/saved.html', 'saved'], [`/invoice.html?id=${orderId}`, 'invoice']];
+    await buyer.setViewportSize({ width: 375, height: 800 });
+    for (const [path, name] of pages) {
+      await buyer.goto(path);
+      await buyer.waitForLoadState('networkidle');
+      const overflow = await buyer.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect.soft(overflow, `${path} scrolls sideways on a phone`).toBeLessThanOrEqual(0);
+      await buyer.screenshot({ path: `${SHOTS}/phone-${name}.png`, fullPage: true });
+    }
+    await buyer.setViewportSize({ width: 1280, height: 900 });
+
+    for (const [who, path, name] of [[SELLER, '/seller.html', 'seller'], [ADMIN, '/admin.html', 'admin']]) {
+      const ctx = await browser.newContext({ viewport: { width: 375, height: 800 } });
+      const page = await ctx.newPage();
+      await logIn(page, who, path);
+      await page.waitForLoadState('networkidle');
+      await checkA11y(page, name);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect.soft(overflow, `${path} scrolls sideways on a phone`).toBeLessThanOrEqual(0);
+      await page.screenshot({ path: `${SHOTS}/phone-${name}.png`, fullPage: true });
+      await ctx.close();
+    }
   });
 });

@@ -133,7 +133,7 @@ async function openRecipe(id) {
   const art = document.getElementById('d-emoji');
   art.textContent = summary.emoji;
   if (summary.photo) {
-    art.innerHTML = `<img src="${escapeHtml(summary.photo.url)}" alt="" onerror="this.parentNode.textContent='${escapeHtml(summary.emoji)}'">`;
+    art.innerHTML = `<img src="${escapeHtml(summary.photo.url)}" alt="" data-fallback="${escapeHtml(summary.emoji)}" onerror="this.parentNode.textContent=this.dataset.fallback">`;
   }
   const credit = document.getElementById('d-credit');
   credit.innerHTML = summary.photo

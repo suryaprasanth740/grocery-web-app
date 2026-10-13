@@ -66,7 +66,7 @@ class InputAndErrorsTest extends ApiTestSupport {
         Object[][] cases = {
                 {signUp("", email, "secret123"), "Name is required"},
                 {signUp("Asha", "not-an-email", "secret123"), "Enter a valid email"},
-                {signUp("Asha", email, "12345"), "Password must be 6 to 72 characters"},
+                {signUp("Asha", email, "1234567"), "Password must be 8 to 72 characters"},
                 {signUp("Asha", "", "secret123"), "Email is required"},
                 {signUp("A".repeat(101), email, "secret123"), "Name must be 100 characters or less"},
         };

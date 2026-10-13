@@ -243,8 +243,12 @@ function newRequestId() {
   return 'req-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
 }
 
+/**
+ * Makes text safe to put inside HTML, both between tags and inside attribute values
+ * (alt="...", aria-label="...", value="..."). Quotes are escaped too: a product called
+ * 'x" onmouseover="...' must stay text and never become an attribute.
+ */
+const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str == null ? '' : String(str);
-  return div.innerHTML;
+  return (str == null ? '' : String(str)).replace(/[&<>"']/g, (ch) => HTML_ESCAPES[ch]);
 }

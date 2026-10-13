@@ -20,7 +20,7 @@ function productCardHtml(p) {
         ${p.stock === 0 ? `<span class="stock-tag">Out of stock</span>` : lowStock ? `<span class="stock-tag">Only ${p.stock} left</span>` : ''}
         ${off > 0 ? `<span class="off-tag">${off}% off</span>` : ''}
         ${p.imageUrl ? `<img src="${escapeHtml(p.imageUrl)}" alt="${escapeHtml(p.name)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` : ''}
-        <span class="photo-emoji" style="${p.imageUrl ? 'display:none;' : ''}">${p.imageEmoji || '\u{1F6D2}'}</span>
+        <span class="photo-emoji" style="${p.imageUrl ? 'display:none;' : ''}">${escapeHtml(p.imageEmoji || '\u{1F6D2}')}</span>
         ${saveButtonHtml(p)}
       </div>
       <div class="body">
@@ -328,8 +328,9 @@ function thumbHtml(p) {
   if (!p) return `<div class="thumb">\u{2753}</div>`;
   const emoji = escapeHtml(p.imageEmoji || '\u{1F6D2}');
   if (p.imageUrl) {
-    return `<div class="thumb"><img src="${escapeHtml(p.imageUrl)}" alt="" loading="lazy"
-      onerror="this.parentNode.textContent='${emoji}'"></div>`;
+    // The fallback emoji is read from a data attribute, never written into the handler's code.
+    return `<div class="thumb"><img src="${escapeHtml(p.imageUrl)}" alt="" loading="lazy" data-fallback="${emoji}"
+      onerror="this.parentNode.textContent=this.dataset.fallback"></div>`;
   }
   return `<div class="thumb">${emoji}</div>`;
 }

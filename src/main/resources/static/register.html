@@ -28,7 +28,8 @@
         </div>
         <div class="field">
           <label for="password">Password</label>
-          <input type="password" id="password" required minlength="6" autocomplete="new-password">
+          <input type="password" id="password" required minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="password-hint">
+          <div class="field-msg muted" id="password-hint">At least 8 characters.</div>
         </div>
         <button type="submit" class="btn btn-primary btn-block" id="register-btn">Create account</button>
       </form>

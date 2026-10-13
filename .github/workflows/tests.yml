@@ -257,6 +257,7 @@ jobs:
           git rm -rfq .
           git clean -fdxq          # also drop the build output (target/, app.log, node_modules)
           cp /tmp/shots/*.png .
+          cp /tmp/shots/*.json . 2>/dev/null || true   # accessibility scan results (axe-*.json)
           echo "Screenshots from the browser tests of ${GITHUB_SHA} on ${GITHUB_REF_NAME}." > README.md
           git add -A
           git commit -qm "Browser test screenshots for ${GITHUB_SHA::7}"

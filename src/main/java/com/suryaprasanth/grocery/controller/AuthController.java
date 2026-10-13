@@ -44,11 +44,13 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> register(@Valid @RequestBody RegisterRequest request,
-                                                          HttpSession session) {
+                                                          HttpServletRequest httpRequest) {
         // The public sign-up page only ever creates BUYER accounts. Sellers apply through
         // /register-seller, and admins are created from environment variables.
         User user = accountService.createAccount(request.getName(), request.getEmail(),
                 request.getPassword(), Role.BUYER, null);
+        HttpSession session = httpRequest.getSession(true);
+        httpRequest.changeSessionId(); // new session id once logged in (stops session fixation)
         session.setAttribute(SessionUtil.USER_ID, user.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(toUserView(user));
     }

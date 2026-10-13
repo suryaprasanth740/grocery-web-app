@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const catRow = document.getElementById('category-row');
     catRow.innerHTML = categories.map(c => `
       <a class="category-chip" href="/products.html?categoryId=${c.id}">
-        <span class="emoji">${c.icon || '\u{1F6D2}'}</span><span>${escapeHtml(c.name)}</span>
+        <span class="emoji">${escapeHtml(c.icon || '\u{1F6D2}')}</span><span>${escapeHtml(c.name)}</span>
       </a>
     `).join('');
   } catch (e) {
@@ -253,7 +253,7 @@ async function loadNearbyShops() {
     document.getElementById('kits-strip').innerHTML = kits.map(k => `
       <a class="mini-card" href="/recipes.html#${encodeURIComponent(k.id)}" style="width:260px;">
         <div class="thumb" style="background:var(--tint-warm);font-size:1.7rem;width:56px;height:56px;">${k.photo
-          ? `<img src="${escapeHtml(k.photo.url)}" alt="" loading="lazy" onerror="this.parentNode.textContent='${escapeHtml(k.emoji)}'">`
+          ? `<img src="${escapeHtml(k.photo.url)}" alt="" loading="lazy" data-fallback="${escapeHtml(k.emoji)}" onerror="this.parentNode.textContent=this.dataset.fallback">`
           : escapeHtml(k.emoji)}</div>
         <div class="info"><h4>${escapeHtml(k.name)}</h4><div class="meta">${k.ingredientCount} items &middot; about ${formatRupees(k.estimatedTotal)}</div></div>
       </a>`).join('');
