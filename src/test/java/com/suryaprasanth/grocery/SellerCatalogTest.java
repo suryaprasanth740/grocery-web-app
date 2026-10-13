@@ -215,4 +215,26 @@ class SellerCatalogTest extends ApiTestSupport {
         assertThat(page.get("totalItems").asLong()).isEqualTo(3);
         assertThat(page.get("totalPages").asInt()).isEqualTo(2);
     }
+
+    @Test
+    @DisplayName("Seller edits their own product: new name, price and stock are saved and buyers see the new price; restock sets the stock")
+    void sellerEditsOwnProduct() throws Exception {
+        SellerAccount seller = newApprovedSeller("560073", "");
+        long id = sellerAddsProduct(seller, "Edit Me Atta", "250.00", 10);
+
+        Map<String, Object> form = sellerProduct("Edit Me Atta 5 kg", "275.50", 12);
+        MvcResult r = call("PUT", "/api/seller/products/" + id, seller.session(), form);
+        assertThat(status(r)).as(r.getResponse().getContentAsString()).isEqualTo(200);
+        assertThat(body(r).get("name").asText()).isEqualTo("Edit Me Atta 5 kg");
+
+        JsonNode seen = body(call("GET", "/api/products/" + id, null, null));
+        assertThat(seen.get("price").decimalValue()).isEqualByComparingTo("275.50");
+        assertThat(seen.get("stock").asInt()).isEqualTo(12);
+
+        assertThat(status(call("PUT", "/api/seller/products/" + id + "/stock", seller.session(), Map.of("stock", 40)))).isEqualTo(200);
+        assertThat(productRepository.findById(id).orElseThrow().getStock()).isEqualTo(40);
+        // A negative restock is refused and changes nothing
+        assertThat(status(call("PUT", "/api/seller/products/" + id + "/stock", seller.session(), Map.of("stock", -1)))).isEqualTo(400);
+        assertThat(productRepository.findById(id).orElseThrow().getStock()).isEqualTo(40);
+    }
 }
