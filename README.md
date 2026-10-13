@@ -6,7 +6,7 @@ pack and deliver, or the buyer picks it up. Shop owners apply, get approved by a
 shop from a dashboard.
 
 A portfolio project by [Surya Prasanth G](https://github.com/suryaprasanth740), built and tested the way a
-QA engineer would: **160 API tests run on both H2 and PostgreSQL, plus 23 browser tests** on every push.
+QA engineer would: **164 API tests run on both H2 and PostgreSQL, plus 27 browser tests with accessibility scans** on every push.
 
 **Live demo:** _not deployed yet: see [Deploying](#deploying)._ The earlier single-shop version, FreshCart,
 is on the `main` branch.
@@ -73,13 +73,15 @@ _These screenshots are taken automatically by the browser tests from the real ru
 ## Quality and testing
 
 Full test plan, requirement traceability, detailed test cases and defect log:
-**[docs/TEST_PLAN.md](docs/TEST_PLAN.md)**.
+**[docs/TEST_PLAN.md](docs/TEST_PLAN.md)**. Final security, accessibility and responsiveness review:
+**[docs/FINAL_REVIEW.md](docs/FINAL_REVIEW.md)**.
 
 | Level | What | Count |
 |---|---|---|
-| API / integration | JUnit 5 + MockMvc: status codes, response bodies **and** database effects | 160 |
-| Database | The same 160 tests on PostgreSQL 16 in CI, as well as H2 | 160 × 2 |
-| Browser (end-to-end) | Playwright in Chrome against the real app: buyer → seller → buyer → admin journey, every public page on desktop and phone | 23 |
+| API / integration | JUnit 5 + MockMvc: status codes, response bodies **and** database effects | 164 |
+| Database | The same 164 tests on PostgreSQL 16 in CI, as well as H2 | 164 × 2 |
+| Browser (end-to-end) | Playwright in Chrome against the real app: buyer → seller → buyer → admin journey, every page on desktop and phone, keyboard-only use, XSS and security headers | 27 |
+| Accessibility | axe-core WCAG 2.1 A/AA scan of 26 page states; any serious or critical finding fails the build | 26 scans |
 | Container | The Docker image Render runs is built, started and checked (non-root user) on every push | 1 |
 
 Some of the edge cases that are tested:
@@ -104,7 +106,7 @@ Some of the edge cases that are tested:
 | Database | PostgreSQL in production (e.g. Neon); in-memory H2 in PostgreSQL mode for local runs and tests |
 | Migrations | Flyway (`src/main/resources/db/migration`); Hibernate only validates (`ddl-auto=validate`) |
 | Frontend | Plain HTML, CSS and JavaScript served by Spring Boot (no framework, no build step) |
-| Auth | Session cookie (HttpOnly, SameSite=Lax, optionally Secure); roles BUYER / SELLER / ADMIN; CSRF header check on every change |
+| Auth & security | Session cookie (HttpOnly, SameSite=Lax, Secure in production); roles BUYER / SELLER / ADMIN; CSRF header check on every change; CSP and security headers |
 | Tests | JUnit 5, Spring MockMvc, AssertJ, Playwright; GitHub Actions |
 | Hosting | Docker on Render (backend + pages); optional Netlify/Vercel in front, proxying `/api` |
 
@@ -208,7 +210,7 @@ be changed by accident. FreshCart keeps running on its own database.
 ## Running the tests
 
 ```bash
-mvn verify                       # all 160 API tests on in-memory H2
+mvn verify                       # all 164 API tests on in-memory H2
 
 # the same tests on PostgreSQL
 DB_URL=jdbc:postgresql://localhost:5432/nammabasket DB_USER=nammabasket DB_PASSWORD=change-me mvn verify
@@ -297,8 +299,8 @@ All endpoints are under `/api` and use JSON. Requests that change something must
 - **Not real tax documents.** Invoices follow the GST layout, but are not filed tax documents.
 - **Demo stock.** Demo products get a new best-before date when theirs passes (`app.demo.refresh-expired-stock`),
   so the free demo keeps working.
-- **Browser coverage.** Browser tests run in Chrome only. Accessibility has basic automated checks so far;
-  a full review is planned.
+- **Browser coverage.** Browser tests run in Chrome only, and there has been no manual screen-reader pass yet.
+  The automated accessibility scans and the security review are in [docs/FINAL_REVIEW.md](docs/FINAL_REVIEW.md).
 - **Cold starts.** The free Render plan sleeps after inactivity, so the first request can take up to a minute.
 
 ---

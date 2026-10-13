@@ -27,6 +27,7 @@ AREA = {
     "SlotRulesTest": "Time-slot rules (pure unit tests)", "SavedItemsTest": "Saved for later",
     "NotificationsTest": "Notifications", "InvoiceTest": "GST invoice",
     "DatabaseMigrationTest": "Database: migrations and constraints",
+    "SecurityHeadersTest": "Security headers and sessions",
 }
 
 out = []
@@ -36,7 +37,7 @@ prefix = {"AuthRolesTest": "AUTH", "SecurityAndAdminTest": "SEC", "InputAndError
           "MultiShopCheckoutTest": "MV", "SellerOnboardingTest": "ONB", "SellerCatalogTest": "CAT", "AdminToolsTest": "ADM",
           "SmartShoppingTest": "SMART", "ReviewsTest": "REV", "TimeSlotsTest": "SLOT", "SlotRulesTest": "SLOTU",
           "SavedItemsTest": "SAVE", "NotificationsTest": "NOTE", "InvoiceTest": "INV",
-          "DatabaseMigrationTest": "DB"}
+          "DatabaseMigrationTest": "DB", "SecurityHeadersTest": "HDR"}
 for f in sorted(JAVA.glob("*Test.java"), key=lambda p: list(AREA).index(p.stem) if p.stem in AREA else 99):
     names = re.findall(r'@DisplayName\("((?:[^"\\]|\\.)*)"\)', f.read_text())
     if not names:

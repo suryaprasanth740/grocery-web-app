@@ -29,7 +29,7 @@
 | Real payments | UPI is a demo screen; no payment gateway is connected. |
 | Load and performance | Free hosting; no load test environment. Concurrency is tested for correctness only (last item, last slot, double submit). |
 | Browsers other than Chromium | Browser tests run in Chrome only. Firefox / Safari are checked by hand before a release. |
-| Full accessibility audit | Only basic checks so far (one h1, no sideways scroll, labelled controls). A full WCAG review is Phase 10. |
+| Manual screen-reader testing | Automated axe scans and keyboard tests run on every push (see FINAL_REVIEW.md); a manual NVDA/VoiceOver pass is still to do. |
 | Emails / SMS | The app doesn't send any; notifications are in-app only. |
 
 ## 2. Test levels and tools
@@ -37,10 +37,11 @@
 | Level | What it proves | Tool | Where it runs |
 |---|---|---|---|
 | Unit | Pure rules with fixed inputs (time-slot windows, cut-off minutes) | JUnit 5 | `SlotRulesTest` |
-| API / integration | Each endpoint: status code, response body and the database effect (stock, orders, audit rows) | JUnit 5 + Spring MockMvc + AssertJ | `src/test/java/...` (160 tests) |
-| Database compatibility | The same 160 tests on a real PostgreSQL 16 server (production uses PostgreSQL on Neon). Tables come from the Flyway migration and Hibernate validates them, so a schema mistake fails every test | GitHub Actions service container | job "API tests (PostgreSQL)" |
+| API / integration | Each endpoint: status code, response body and the database effect (stock, orders, audit rows) | JUnit 5 + Spring MockMvc + AssertJ | `src/test/java/...` (164 tests) |
+| Database compatibility | The same 164 tests on a real PostgreSQL 16 server (production uses PostgreSQL on Neon). Tables come from the Flyway migration and Hibernate validates them, so a schema mistake fails every test | GitHub Actions service container | job "API tests (PostgreSQL)" |
 | Container | The Docker image Render runs: it builds, starts, answers, and runs as a non-root user | Docker | job "Docker image" |
-| End-to-end (browser) | Real app + real database + real Chrome: buyer, seller and admin journeys | Playwright 1.47 | `e2e/` (23 tests) |
+| End-to-end (browser) | Real app + real database + real Chrome: buyer, seller and admin journeys, keyboard-only use, XSS, security headers, phone widths | Playwright 1.47 | `e2e/` (27 tests) |
+| Accessibility | WCAG 2.1 A/AA rules on 26 page states; serious/critical findings fail the build | axe-core 4.10 | inside the browser tests |
 | Exploratory | Looking at every screenshot from the browser run; trying odd inputs by hand | Screenshots on the `ci-screenshots` branch | after each push |
 
 **Test data rules**
@@ -114,6 +115,7 @@ Each line of the QA brief is mapped to the automated tests that prove it. IDs ar
 | Unknown endpoint returns 404 | SMART-09, E2E-PAGE-14 |
 | Validation failures return client errors | ERR-01, ERR-07, ERR-08, CRIT-06, CRIT-09 |
 | Server errors don't leak sensitive information | ERR-09, ERR-08, ONB-12 |
+| Security headers, session handling, XSS (Phase 10 review) | HDR-01 … HDR-04, E2E-PAGE-16, E2E-PAGE-17 |
 | Database-level protection (PostgreSQL-compatible test configuration) | DB-01, DB-02, DB-03 |
 | **New features** | |
 | Ratings & reviews | REV-01 … REV-06, E2E-MARK-06, E2E-MARK-07 |
@@ -165,18 +167,26 @@ Real problems found while building and testing NammaBasket. Each fixed bug has a
 | DEF-04 | Writing the page checks | 10 pages had no `h1` main heading, so screen-reader users couldn't jump to the page title | Minor | P2 | Fixed | E2E-PAGE-01 … 14 |
 | DEF-05 | Browser test screenshots | After adding Saved and the bell, header links wrapped onto two lines at 1280 px | Trivial | P3 | Fixed (Budget moved to the footer, links don't wrap) | screenshot review |
 | DEF-06 | Browser test screenshots | Notification text was cut off in the bell panel (no-wrap rule from the header leaked into it) | Minor | P3 | Fixed | screenshot review |
-| DEF-07 | Browser test design | Seller "New" filter hides an order as soon as it is accepted, so the seller can't see it move along | Minor | P3 | Open (works as designed; "All" or "In progress" shows it). Suggest staying on the order after a step | — |
+| DEF-07 | Browser test design | Seller "New" filter hides an order as soon as it is accepted, so the seller can't see it move along | Minor | P3 | Fixed (Phase 10: the dashboard follows the order to "In progress") | — |
 | DEF-08 | Admin page check | The "reason" box for rejecting a shop showed before Reject was pressed | Trivial | P3 | Fixed | — |
 | DEF-09 | Test review | Invoice test expected 404 for another buyer, but the app answers 403 there, like the order page itself | — (test defect) | P3 | Test corrected; kept consistent with SEC-01 | INV-05 |
 | DEF-10 | Test isolation | A new test made a shop serving PIN 110001, which older tests use as "not served", so they failed depending on order | — (test defect) | P2 | Fixed (new shops use 403001) | CHK-01, CHK-02 |
 | DEF-11 | FreshCart (earlier) | Unknown pages returned 500 instead of 404 | Major | P1 | Fixed | SMART-09, E2E-PAGE-14 |
+| DEF-12 | Phase 10 security review | Stored XSS: page templates did not escape quotes, so a product or shop name containing `"` could add a script attribute on buyers' pages | Critical | P1 | Fixed (escapeHtml escapes quotes) | E2E-PAGE-17 |
+| DEF-13 | Phase 10 security review | Photo fallback built JavaScript from data (`onerror="…'${emoji}'"`) | Major | P1 | Fixed (value read from a data attribute) | E2E-PAGE-17 |
+| DEF-14 | Phase 10 security review | No browser security headers (CSP, frame protection, nosniff) when served from Render | Major | P1 | Fixed (SecurityHeadersFilter + Netlify/Vercel headers) | HDR-01, HDR-02, E2E-PAGE-16 |
+| DEF-15 | Phase 10 security review | Session id not renewed at sign-up (session fixation) | Major | P2 | Fixed | HDR-03 |
+| DEF-16 | Phase 10 security review | Random admin password printed in the logs for production databases | Major | P1 | Fixed (only for the local in-memory database) | code review |
+| DEF-17 | axe scan (browser tests) | Admin tab strip used role="tablist" without tabs (critical accessibility error) | Minor | P2 | Fixed (labelled button group with aria-pressed) | axe scan in E2E-MARK-07 |
+| DEF-18 | axe scan (browser tests) | Header "Admin" link counted as a link inside text on phones (serious accessibility error) | Minor | P3 | Fixed | axe scan in E2E-MARK-09 |
+| DEF-19 | Keyboard test | Escape closed the PIN-code box and bell but left keyboard focus inside the hidden box; "Skip to content" did not move focus | Minor | P3 | Fixed | E2E-PAGE-18 |
 
 ## 8. Risks and what is still missing
 
 | Item | Risk | Plan |
 |---|---|---|
-| Admin password is printed once in the log when `ADMIN_PASSWORD` is not set | Anyone who can read the logs can log in as admin | Phase 10: don't print it in production; the README says to set it |
-| Accessibility checked only at a basic level | Screen-reader and keyboard problems may remain | Phase 10: axe-core scan in the browser tests + keyboard walk-through |
+| No manual screen-reader pass | Some assistive-technology problems may remain | Manual NVDA/VoiceOver check before a public launch |
+| Spring Boot 3.3 gets no more free updates | Future vulnerabilities won't be patched | Upgrade to a supported line as a separate change (see FINAL_REVIEW.md) |
 | Browser tests run in Chrome only | Safari/Firefox layout differences | Manual check before release |
 | Slot times use India time (Asia/Kolkata) on the server | Shops outside India aren't supported | Out of scope for this project |
 
@@ -184,7 +194,7 @@ Real problems found while building and testing NammaBasket. Each fixed bug has a
 
 Generated from the test code by `python3 tools/testplan/inventory.py "<run>"`, so the list always matches what CI runs.
 
-_160 API tests (each run twice: on H2 and on PostgreSQL 16) and 23 browser tests. "Pass" = passed in CI run [#38407768068](https://github.com/suryaprasanth740/grocery-web-app/actions/runs/38407768068) (commit 0916ed4, 13 Oct 2026)._
+_164 API tests (each run twice: on H2 and on PostgreSQL 16) and 27 browser tests. "Pass" = passed in CI run [#38415846620](https://github.com/suryaprasanth740/grocery-web-app/actions/runs/38415846620) (commit b55d760, 13 Oct 2026)._
 
 #### Authentication & roles (`AuthRolesTest`, 11 tests)
 
@@ -441,7 +451,16 @@ _160 API tests (each run twice: on H2 and on PostgreSQL 16) and 23 browser tests
 | DB-02 | The database itself refuses negative stock and unknown order statuses, even if the Java checks were skipped | Pass |
 | DB-03 | Two accounts can't share one email: the database has a unique key, not only the Java check | Pass |
 
-#### Browser: `e2e/tests/marketplace.spec.js` (8 tests)
+#### Security headers and sessions (`SecurityHeadersTest`, 4 tests)
+
+| ID | What the test checks | Result |
+|---|---|---|
+| HDR-01 | Pages get a Content-Security-Policy that forbids framing, plus nosniff, DENY and a referrer policy | Pass |
+| HDR-02 | API answers (orders, invoices...) are never stored in caches; error answers get the headers too | Pass |
+| HDR-03 | Signing up gives the browser a NEW session id (an id planted before sign-up is useless: no session fixation) | Pass |
+| HDR-04 | Logging in also gives a new session id, and logging out ends the session | Pass |
+
+#### Browser: `e2e/tests/marketplace.spec.js` (9 tests)
 
 | ID | What the test checks | Result |
 |---|---|---|
@@ -453,8 +472,9 @@ _160 API tests (each run twice: on H2 and on PostgreSQL 16) and 23 browser tests
 | E2E-MARK-06 | Buyer sees the update in the bell, rates the product, and the shop page shows it | Pass |
 | E2E-MARK-07 | Admin hides the review; it leaves the product rating | Pass |
 | E2E-MARK-08 | Cart item can be saved for later from the cart page | Pass |
+| E2E-MARK-09 | Logged-in pages fit a phone screen (375 px) and pass the accessibility scan | Pass |
 
-#### Browser: `e2e/tests/pages.spec.js` (15 tests)
+#### Browser: `e2e/tests/pages.spec.js` (18 tests)
 
 | ID | What the test checks | Result |
 |---|---|---|
@@ -473,3 +493,6 @@ _160 API tests (each run twice: on H2 and on PostgreSQL 16) and 23 browser tests
 | E2E-PAGE-13 | /credits.html opens cleanly on desktop and phone | Pass |
 | E2E-PAGE-14 | /no-such-page.html opens cleanly on desktop and phone | Pass |
 | E2E-PAGE-15 | Photo credits list every bundled photo with its licence | Pass |
+| E2E-PAGE-16 | Security headers are sent with pages and API answers | Pass |
+| E2E-PAGE-17 | Hostile shop or product text is shown as text and never runs as code (XSS) | Pass |
+| E2E-PAGE-18 | Keyboard only: skip link, PIN code box and Escape all work without a mouse | Pass |
