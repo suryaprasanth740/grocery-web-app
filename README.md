@@ -8,8 +8,9 @@ shop from a dashboard.
 A portfolio project by [Surya Prasanth G](https://github.com/suryaprasanth740), built and tested the way a
 QA engineer would: **164 API tests run on both H2 and PostgreSQL, plus 27 browser tests with accessibility scans** on every push.
 
-**Live demo:** _not deployed yet: see [Deploying](#deploying)._ The earlier single-shop version, FreshCart,
-is on the `main` branch.
+**Live demo:** **[nammabasket.vercel.app](https://nammabasket.vercel.app)**. The pages are on Vercel and the API is on Render
+(free plan, so the first visit after a quiet spell can take up to a minute while it wakes up). The earlier single-shop
+version, FreshCart, is on the `main` branch.
 **Stack:** Java 17 · Spring Boot 3 · Spring Data JPA · PostgreSQL · Flyway · HTML/CSS/vanilla JavaScript ·
 JUnit 5 + MockMvc · Playwright · GitHub Actions · Docker
 
