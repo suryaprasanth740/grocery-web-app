@@ -1,0 +1,11 @@
+{
+  "name": "nammabasket-browser-tests",
+  "private": true,
+  "description": "Browser tests that click through the real running NammaBasket app (see README in this folder).",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.47.2"
+  }
+}

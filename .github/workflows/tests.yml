@@ -1,5 +1,10 @@
 # Builds the app and runs ALL automated tests on every push and pull request.
 # See the results in: GitHub repo -> Actions tab -> "Build and test".
+#
+# Three jobs run side by side:
+#   api-tests-h2        JUnit 5 + MockMvc API tests on the in-memory H2 database (what `mvn verify` uses locally)
+#   api-tests-postgres  The same tests on a real PostgreSQL 16 server, like production (Neon)
+#   browser-tests       Starts the real app on PostgreSQL and clicks through it in Chrome (Playwright, see e2e/)
 name: Build and test
 
 on:
@@ -8,7 +13,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  api-tests-h2:
+    name: API tests (H2)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -31,7 +37,7 @@ jobs:
         if: always()
         run: |
           totals=$(grep -E "^\[(INFO|WARNING|ERROR)\] Tests run:" build.log | tail -1 | sed 's/^\[[A-Z]*\] //')
-          echo "::notice title=Test totals::${totals:-no tests ran}"
+          echo "::notice title=Test totals (H2)::${totals:-no tests ran}"
 
       # If something fails, puts the compiler errors and failed tests into annotations,
       # so the reason is visible on the Summary page without downloading the log.
@@ -40,17 +46,167 @@ jobs:
         run: |
           {
             grep -E "\[ERROR\] .*\.java|COMPILATION ERROR|cannot find symbol|symbol:|location:" build.log | head -40
-            # Root causes (e.g. why the app could not start), most specific last
             grep -hE "^Caused by:" target/surefire-reports/*.txt build.log 2>/dev/null | sort | uniq -c | sort -rn | head -12
             grep -E "\[ERROR\] (Tests run|Failures|  [A-Za-z]+Test\.)" build.log | head -40
             grep -hE -A6 "<<< (FAILURE|ERROR)!" target/surefire-reports/*.txt 2>/dev/null | head -120
           } > failures.txt || true
           msg=$(sed 's/%/%25/g; s/\r//g' failures.txt | awk '{printf "%s%%0A", $0}')
-          echo "::error title=Build or test failures::${msg:-See build log}"
+          echo "::error title=Build or test failures (H2)::${msg:-See build log}"
 
       - name: Save test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-reports
+          name: test-reports-h2
           path: target/surefire-reports/
+
+  api-tests-postgres:
+    name: API tests (PostgreSQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: nammabasket
+          POSTGRES_USER: nammabasket
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U nammabasket"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DB_URL: jdbc:postgresql://localhost:5432/nammabasket
+      DB_USER: nammabasket
+      DB_PASSWORD: ci-only-password
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Run tests on PostgreSQL
+        run: |
+          set -o pipefail
+          mvn -B verify 2>&1 | tee build.log
+
+      - name: Test totals
+        if: always()
+        run: |
+          totals=$(grep -E "^\[(INFO|WARNING|ERROR)\] Tests run:" build.log | tail -1 | sed 's/^\[[A-Z]*\] //')
+          echo "::notice title=Test totals (PostgreSQL)::${totals:-no tests ran}"
+
+      - name: Explain failures
+        if: failure()
+        run: |
+          {
+            grep -E "\[ERROR\] .*\.java|COMPILATION ERROR|cannot find symbol" build.log | head -20
+            grep -hE "^Caused by:" target/surefire-reports/*.txt build.log 2>/dev/null | sort | uniq -c | sort -rn | head -12
+            grep -E "\[ERROR\] (Tests run|Failures|  [A-Za-z]+Test\.)" build.log | head -40
+            grep -hE -A6 "<<< (FAILURE|ERROR)!" target/surefire-reports/*.txt 2>/dev/null | head -120
+          } > failures.txt || true
+          msg=$(sed 's/%/%25/g; s/\r//g' failures.txt | awk '{printf "%s%%0A", $0}')
+          echo "::error title=Build or test failures (PostgreSQL)::${msg:-See build log}"
+
+      - name: Save test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-postgres
+          path: target/surefire-reports/
+
+  browser-tests:
+    name: Browser tests (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: nammabasket
+          POSTGRES_USER: nammabasket
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U nammabasket"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DB_URL: jdbc:postgresql://localhost:5432/nammabasket
+      DB_USER: nammabasket
+      DB_PASSWORD: ci-only-password
+      # Test-only accounts for this throw-away database
+      ADMIN_EMAIL: admin@nammabasket.test
+      ADMIN_PASSWORD: Admin@12345-ci
+      DEMO_SELLER_PASSWORD: Demo@12345-ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Build the app
+        run: mvn -B -q -DskipTests package
+
+      - name: Start the app
+        run: |
+          nohup java -jar target/*.jar > app.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8080/api/categories > /dev/null && { echo "App is up after ${i}x2 s"; exit 0; }
+            sleep 2
+          done
+          echo "::error title=App did not start::$(tail -40 app.log | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+          exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Playwright
+        working-directory: e2e
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Run browser tests
+        working-directory: e2e
+        run: |
+          mkdir -p screenshots
+          set -o pipefail
+          npx playwright test 2>&1 | tee e2e.log
+
+      - name: Test totals
+        if: always()
+        working-directory: e2e
+        run: |
+          totals=$(grep -E "^\s+[0-9]+ (passed|failed|flaky|skipped)" e2e.log | sed 's/^ *//' | paste -sd', ' -)
+          echo "::notice title=Browser tests::${totals:-no tests ran}"
+
+      - name: Explain failures
+        if: failure()
+        run: |
+          {
+            grep -E "✘|Error:|expect\(|Expected|Received|at .*spec\.js" e2e/e2e.log | head -80
+            echo "---- app log (errors) ----"
+            grep -E "ERROR|Exception" app.log | head -20
+          } > failures.txt || true
+          msg=$(sed 's/%/%25/g; s/\r//g' failures.txt | awk '{printf "%s%%0A", $0}')
+          echo "::error title=Browser test failures::${msg:-See the log}"
+
+      - name: Save screenshots and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-test-results
+          path: |
+            e2e/screenshots/
+            e2e/report/
+            e2e/test-results/
+            app.log

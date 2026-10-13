@@ -184,6 +184,28 @@ const API = {
   updateMyShop(payload) { return this.put('/api/seller/shop', payload); },
   resubmitMyShop() { return this.post('/api/seller/shop/resubmit'); },
   setAcceptingOrders(acceptingOrders) { return this.put('/api/seller/shop/accepting', { acceptingOrders }); },
+
+  // ---------- Reviews, saved for later, notifications, slots, invoices ----------
+  productReviews(id) { return this.get(`/api/products/${id}/reviews`); },
+  shopReviews(id) { return this.get(`/api/shops/${id}/reviews`); },
+  review(productId, rating, comment) { return this.post(`/api/products/${productId}/reviews`, { rating, comment }); },
+  myReviews() { return this.get('/api/reviews/mine'); },
+  adminReviews() { return this.get('/api/admin/reviews'); },
+  adminHideReview(id, reason) { return this.put(`/api/admin/reviews/${id}/hide`, { reason }); },
+  adminShowReview(id) { return this.put(`/api/admin/reviews/${id}/show`); },
+  saved() { return this.get('/api/saved'); },
+  save(productId) { return this.post(`/api/saved/${productId}`); },
+  unsave(productId) { return this.del(`/api/saved/${productId}`); },
+  savedToCart(productId) { return this.post(`/api/saved/${productId}/move-to-cart`); },
+  cartToSaved(productId) { return this.post(`/api/cart/save-for-later/${productId}`); },
+  notifications() { return this.get('/api/notifications'); },
+  readNotification(id) { return this.post(`/api/notifications/${id}/read`); },
+  readAllNotifications() { return this.post('/api/notifications/read-all'); },
+  shopSlots(shopId) { return this.get(`/api/shops/${shopId}/slots`); },
+  invoice(orderId, as) {
+    const base = as === 'seller' ? '/api/seller/orders/' : as === 'admin' ? '/api/admin/orders/' : '/api/orders/';
+    return this.get(base + orderId + '/invoice');
+  },
 };
 
 function formatRupees(amount) {

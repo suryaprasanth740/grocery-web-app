@@ -14,7 +14,7 @@
 <main id="main">
   <div class="wrap">
     <div class="section-heading" style="margin-top:34px;">
-      <h2>Your cart</h2>
+      <h1>Your cart</h1>
     </div>
     <div id="cart-root">
       <div class="skeleton" style="height:90px;margin-bottom:12px;"></div>
@@ -186,6 +186,7 @@ function cartItemHtml(item) {
           ${item.priceChanged ? `<span class="price-changed">was ${formatRupees(item.priceWhenAdded)}</span>` : ''}
         </div>
         ${expiryTagHtml(p)}
+        <button type="button" class="linklike small save-later" aria-label="Save ${escapeHtml(p.name)} for later">Save for later</button>
       </div>
       <div class="qty-control">
         <button class="qty-minus" aria-label="Decrease quantity">&minus;</button>
@@ -223,6 +224,18 @@ function attachCartHandlers() {
     row.querySelector('.remove').addEventListener('click', async () => {
       busy(true);
       await removeItem(productId);
+    });
+    row.querySelector('.save-later').addEventListener('click', async () => {
+      busy(true);
+      try {
+        await API.cartToSaved(productId);
+        await loadCart();
+        refreshCartCount();
+        showToast('Saved for later. Find it under Saved.');
+      } catch (e) {
+        showToast(e.message);
+        busy(false);
+      }
     });
   });
 }

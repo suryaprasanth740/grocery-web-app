@@ -14,7 +14,7 @@
 <main id="main">
   <div class="wrap" style="max-width:720px;">
     <div class="section-heading" style="margin-top:34px;">
-      <h2>My orders</h2>
+      <h1>My orders</h1>
     </div>
     <div id="orders-root">
       <div class="skeleton" style="height:120px;margin-bottom:12px;"></div>
@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="top-row">
           <div>
             <div class="order-id">Order #${o.id}${o.shopName ? ` from ${escapeHtml(o.shopName)}` : ''}</div>
-            <div class="date">${formatDateTime(o.createdAt)}${o.fulfilment === 'PICKUP' ? ', pickup' : ''}</div>
+            <div class="date">${formatDateTime(o.createdAt)}${o.fulfilment === 'PICKUP' ? ', pickup' : ''}${o.slotDate ? ' · slot ' + escapeHtml(slotText(o)) : ''}</div>
           </div>
           ${statusBadgeHtml(o.status)}
         </div>

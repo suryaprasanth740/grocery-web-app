@@ -59,11 +59,15 @@ async function loadOrder(flash) {
   if (order.ordersInCheckout > 1) {
     try { siblings = (await API.orders()).filter(o => o.checkoutId === order.checkoutId && o.id !== order.id); } catch (e) { /* optional */ }
   }
-  root.innerHTML = orderHtml(order, flash, siblings);
+  let myReviews = [];
+  if (order.status === 'DELIVERED') {
+    try { myReviews = await API.myReviews(); } catch (e) { /* the form still works */ }
+  }
+  root.innerHTML = orderHtml(order, flash, siblings, myReviews);
   wireActions(order);
 }
 
-function orderHtml(order, flash, siblings) {
+function orderHtml(order, flash, siblings, myReviews) {
   const pending = order.status === 'PAYMENT_PENDING';
   const deliveredRecently = order.status === 'DELIVERED' && order.deliveredAt
     && (Date.now() - serverDate(order.deliveredAt).getTime()) < ISSUE_WINDOW_HOURS * 3600 * 1000;
@@ -74,9 +78,9 @@ function orderHtml(order, flash, siblings) {
     ${JUST_PLACED && order.status === 'PLACED' && !flash ? `
       <div class="confirm-banner">
         <div class="stamp-big">&#9989;</div>
-        <h2 style="color:#fff;">Order placed!</h2>
+        <h1 style="color:#fff;">Order placed!</h1>
         <p style="opacity:0.85;">${siblings.length ? `Your basket became ${siblings.length + 1} orders, one per shop.` : `Order #${order.id} is with ${escapeHtml(order.shopName || 'the shop')}.`} Thanks for shopping with NammaBasket.</p>
-      </div>` : `<div class="section-heading" style="margin-top:34px;"><h2>Order #${order.id}</h2></div>`}
+      </div>` : `<div class="section-heading" style="margin-top:34px;"><h1>Order #${order.id}</h1></div>`}
 
     ${flash ? `<div class="alert alert-success">${escapeHtml(flash)}</div>` : ''}
     ${order.statusNote ? `<div class="notice ${order.status === 'PAYMENT_FAILED' || order.status === 'CANCELLED' ? 'warn' : 'info'}">${escapeHtml(order.statusNote)}</div>` : ''}
@@ -97,6 +101,7 @@ function orderHtml(order, flash, siblings) {
         ${pickup
           ? `<div><strong>Pick up from:</strong> ${escapeHtml(order.shopAddress || '')}${order.shopPhone ? `, phone ${escapeHtml(order.shopPhone)}` : ''}</div>`
           : `<div><strong>Delivering to:</strong> ${escapeHtml(order.shippingAddress || '')}${order.pincode ? ', ' + escapeHtml(order.pincode) : ''}</div>`}
+        ${order.slotDate ? `<div><strong>${pickup ? 'Pickup' : 'Delivery'} slot:</strong> ${escapeHtml(slotText(order))}</div>` : ''}
         <div><strong>Payment:</strong> ${escapeHtml(order.paymentMethod)}, ${escapeHtml(PAYMENT_LABELS[order.paymentStatus] || order.paymentStatus)}</div>
         <div><strong>If an item is unavailable:</strong> ${escapeHtml(SUBSTITUTION_LABELS[order.substitutionPreference] || '-')}</div>
       </div>
@@ -123,11 +128,14 @@ function orderHtml(order, flash, siblings) {
         <div class="bill-note">Refunds go back to your original payment method in 3-5 working days.</div>
       </div>` : ''}
 
+    ${order.status === 'DELIVERED' ? reviewFormHtml(order, myReviews || []) : ''}
+
     ${deliveredRecently ? issueFormHtml(order) : ''}
 
     <div id="action-error"></div>
     <div class="action-row">
       ${canCancel ? `<button class="btn btn-outline danger" id="cancel-btn">Cancel order</button>` : ''}
+      ${order.status === 'DELIVERED' ? `<a class="btn btn-outline" href="/invoice.html?id=${order.id}">${'View invoice'}</a>` : ''}
       ${['DELIVERED', 'CANCELLED', 'PAYMENT_FAILED'].includes(order.status) ? `<button class="btn btn-outline" id="reorder-btn">Order again</button>` : ''}
       <a href="/orders.html" class="btn btn-outline">Back to my orders</a>
       <a href="/products.html" class="btn btn-primary">Continue shopping</a>
@@ -198,6 +206,34 @@ function issueFormHtml(order) {
     </form>`;
 }
 
+/** One row per product: stars + optional comment. Sending again updates the earlier review. */
+function reviewFormHtml(order, myReviews) {
+  const mine = {};
+  myReviews.forEach(r => { mine[r.productId] = r; });
+  const seen = new Set();
+  const items = order.items.filter(it => it.productId && !seen.has(it.productId) && seen.add(it.productId));
+  if (!items.length) return '';
+  return `
+    <div class="order-card" id="reviews-card">
+      <h3 style="font-size:1rem;margin-bottom:4px;">Rate your items</h3>
+      <p class="bill-note" style="margin-bottom:10px;">Your first name and stars are shown to other buyers as a verified purchase.</p>
+      ${items.map(it => {
+        const r = mine[it.productId];
+        return `<form class="review-row" data-product="${it.productId}">
+          <div class="review-row-head"><b>${escapeHtml(it.productName)}</b>
+            ${r ? `<span class="muted small">${r.hidden ? 'Hidden by NammaBasket' : 'You rated it ' + r.rating + '/5'}</span>` : ''}</div>
+          ${starInputHtml('stars-' + it.productId, r ? r.rating : 0, 'Stars for ' + it.productName)}
+          <div class="inline-row">
+            <input type="text" maxlength="500" placeholder="What was good or bad? (optional)" aria-label="Comment on ${escapeHtml(it.productName)}"
+              value="${r && r.comment ? escapeHtml(r.comment) : ''}">
+            <button type="submit" class="btn btn-outline btn-sm">${r ? 'Update' : 'Send'}</button>
+          </div>
+          <div class="field-msg" aria-live="polite"></div>
+        </form>`;
+      }).join('')}
+    </div>`;
+}
+
 function showActionError(message) {
   document.getElementById('action-error').innerHTML = `<div class="alert alert-error">${escapeHtml(message)}</div>`;
 }
@@ -256,6 +292,26 @@ function wireActions(order) {
       }
     });
   }
+
+  document.querySelectorAll('form.review-row').forEach(f => f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = f.querySelector('.field-msg');
+    const picked = f.querySelector('input[type="radio"]:checked');
+    if (!picked) { msg.className = 'field-msg error'; msg.textContent = 'Choose 1 to 5 stars first.'; return; }
+    const btn = f.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    try {
+      await API.review(Number(f.dataset.product), Number(picked.value), f.querySelector('input[type="text"]').value.trim() || null);
+      msg.className = 'field-msg ok';
+      msg.textContent = 'Thanks! Your review is saved.';
+      btn.textContent = 'Update';
+    } catch (err) {
+      msg.className = 'field-msg error';
+      msg.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }));
 
   const form = document.getElementById('issue-form');
   if (form) {

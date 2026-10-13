@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice | NammaBasket</title>
+<link rel="icon" href="/img/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="invoice-page">
+
+<header class="signboard" id="site-header"></header>
+
+<main id="main">
+  <div class="wrap" style="max-width:860px;">
+    <div class="action-row no-print" style="margin:28px 0 14px;">
+      <a class="btn btn-outline" id="back-link" href="/orders.html">Back</a>
+      <button class="btn btn-primary" id="print-btn" type="button" disabled>Print or save as PDF</button>
+    </div>
+    <article class="invoice" id="invoice-root" aria-live="polite">
+      <div class="skeleton" style="height:320px;"></div>
+    </article>
+  </div>
+</main>
+
+<footer class="site-footer no-print" id="site-footer"></footer>
+
+<div id="toast"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/shop.js"></script>
+<script>
+const params = new URLSearchParams(window.location.search);
+const ORDER_ID = params.get('id');
+const AS = params.get('as'); // null = buyer, 'seller' or 'admin'
+
+const money = (v) => formatRupees(v);
+const PAY = { UPI: 'UPI', COD: 'Cash' };
+
+function invoiceHtml(inv) {
+  const s = inv.seller, b = inv.buyer, t = inv.totals;
+  return `
+    <header class="inv-head">
+      <div>
+        <div class="inv-brand">${escapeHtml(s.name)}</div>
+        <div class="muted small">${[s.address, s.pincode].filter(Boolean).map(escapeHtml).join(', ')}</div>
+        ${s.phone ? `<div class="muted small">Phone ${escapeHtml(s.phone)}</div>` : ''}
+        ${s.gstin ? `<div class="small"><b>GSTIN</b> ${escapeHtml(s.gstin)}</div>` : ''}
+      </div>
+      <div class="inv-title">
+        <h1>${escapeHtml(inv.title)}</h1>
+        <dl>
+          <dt>Invoice no.</dt><dd>${escapeHtml(inv.invoiceNumber)}</dd>
+          <dt>Invoice date</dt><dd>${formatDate(inv.invoiceDate)}</dd>
+          <dt>Order</dt><dd>#${inv.orderId}, ${formatDate(inv.orderDate)}</dd>
+        </dl>
+      </div>
+    </header>
+
+    <section class="inv-parties">
+      <div>
+        <h2>Billed to</h2>
+        <div><b>${escapeHtml(b.name)}</b></div>
+        <div class="muted small">${inv.fulfilment === 'PICKUP' ? 'Collected from the shop' : [b.address, b.pincode].filter(Boolean).map(escapeHtml).join(', ')}</div>
+      </div>
+      <div>
+        <h2>Payment</h2>
+        <div>${PAY[inv.paymentMethod] || escapeHtml(inv.paymentMethod)}, ${escapeHtml((PAYMENT_LABELS[inv.paymentStatus] || inv.paymentStatus).toLowerCase())}</div>
+        <div class="muted small">Place of supply: Karnataka (29)</div>
+      </div>
+    </section>
+
+    <div class="table-scroll">
+      <table class="inv-table">
+        <caption class="sr-only">Items</caption>
+        <thead><tr>
+          <th scope="col">Item</th><th scope="col" class="num">Qty</th><th scope="col" class="num">Rate</th>
+          <th scope="col" class="num">Discount</th><th scope="col" class="num">Taxable value</th>
+          <th scope="col" class="num">GST</th><th scope="col" class="num">Amount</th>
+        </tr></thead>
+        <tbody>
+          ${inv.lines.map(l => `<tr>
+            <td>${escapeHtml(l.name)}</td>
+            <td class="num">${l.quantity}</td>
+            <td class="num">${money(l.unitPrice)}</td>
+            <td class="num">${Number(l.discount) ? '− ' + money(l.discount) : '–'}</td>
+            <td class="num">${money(l.taxableValue)}</td>
+            <td class="num">${money(l.gst)} <span class="muted small">(${l.gstPercent}%)</span></td>
+            <td class="num">${money(Number(l.amount) - Number(l.discount))}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="inv-bottom">
+      <div class="table-scroll">
+        <table class="inv-table inv-gst">
+          <caption>GST summary</caption>
+          <thead><tr><th scope="col">Rate</th><th scope="col" class="num">Taxable value</th><th scope="col" class="num">CGST</th><th scope="col" class="num">SGST</th></tr></thead>
+          <tbody>
+            ${inv.gstByRate.map(r => `<tr><td>${r.gstPercent}%</td><td class="num">${money(r.taxableValue)}</td>
+              <td class="num">${money(r.cgst)}</td><td class="num">${money(r.sgst)}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <dl class="inv-totals">
+        <dt>Items total</dt><dd>${money(t.itemsTotal)}</dd>
+        ${Number(t.discount) ? `<dt>Coupon discount</dt><dd>− ${money(t.discount)}</dd>` : ''}
+        <dt>Delivery fee</dt><dd>${Number(t.deliveryFee) ? money(t.deliveryFee) : 'Free'}</dd>
+        <dt class="muted">GST included (CGST ${money(t.cgst)} + SGST ${money(t.sgst)})</dt><dd class="muted">${money(t.gstIncluded)}</dd>
+        <dt class="grand">Total paid</dt><dd class="grand">${money(t.grandTotal)}</dd>
+      </dl>
+    </div>
+
+    <p class="inv-note">${escapeHtml(inv.note)}</p>`;
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const root = document.getElementById('invoice-root');
+  const back = document.getElementById('back-link');
+  back.href = AS === 'seller' ? '/seller.html#orders' : AS === 'admin' ? '/admin.html' : `/order.html?id=${encodeURIComponent(ORDER_ID || '')}`;
+  if (!ORDER_ID) { root.innerHTML = '<p>No order given.</p>'; return; }
+  try {
+    const inv = await API.invoice(encodeURIComponent(ORDER_ID), AS);
+    document.title = `${inv.title} ${inv.invoiceNumber} | NammaBasket`;
+    root.innerHTML = invoiceHtml(inv);
+    const print = document.getElementById('print-btn');
+    print.disabled = false;
+    print.addEventListener('click', () => window.print());
+  } catch (e) {
+    if (e.status === 401) { goToLogin(); return; }
+    root.innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`;
+  }
+});
+</script>
+</body>
+</html>

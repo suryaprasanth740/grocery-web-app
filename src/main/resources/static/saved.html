@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saved for later | NammaBasket</title>
+<link rel="icon" href="/img/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="signboard" id="site-header"></header>
+
+<main id="main">
+  <div class="wrap" style="max-width:820px;">
+    <div class="section-heading" style="margin-top:34px;">
+      <h1>Saved for later</h1>
+      <span class="note" id="saved-note"></span>
+    </div>
+    <div id="saved-root">
+      <div class="skeleton" style="height:96px;margin-bottom:12px;"></div>
+      <div class="skeleton" style="height:96px;"></div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<div id="toast"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/shop.js"></script>
+<script>
+const root = document.getElementById('saved-root');
+
+function render(list) {
+  document.getElementById('saved-note').textContent = list.length ? `${list.length} item${list.length === 1 ? '' : 's'}` : '';
+  if (list.length === 0) {
+    root.innerHTML = `
+      <div class="empty-state">
+        <div class="big-emoji">&#129293;</div>
+        <h3>Nothing saved yet</h3>
+        <p>Tap the heart on any product, or "Save for later" in your cart, to keep it here.</p>
+        <a href="/products.html" class="btn btn-primary mt-40">Browse groceries</a>
+      </div>`;
+    return;
+  }
+  root.innerHTML = `<ul class="saved-list">${list.map((s) => {
+    const p = s.product;
+    return `<li class="saved-item">
+      ${thumbHtml(p)}
+      <div class="saved-info">
+        <h3>${escapeHtml(p.name)}</h3>
+        <div class="muted small">${escapeHtml(p.unit || '')}${p.shopName ? ' · ' + escapeHtml(p.shopName) : ''}</div>
+        <div class="price">${formatRupees(p.price)}</div>
+        ${s.available ? '' : `<div class="field-msg error">${escapeHtml(s.reason)}</div>`}
+      </div>
+      <div class="saved-actions">
+        <button class="btn btn-primary btn-sm" data-move="${p.id}" ${s.available ? '' : 'disabled'}
+          aria-label="Move ${escapeHtml(p.name)} to cart">Move to cart</button>
+        <button class="btn btn-outline btn-sm" data-remove="${p.id}" aria-label="Remove ${escapeHtml(p.name)} from saved">Remove</button>
+      </div>
+    </li>`;
+  }).join('')}</ul>`;
+}
+
+root.addEventListener('click', async (e) => {
+  const move = e.target.closest('[data-move]');
+  const remove = e.target.closest('[data-remove]');
+  if (!move && !remove) return;
+  const btn = move || remove;
+  btn.disabled = true;
+  try {
+    if (move) {
+      const both = await API.savedToCart(Number(move.dataset.move));
+      render(both.saved);
+      refreshCartCount();
+      showToast('Moved to your cart');
+    } else {
+      render(await API.unsave(Number(remove.dataset.remove)));
+      showToast('Removed');
+    }
+  } catch (err) {
+    showToast(err.message);
+    btn.disabled = false;
+  }
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const me = await API.me();
+    if (me.role !== 'BUYER') {
+      root.innerHTML = '<p>Only shopper accounts have a saved list.</p>';
+      return;
+    }
+  } catch (e) {
+    window.location.href = '/login.html?next=/saved.html';
+    return;
+  }
+  try {
+    render(await API.saved());
+  } catch (e) {
+    root.innerHTML = `<p class="field-msg error">Could not load your saved items. ${escapeHtml(e.message)}</p>`;
+  }
+});
+</script>
+</body>
+</html>

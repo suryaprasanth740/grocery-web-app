@@ -53,6 +53,16 @@ function shopFieldsHtml(shop) {
       <div class="field"><label for="f-minOrderAmount">Minimum order (&#8377;)</label>
         <input id="f-minOrderAmount" name="minOrderAmount" type="number" min="0" max="5000" step="1" required value="${v('minOrderAmount', '0')}"></div>
     </div>
+    <div class="form-2">
+      <div class="field"><label for="f-gstin">GSTIN <span class="muted">(optional, printed on invoices)</span></label>
+        <input id="f-gstin" name="gstin" maxlength="15" autocapitalize="characters" spellcheck="false" value="${v('gstin')}" placeholder="29ABCDE1234F1Z5"></div>
+      <div class="field"><label for="f-slotCapacity">Time slots</label>
+        <label class="choice"><input type="checkbox" name="slotsEnabled" ${checked('slotsEnabled', false)}> Buyers can choose a 2-hour slot (today or tomorrow)</label>
+        <div class="inline-row" style="align-items:center;margin-top:6px;">
+          <input id="f-slotCapacity" name="slotCapacity" type="number" min="1" max="50" step="1" value="${v('slotCapacity', '10')}" style="max-width:90px;">
+          <span class="muted small">orders per slot at most</span>
+        </div></div>
+    </div>
     ${shop ? `
     <div class="form-2">
       <div class="field"><label for="f-logo">Shop photo or logo <span class="muted">(optional)</span></label>
@@ -150,6 +160,9 @@ function readShopFields(form) {
     deliveryFee: num('deliveryFee'),
     freeDeliveryAbove: num('freeDeliveryAbove'),
     minOrderAmount: num('minOrderAmount'),
+    gstin: form.elements.gstin ? val('gstin').toUpperCase() : null,
+    slotsEnabled: form.elements.slotsEnabled ? form.elements.slotsEnabled.checked : false,
+    slotCapacity: form.elements.slotCapacity && val('slotCapacity') !== '' ? num('slotCapacity') : null,
     logoUrl: form.elements.logoUrl ? (form.elements.logoUrl.value || null) : null,
     latitude: form.elements.latitude && form.elements.latitude.value !== '' ? Number(form.elements.latitude.value) : null,
     longitude: form.elements.longitude && form.elements.longitude.value !== '' ? Number(form.elements.longitude.value) : null,
@@ -166,5 +179,7 @@ function checkShopFields(d) {
   if (!d.offersDelivery && !d.offersPickup) return 'Choose delivery, pickup, or both.';
   if (d.deliveryFee == null) return 'Enter a delivery fee (0 if delivery is free).';
   if (d.minOrderAmount == null) return 'Enter a minimum order (0 for no minimum).';
+  if (d.gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(d.gstin)) return 'GSTIN must look like 29ABCDE1234F1Z5 (15 characters), or be left empty.';
+  if (d.slotsEnabled && !(d.slotCapacity >= 1 && d.slotCapacity <= 50)) return 'Orders per slot must be between 1 and 50.';
   return '';
 }

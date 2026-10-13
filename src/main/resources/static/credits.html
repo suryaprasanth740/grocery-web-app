@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photo credits | NammaBasket</title>
+<meta name="description" content="Who took the product photos used in the NammaBasket demo, and their licences.">
+<link rel="icon" href="/img/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="signboard" id="site-header"></header>
+
+<main id="main">
+  <div class="wrap">
+    <article class="prose" style="max-width:none;">
+      <h1>Photo credits</h1>
+      <p>The demo product photos come from <a href="https://commons.wikimedia.org/">Wikimedia Commons</a> and are used under the licence shown
+        for each one. Every photo was cropped to a square and made smaller for this site; no other changes were made.
+        Photos that sellers upload for their own shops are theirs and are not listed here.</p>
+    </article>
+    <ul class="credit-grid" id="credits"><li class="skeleton" style="height:90px;"></li></ul>
+  </div>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/shop.js"></script>
+<script>
+(async () => {
+  const box = document.getElementById('credits');
+  try {
+    const res = await fetch('/img/products/credits.json');
+    const data = await res.json();
+    const link = (url, text) => url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(text)}</a>` : escapeHtml(text);
+    box.innerHTML = Object.entries(data)
+      .sort((a, b) => a[1].product.localeCompare(b[1].product))
+      .map(([slug, c]) => `<li class="credit">
+        <img src="/img/products/${encodeURIComponent(slug)}.jpg" alt="" loading="lazy" width="72" height="72">
+        <div>
+          <b>${escapeHtml(c.product)}</b>
+          <div class="small">${link(c.source, c.title)}</div>
+          <div class="small muted">By ${escapeHtml(c.author)}, ${link(c.licenceUrl, c.licence)}</div>
+        </div>
+      </li>`).join('');
+  } catch (e) {
+    box.innerHTML = '<li>Could not load the credits list.</li>';
+  }
+})();
+</script>
+</body>
+</html>

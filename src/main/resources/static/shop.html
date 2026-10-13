@@ -39,6 +39,7 @@
       <div class="skeleton" style="height:220px;"></div>
       <div class="skeleton" style="height:220px;"></div>
     </div>
+    <section class="shop-reviews" id="shop-reviews" hidden aria-label="Buyer reviews"></section>
   </div>
 </main>
 
@@ -62,6 +63,7 @@ let activeCat = null;
     renderChips();
     renderProducts();
     wireReport(data.shop);
+    loadShopReviews(data.shop);
   } catch (e) {
     document.getElementById('shop-head').innerHTML = `<div><h1>Shop not found</h1><p class="muted">This shop isn&rsquo;t on NammaBasket right now. <a href="/shops.html" style="text-decoration:underline;">See other shops</a></p></div>`;
     document.getElementById('shop-products').innerHTML = '';
@@ -77,6 +79,7 @@ function renderHead(s) {
     <div class="shop-logo">${s.logoUrl ? `<img src="${escapeHtml(s.logoUrl)}" alt="">` : '&#127978;'}</div>
     <div style="flex:1;min-width:240px;">
       <h1>${escapeHtml(s.name)}</h1>
+      ${s.ratingCount > 0 ? `<a class="stars-line" href="#shop-reviews">${starsHtml(s.ratingAverage)} <b>${s.ratingAverage}</b> <span class="muted">from ${s.ratingCount} review${s.ratingCount === 1 ? '' : 's'}</span></a>` : ''}
       <div class="muted">${escapeHtml(s.categoryLabel)}, ${escapeHtml(s.addressLine)}${s.distanceKm != null ? `, ${s.distanceKm} km away` : ''}</div>
       <div class="shop-card-facts">
         <span class="${s.acceptingOrders && s.openNow ? 'open' : 'closed'}">${!s.acceptingOrders ? 'Not taking orders right now' : s.openNow ? `Open now, until ${s.closeTime}` : `Closed, opens at ${s.openTime}`}</span>
@@ -112,6 +115,18 @@ function renderProducts() {
   attachAddToCartHandlers(grid);
 }
 document.getElementById('in-shop').addEventListener('input', renderProducts);
+
+async function loadShopReviews(shop) {
+  const box = document.getElementById('shop-reviews');
+  if (!shop.ratingCount) return;
+  try {
+    const r = await API.shopReviews(shop.id);
+    box.hidden = false;
+    box.innerHTML = `<div class="section-heading"><h2>What buyers say</h2>
+        <span class="note">${starsHtml(r.ratingAverage)} ${r.ratingAverage} out of 5, ${r.ratingCount} review${r.ratingCount === 1 ? '' : 's'}</span></div>
+      <ul class="review-list review-grid">${r.reviews.map(rv => reviewItemHtml({ ...rv, showProduct: true })).join('')}</ul>`;
+  } catch (e) { /* reviews are optional on this page */ }
+}
 
 async function wireReport(shop) {
   const box = document.getElementById('report-box');

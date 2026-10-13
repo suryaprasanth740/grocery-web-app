@@ -14,7 +14,7 @@
 <main id="main">
   <div class="wrap">
     <div class="section-heading" style="margin-top:34px;">
-      <h2>Admin panel</h2>
+      <h1>Admin panel</h1>
     </div>
     <div class="tabs" role="tablist">
       <button class="tab active" data-tab="applications">Shop applications <span id="pending-count"></span></button>
@@ -23,6 +23,7 @@
       <button class="tab" data-tab="orders">Orders</button>
       <button class="tab" data-tab="products">Products</button>
       <button class="tab" data-tab="reports">Buyer reports <span id="report-count"></span></button>
+      <button class="tab" data-tab="reviews">Reviews</button>
       <button class="tab" data-tab="issues">Missing items</button>
       <button class="tab" data-tab="categories">Categories</button>
       <button class="tab" data-tab="coupons">Promotions</button>
@@ -89,6 +90,7 @@ async function render() {
     if (activeTab === 'orders') await renderOrders(root);
     if (activeTab === 'products') await renderProducts(root);
     if (activeTab === 'issues') await renderIssues(root);
+    if (activeTab === 'reviews') await renderReviews(root);
     if (activeTab === 'coupons') await renderCoupons(root);
   } catch (e) {
     root.innerHTML = '';
@@ -275,7 +277,7 @@ async function renderOrders(root) {
         <td>${formatRupees(o.totalAmount)}${Number(o.discount) > 0 ? `<div class="muted small">${escapeHtml(o.couponCode)} &minus;${formatRupees(o.discount)}</div>` : ''}</td>
         <td>${escapeHtml(o.paymentMethod)}<div class="muted small">${escapeHtml(PAYMENT_LABELS[o.paymentStatus] || o.paymentStatus)}</div></td>
         <td class="small">${escapeHtml(SUBSTITUTION_LABELS[o.substitutionPreference] || '-')}</td>
-        <td>${statusBadgeHtml(o.status)}</td>
+        <td>${statusBadgeHtml(o.status)}${o.slotDate ? `<div class="muted small">Slot ${escapeHtml(slotText(o))}</div>` : ''}${o.status === 'DELIVERED' ? `<div><a class="small" style="text-decoration:underline;" href="/invoice.html?id=${o.id}&as=admin">Invoice</a></div>` : ''}</td>
         <td class="actions">${nextStepsFor(o).map(s => `
           <button class="btn btn-sm ${s === 'CANCELLED' ? 'btn-outline danger' : 'btn-primary'}" data-order="${o.id}" data-status="${s}">
             ${s === 'CANCELLED' ? 'Cancel' : 'Mark ' + escapeHtml(STATUS_LABELS[s][0].toLowerCase())}</button>`).join('') || '<span class="muted small">&mdash;</span>'}
@@ -506,6 +508,42 @@ async function renderReports(root, status) {
       showToast('Report closed', 'ok');
       await Promise.all([renderReports(root, status), renderStats()]);
     } catch (err) { showError(err.message); btn.disabled = false; }
+  }));
+}
+
+// ---------------- Reviews (moderation) ----------------
+async function renderReviews(root) {
+  const reviews = await API.adminReviews();
+  if (!reviews.length) {
+    root.innerHTML = '<div class="empty-state"><h3>No reviews yet</h3><p>Buyers can review products after an order is delivered.</p></div>';
+    return;
+  }
+  root.innerHTML = `<p class="muted small">Latest 100 reviews. Hiding one removes it from the product and shop averages; the buyer sees it was hidden.</p>
+    <div class="table-wrap"><table class="admin-table">
+    <thead><tr><th>Product</th><th>Stars</th><th>Comment</th><th>By</th><th>Date</th><th>Visible</th><th>Action</th></tr></thead>
+    <tbody>${reviews.map(r => `<tr>
+      <td>${escapeHtml(r.productName)}<div class="muted small">${escapeHtml(r.shopName)}</div></td>
+      <td>${r.rating}/5</td>
+      <td style="max-width:320px;">${r.comment ? escapeHtml(r.comment) : '<span class="muted">&mdash;</span>'}</td>
+      <td>${escapeHtml(r.buyerName)}</td>
+      <td class="small">${formatDateTime(r.createdAt)}</td>
+      <td>${r.hidden ? `<span class="status-pill SUSPENDED" style="margin:0;">hidden</span><div class="muted small">${escapeHtml(r.hiddenReason || '')}</div>` : 'Yes'}</td>
+      <td class="actions">${r.hidden
+        ? `<button class="btn btn-sm btn-outline" data-show-review="${r.id}">Show again</button>`
+        : `<form class="inline-row" data-hide-review="${r.id}"><input name="reason" maxlength="300" required placeholder="Reason" aria-label="Reason for hiding" style="min-width:120px;">
+            <button class="btn btn-sm btn-outline danger" type="submit">Hide</button></form>`}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+  root.querySelectorAll('[data-show-review]').forEach(b => b.addEventListener('click', async () => {
+    b.disabled = true;
+    try { await API.adminShowReview(Number(b.dataset.showReview)); showToast('Review visible again', 'ok'); await renderReviews(root); }
+    catch (e) { showError(e.message); b.disabled = false; }
+  }));
+  root.querySelectorAll('[data-hide-review]').forEach(f => f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const reason = f.elements.reason.value.trim();
+    if (!reason) { showError('Give a reason for hiding the review.'); return; }
+    try { await API.adminHideReview(Number(f.dataset.hideReview), reason); showToast('Review hidden', 'ok'); await renderReviews(root); }
+    catch (err) { showError(err.message); }
   }));
 }
 

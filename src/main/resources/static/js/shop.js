@@ -21,11 +21,13 @@ function productCardHtml(p) {
         ${off > 0 ? `<span class="off-tag">${off}% off</span>` : ''}
         ${p.imageUrl ? `<img src="${escapeHtml(p.imageUrl)}" alt="${escapeHtml(p.name)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` : ''}
         <span class="photo-emoji" style="${p.imageUrl ? 'display:none;' : ''}">${p.imageEmoji || '\u{1F6D2}'}</span>
+        ${saveButtonHtml(p)}
       </div>
       <div class="body">
         ${p.brand ? `<div class="brand">${escapeHtml(p.brand)}</div>` : ''}
         <h3>${escapeHtml(p.name)}</h3>
         <div class="unit">${escapeHtml(p.unit || '')}</div>
+        ${ratingButtonHtml(p)}
         ${p.shopName ? `<a class="sold-by" href="/shop.html?s=${encodeURIComponent(p.shopSlug)}">${escapeHtml(p.shopName)}</a>` : ''}
         <div class="desc">${escapeHtml(p.description || '')}</div>
         ${expiryTagHtml(p)}
@@ -51,6 +53,7 @@ function shopCardHtml(s) {
         <div class="shop-logo">${s.logoUrl ? `<img src="${escapeHtml(s.logoUrl)}" alt="" loading="lazy">` : '\u{1F3EA}'}</div>
         <div>
           <h3>${escapeHtml(s.name)}</h3>
+          ${s.ratingCount > 0 ? `<div class="stars-line">${starsHtml(s.ratingAverage)} ${s.ratingAverage} <span class="muted">(${s.ratingCount})</span></div>` : ''}
           <div class="muted small">${escapeHtml(s.categoryLabel)}${s.distanceKm != null ? `, ${s.distanceKm} km away` : ''}</div>
         </div>
       </div>
@@ -79,7 +82,128 @@ const NBChoices = {
   },
 };
 
+// ---------- Ratings ----------
+
+const HEART_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20.3l-1.3-1.2C5.9 14.8 3 12.1 3 8.8 3 6.1 5.1 4 7.7 4c1.5 0 3 .7 4.3 1.9C13.3 4.7 14.8 4 16.3 4 18.9 4 21 6.1 21 8.8c0 3.3-2.9 6-7.7 10.3z"/></svg>';
+
+/** Five stars, filled to the nearest half, for an average like 4.3. Decorative: the number is always shown next to it. */
+function starsHtml(avg, size) {
+  const v = Math.round(Number(avg || 0) * 2) / 2;
+  let out = '';
+  for (let i = 1; i <= 5; i++) {
+    out += `<span class="star ${v >= i ? 'full' : v >= i - 0.5 ? 'half' : ''}">\u2605</span>`;
+  }
+  return `<span class="stars${size === 'lg' ? ' lg' : ''}" aria-hidden="true">${out}</span>`;
+}
+
+/** "★★★★☆ 4.3 (12)" on a product card; opens the reviews. Nothing when nobody has reviewed it yet. */
+function ratingButtonHtml(p) {
+  if (!p.ratingCount) return '';
+  return `<button type="button" class="rating-btn" data-reviews="${p.id}" data-name="${escapeHtml(p.name)}"
+      aria-label="${p.ratingAverage} out of 5 from ${p.ratingCount} review${p.ratingCount === 1 ? '' : 's'}. Read reviews of ${escapeHtml(p.name)}">
+      ${starsHtml(p.ratingAverage)} <b>${p.ratingAverage}</b> <span class="muted">(${p.ratingCount})</span></button>`;
+}
+
+/** The reviews of one product in a dialog (reused by every page that shows product cards). */
+async function openReviews(productId, productName) {
+  let dlg = document.getElementById('reviews-dialog');
+  if (!dlg) {
+    dlg = document.createElement('dialog');
+    dlg.id = 'reviews-dialog';
+    dlg.className = 'nb-dialog';
+    dlg.setAttribute('aria-labelledby', 'reviews-title');
+    document.body.appendChild(dlg);
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+  }
+  dlg.innerHTML = `<div class="dlg-head"><h2 id="reviews-title">Reviews: ${escapeHtml(productName)}</h2>
+    <button type="button" class="dlg-close" aria-label="Close">\u00D7</button></div><div class="dlg-body"><p class="muted">Loading\u2026</p></div>`;
+  dlg.querySelector('.dlg-close').addEventListener('click', () => dlg.close());
+  dlg.showModal();
+  try {
+    const r = await API.productReviews(productId);
+    dlg.querySelector('.dlg-body').innerHTML = r.reviews.length === 0
+      ? '<p class="muted">No reviews yet.</p>'
+      : `<div class="review-summary">${starsHtml(r.ratingAverage, 'lg')} <b>${r.ratingAverage}</b> out of 5 <span class="muted">from ${r.ratingCount} buyer${r.ratingCount === 1 ? '' : 's'}</span></div>
+         <ul class="review-list">${r.reviews.map(reviewItemHtml).join('')}</ul>`;
+  } catch (e) {
+    dlg.querySelector('.dlg-body').innerHTML = `<p class="field-msg error">${escapeHtml(e.message)}</p>`;
+  }
+}
+
+function reviewItemHtml(rv) {
+  return `<li class="review-item">
+    <div>${starsHtml(rv.rating)} <span class="sr-only">${rv.rating} out of 5</span>
+      <b>${escapeHtml(rv.buyerName)}</b> <span class="verified">Verified purchase</span></div>
+    ${rv.comment ? `<p>${escapeHtml(rv.comment)}</p>` : ''}
+    <div class="muted small">${formatDateTime(rv.createdAt)}${rv.edited ? ' (edited)' : ''}${rv.productName && rv.showProduct ? ' \u00B7 ' + escapeHtml(rv.productName) : ''}</div>
+  </li>`;
+}
+
+// ---------- Saved for later (the heart on product cards) ----------
+
+function saveButtonHtml(p) {
+  return `<button type="button" class="save-btn" data-save="${p.id}" aria-pressed="false"
+      aria-label="Save ${escapeHtml(p.name)} for later">${HEART_SVG}</button>`;
+}
+
+/**
+ * Which products this buyer saved. Loaded once per page. Sellers and admins don't shop,
+ * so their hearts are removed; logged-out visitors are sent to log in when they tap one.
+ */
+const NBSaved = {
+  ids: new Set(),
+  state: null, // null = not loaded, 'buyer', 'guest', 'other'
+  loading: null,
+  load() {
+    if (!this.loading) {
+      this.loading = API.saved().then((list) => {
+        this.ids = new Set(list.map((s) => s.product.id));
+        this.state = 'buyer';
+      }).catch((e) => {
+        this.state = e.status === 401 ? 'guest' : 'other';
+      });
+    }
+    return this.loading;
+  },
+  paint(container) {
+    container.querySelectorAll('.save-btn[data-save]').forEach((btn) => {
+      if (this.state === 'other') { btn.remove(); return; }
+      const on = this.ids.has(Number(btn.dataset.save));
+      btn.setAttribute('aria-pressed', String(on));
+    });
+  },
+};
+
 function attachAddToCartHandlers(container) {
+  NBSaved.load().then(() => NBSaved.paint(container));
+  container.querySelectorAll('.save-btn[data-save]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (NBSaved.state === 'guest') { goToLogin(); return; }
+      const id = Number(btn.dataset.save);
+      const on = btn.getAttribute('aria-pressed') === 'true';
+      btn.disabled = true;
+      try {
+        if (on) {
+          await API.unsave(id);
+          NBSaved.ids.delete(id);
+          showToast('Removed from Saved');
+        } else {
+          await API.save(id);
+          NBSaved.ids.add(id);
+          showToast('Saved for later');
+        }
+        NBSaved.paint(document);
+      } catch (e) {
+        if (e.status === 401) goToLogin(); else showToast(e.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+  container.querySelectorAll('.rating-btn[data-reviews]').forEach((btn) => {
+    btn.addEventListener('click', () => openReviews(Number(btn.dataset.reviews), btn.dataset.name));
+  });
+
   container.querySelectorAll('.add-to-cart-btn[data-id]').forEach(btn => {
     btn.addEventListener('click', async () => {
       btn.disabled = true; // stops fast double clicks adding 2
@@ -116,6 +240,26 @@ function serverDate(iso) {
 
 function formatDateTime(iso) {
   return serverDate(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+/** "Tue, 14 Oct, 6:00 pm - 8:00 pm" for an order with a booked slot, or '' (as soon as possible). */
+function slotText(o) {
+  if (!o || !o.slotDate || !o.slotStart) return '';
+  const t = (hhmm) => {
+    const [h, m] = hhmm.split(':').map(Number);
+    return new Date(2000, 0, 1, h, m).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+  };
+  const day = new Date(o.slotDate + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+  return `${day}, ${t(o.slotStart)} \u2013 ${t(o.slotEnd)}`;
+}
+
+/** Five radio buttons shown as stars (keyboard: arrow keys). name must be unique on the page. */
+function starInputHtml(name, value, label) {
+  return `<fieldset class="star-input">
+    <legend class="sr-only">${escapeHtml(label)}</legend>
+    ${[5, 4, 3, 2, 1].map(n => `<input type="radio" id="${name}-${n}" name="${name}" value="${n}" ${Number(value) === n ? 'checked' : ''}>
+      <label for="${name}-${n}" title="${n} star${n === 1 ? '' : 's'}"><span class="sr-only">${n} star${n === 1 ? '' : 's'}</span>\u2605</label>`).join('')}
+  </fieldset>`;
 }
 
 // ---------- Order status ----------
@@ -191,7 +335,7 @@ function thumbHtml(p) {
 }
 
 function goToLogin() {
-  window.location.href = '/login.html?next=' + encodeURIComponent(window.location.pathname + window.location.hash);
+  window.location.href = '/login.html?next=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
 }
 
 /**

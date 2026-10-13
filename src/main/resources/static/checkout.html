@@ -14,7 +14,7 @@
 <main id="main">
   <div class="wrap" style="max-width:640px;">
     <div class="section-heading" style="margin-top:34px;">
-      <h2>Checkout</h2>
+      <h1>Checkout</h1>
     </div>
     <div id="checkout-root">
       <div class="skeleton" style="height:220px;"></div>
@@ -131,6 +131,8 @@ async function init() {
         </div>
       </div>
 
+      <div id="slot-fields"></div>
+
       <div class="field">
         <label>Payment method</label>
         <div class="choice-list" id="payment-choices"></div>
@@ -153,6 +155,40 @@ async function init() {
     document.getElementById('address-count').textContent = address.value.length;
   });
   document.getElementById('checkout-form').addEventListener('submit', placeOrder);
+  loadSlots();
+}
+
+// ---------- Time slots (only for shops that offer them) ----------
+const slotChoices = {}; // {shopId: "2026-10-14T17:00"}; missing = as soon as possible
+
+async function loadSlots() {
+  const box = document.getElementById('slot-fields');
+  if (!box) return;
+  const shops = currentBill.shops.filter(sb => sb.shopId);
+  const results = await Promise.all(shops.map(sb => API.shopSlots(sb.shopId).catch(() => null)));
+  box.innerHTML = shops.map((sb, i) => {
+    const r = results[i];
+    if (!r || !r.enabled) return '';
+    const open = r.days.some(d => d.slots.some(s => !s.full));
+    if (slotChoices[sb.shopId] && !r.days.some(d => d.slots.some(s => s.value === slotChoices[sb.shopId] && !s.full))) {
+      delete slotChoices[sb.shopId]; // that slot closed or filled up
+    }
+    const how = sb.fulfilment === 'PICKUP' ? 'Pickup' : 'Delivery';
+    return `<div class="field">
+      <label for="slot-${sb.shopId}">${how} time from ${escapeHtml(sb.shopName)}</label>
+      <select id="slot-${sb.shopId}" data-slot-shop="${sb.shopId}">
+        <option value="">As soon as possible</option>
+        ${r.days.filter(d => d.slots.length).map(d => `<optgroup label="${d.label}">
+          ${d.slots.map(s => `<option value="${s.value}" ${s.full ? 'disabled' : ''} ${slotChoices[sb.shopId] === s.value ? 'selected' : ''}>
+            ${d.label}, ${escapeHtml(s.label)}${s.full ? ' (full)' : s.placesLeft <= 2 ? ` (${s.placesLeft} left)` : ''}</option>`).join('')}
+        </optgroup>`).join('')}
+      </select>
+      <div class="field-msg muted">${open ? '2-hour slots. Slots close an hour before they start.' : 'No slots left today or tomorrow, so the order will be prepared as soon as possible.'}</div>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('select[data-slot-shop]').forEach(sel => sel.addEventListener('change', () => {
+    if (sel.value) slotChoices[sel.dataset.slotShop] = sel.value; else delete slotChoices[sel.dataset.slotShop];
+  }));
 }
 
 function renderBill() {
@@ -302,6 +338,7 @@ async function placeOrder(e) {
       shippingAddress: needsDelivery() ? address : null,
       pincode,
       fulfilment: fulfilmentChoices(),
+      slots: slotChoices,
       paymentMethod: document.querySelector('input[name="pay"]:checked').value,
       couponCode: appliedCoupon,
       substitutionPreference: document.querySelector('input[name="subst"]:checked').value,
@@ -315,7 +352,7 @@ async function placeOrder(e) {
     errorBox.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
     if (err.status === 409) {
       // Bill changed (price / stock / coupon). Show the fresh bill.
-      try { await refreshBill(); renderBill(); } catch (_) { /* ignore */ }
+      try { await refreshBill(); renderBill(); await loadSlots(); } catch (_) { /* ignore */ }
     }
     updatePlaceButton();
     errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });

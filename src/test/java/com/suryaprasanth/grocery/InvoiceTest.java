@@ -109,7 +109,7 @@ class InvoiceTest extends ApiTestSupport {
     }
 
     @Test
-    @DisplayName("Who can see it: the buyer, the selling shop and admins; another buyer or shop gets 404")
+    @DisplayName("Who can see it: the buyer, the selling shop and admins; another buyer 403, another shop 404")
     void access() throws Exception {
         SellerAccount seller = newApprovedSeller("560073", "");
         Product p = productRepository.findById(sellerAddsProduct(seller, "Invoice Item", "50.00", 10)).orElseThrow();
@@ -121,7 +121,8 @@ class InvoiceTest extends ApiTestSupport {
         assertThat(status(call("GET", "/api/seller/orders/" + orderId + "/invoice", seller.session(), null))).isEqualTo(200);
         assertThat(status(call("GET", "/api/admin/orders/" + orderId + "/invoice", adminSession(), null))).isEqualTo(200);
 
-        assertThat(status(call("GET", "/api/orders/" + orderId + "/invoice", newCustomer(), null))).isEqualTo(404);
+        // Same answers as for the order itself (see TC_10): another buyer 403, another shop 404
+        assertThat(status(call("GET", "/api/orders/" + orderId + "/invoice", newCustomer(), null))).isEqualTo(403);
         SellerAccount other = newApprovedSeller("560073", "");
         assertThat(status(call("GET", "/api/seller/orders/" + orderId + "/invoice", other.session(), null))).isEqualTo(404);
         assertThat(status(call("GET", "/api/admin/orders/" + orderId + "/invoice", buyer, null))).isEqualTo(403);

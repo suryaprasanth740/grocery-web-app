@@ -18,7 +18,8 @@ import java.util.Map;
 
 /**
  * The invoice of a delivered order, for the three people who may see it: the buyer who ordered,
- * the shop that sold it, and admins. Everyone else gets the same answer as for a missing order.
+ * the shop that sold it, and admins. Everyone else gets the same answer as when opening the order itself
+ * (another buyer 403, another shop 404).
  */
 @RestController
 public class InvoiceController {

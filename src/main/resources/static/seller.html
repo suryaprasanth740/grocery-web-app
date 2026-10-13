@@ -76,6 +76,12 @@ async function load() {
     tab = t.dataset.tab;
     renderTab();
   }));
+  // Links like /seller.html#orders (from the notification bell) open that tab.
+  const fromHash = document.querySelector(`.tab[data-tab="${location.hash.slice(1)}"]`);
+  if (fromHash) {
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === fromHash));
+    tab = fromHash.dataset.tab;
+  }
   renderFrame();
   renderTab();
   if (new URLSearchParams(location.search).get('applied')) {
@@ -90,6 +96,7 @@ function renderFrame() {
   document.getElementById('dash').hidden = false;
   document.getElementById('board').innerHTML = `
     <h1>${escapeHtml(shop.name)} <span class="status-pill ${shop.status}">${STATUS_TEXT[shop.status]}</span></h1>
+    ${shop.ratingCount > 0 ? `<div class="stars-line">${starsHtml(shop.ratingAverage)} ${shop.ratingAverage} <span class="muted">from ${shop.ratingCount} review${shop.ratingCount === 1 ? '' : 's'}</span></div>` : ''}
     <p>${escapeHtml(shop.categoryLabel)}, ${escapeHtml(shop.addressLine)}</p>`;
   const panel = document.getElementById('status-panel');
   if (shop.status === 'PENDING') {
@@ -256,6 +263,7 @@ function sellerOrderHtml(o) {
         ${statusBadgeHtml(o.status)}
       </div>
       <div class="order-meta">
+        ${o.slotDate ? `<div class="slot-line"><strong>${o.fulfilment === 'PICKUP' ? 'Pickup' : 'Delivery'} slot:</strong> ${escapeHtml(slotText(o))}</div>` : ''}
         ${o.fulfilment === 'DELIVERY' ? `<div><strong>Deliver to:</strong> ${escapeHtml(o.shippingAddress || '')}, ${escapeHtml(o.pincode || '')}</div>` : '<div><strong>Buyer collects from your shop.</strong></div>'}
         <div><strong>Payment:</strong> ${escapeHtml(o.paymentMethod)}, ${escapeHtml(PAYMENT_LABELS[o.paymentStatus] || o.paymentStatus)}</div>
         <div><strong>If an item runs out:</strong> ${escapeHtml(SUBSTITUTION_LABELS[o.substitutionPreference] || '-')}</div>
@@ -267,6 +275,7 @@ function sellerOrderHtml(o) {
         ${Number(o.discount) > 0 ? `<div class="order-line"><span>Coupon (paid by NammaBasket)</span><span>&minus; ${formatRupees(o.discount)}</span></div>` : ''}
         <div class="order-line"><b>Total</b><b>${formatRupees(o.totalAmount)}</b></div>
       </div>
+      ${o.status === 'DELIVERED' ? `<a class="linklike small" href="/invoice.html?id=${o.id}&as=seller">View invoice</a>` : ''}
       ${actions.length || canReject ? `<div class="action-row" style="margin:12px 0 0;">
         ${actions.map(([step, label]) => `<button class="btn btn-primary btn-sm" data-order="${o.id}" data-step="${step}">${label}</button>`).join('')}
         ${canReject ? `<button class="btn btn-outline danger btn-sm" data-reject="${o.id}">Reject</button>` : ''}
