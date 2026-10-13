@@ -1,0 +1,794 @@
+{
+ "agarbatti": {
+  "product": "Agarbatti",
+  "title": "Agarbatti - Musk fragrance.jpg",
+  "author": "Vis M",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Agarbatti_-_Musk_fragrance.jpg"
+ },
+ "alphonso-mangoes": {
+  "product": "Alphonso Mangoes",
+  "title": "Alphonso mango.jpg",
+  "author": "G patkar at English Wikipedia",
+  "licence": "Public domain",
+  "licenceUrl": "",
+  "source": "https://commons.wikimedia.org/wiki/File:Alphonso_mango.jpg"
+ },
+ "assam-tea-powder": {
+  "product": "Assam Tea Powder",
+  "title": "Nepal-dhankuta.jpg",
+  "author": "Oraola",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Nepal-dhankuta.jpg"
+ },
+ "banana-chips": {
+  "product": "Banana Chips",
+  "title": "Kerala banana chips Upperi varuthath.jpg",
+  "author": "Ramesh NG",
+  "licence": "CC BY-SA 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Kerala_banana_chips_Upperi_varuthath.jpg"
+ },
+ "basmati-rice": {
+  "product": "Basmati Rice",
+  "title": "Basmati Rice India, raw.jpg",
+  "author": "cookbookman17",
+  "licence": "CC BY 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Basmati_Rice_India,_raw.jpg"
+ },
+ "beetroot": {
+  "product": "Beetroot",
+  "title": "Beetroot jm26647.jpg",
+  "author": "joergens.mi",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Beetroot_jm26647.jpg"
+ },
+ "besan": {
+  "product": "Besan",
+  "title": "Gram flour AvL.jpg",
+  "author": "AlexanderVanLoon",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Gram_flour_AvL.jpg"
+ },
+ "black-pepper": {
+  "product": "Black Pepper",
+  "title": "Black Peppercorns (4422070187).jpg",
+  "author": "Ryan Snyder",
+  "licence": "CC BY 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Black_Peppercorns_(4422070187).jpg"
+ },
+ "bombay-rava": {
+  "product": "Bombay Rava",
+  "title": "Semolina Sooji (49684140806).jpg",
+  "author": "Ajay Suresh from New York, NY, USA",
+  "licence": "CC BY 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Semolina_Sooji_(49684140806).jpg"
+ },
+ "brinjal": {
+  "product": "Brinjal",
+  "title": "Eggplant 3.jpg",
+  "author": "GTSPACE",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Eggplant_3.jpg"
+ },
+ "bun": {
+  "product": "Bun",
+  "title": "HK Shek Tong Tsui 石塘咀 STT Queen's Road West Bakery 生命物麵包店 food shop 椰絲 甜麵 Coconut sweet breads 椰賓 Buns September 2021 SS2.jpg",
+  "author": "Groam Lou SUM",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:HK_Shek_Tong_Tsui_%E7%9F%B3%E5%A1%98%E5%92%80_STT_Queen%27s_Road_West_Bakery_%E7%94%9F%E5%91%BD%E7%89%A9%E9%BA%B5%E5%8C%85%E5%BA%97_food_shop_%E6%A4%B0%E7%B5%B2_%E7%94%9C%E9%BA%B5_Coconut_sweet_breads_%E6%A4%B0%E8%B3%93_Buns_September_2021_SS2.jpg"
+ },
+ "butter": {
+  "product": "Butter",
+  "title": "Block of butter 20200928 080213.jpg",
+  "author": "Salicyna",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Block_of_butter_20200928_080213.jpg"
+ },
+ "butter-croissants": {
+  "product": "Butter Croissants",
+  "title": "Croissants au beurre (18953292873).jpg",
+  "author": "Herry Wibisono (herryway)",
+  "licence": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File:Croissants_au_beurre_(18953292873).jpg"
+ },
+ "buttermilk": {
+  "product": "Buttermilk",
+  "title": "Buttermilk-(right)-and-Milk-(left).jpg",
+  "author": "Ukko-wc",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Buttermilk-(right)-and-Milk-(left).jpg"
+ },
+ "cabbage": {
+  "product": "Cabbage",
+  "title": "Cabbage in a stack.jpg",
+  "author": "Jeffery Martin",
+  "licence": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File:Cabbage_in_a_stack.jpg"
+ },
+ "camphor": {
+  "product": "Camphor",
+  "title": "Camphor Cubes.jpg",
+  "author": "Salil Kumar Mukherjee",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Camphor_Cubes.jpg"
+ },
+ "cardamom": {
+  "product": "Cardamom",
+  "title": "Green Cardamom Pods.jpg",
+  "author": "Misterneedlemouse",
+  "licence": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File:Green_Cardamom_Pods.jpg"
+ },
+ "carrots": {
+  "product": "Carrots",
+  "title": "Fresh orange carrots.jpg",
+  "author": "congerdesign",
+  "licence": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File:Fresh_orange_carrots.jpg"
+ },
+ "cashews": {
+  "product": "Cashews",
+  "title": "CASHEW NUTS.jpg",
+  "author": "Ranjithkumar Murugesan",
+  "licence": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File:CASHEW_NUTS.jpg"
+ },
+ "cauliflower": {
+  "product": "Cauliflower",
+  "title": "Liat Portal for Foodie Disorder - Cauliflower from San Francisco farmers market.jpg",
+  "author": "HaJunkiyada",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Liat_Portal_for_Foodie_Disorder_-_Cauliflower_from_San_Francisco_farmers_market.jpg"
+ },
+ "chana-dal": {
+  "product": "Chana Dal",
+  "title": "Split Chickpeas.jpg",
+  "author": "Gaurav Dhwaj Khadka",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Split_Chickpeas.jpg"
+ },
+ "cheddar-cheese": {
+  "product": "Cheddar Cheese",
+  "title": "Montgomerys cheddar cheese.jpg",
+  "author": "Jon Sullivan",
+  "licence": "Public domain",
+  "licenceUrl": "",
+  "source": "https://commons.wikimedia.org/wiki/File:Montgomerys_cheddar_cheese.jpg"
+ },
+ "chocolate-muffins": {
+  "product": "Chocolate Muffins",
+  "title": "Chocolate muffin bake.jpg",
+  "author": "Amin",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Chocolate_muffin_bake.jpg"
+ },
+ "clay-diyas": {
+  "product": "Clay Diyas",
+  "title": "DiwaliOilLampCrop.JPG",
+  "author": "Arne Hückelheim",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:DiwaliOilLampCrop.JPG"
+ },
+ "coconut-cookies": {
+  "product": "Coconut Cookies",
+  "title": "Coconut cookies-.jpg",
+  "author": "Kanikatwl",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Coconut_cookies-.jpg"
+ },
+ "coconut-oil": {
+  "product": "Coconut Oil",
+  "title": "Coconut and oil.jpg",
+  "author": "Phu Thinh Co",
+  "licence": "CC BY-SA 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Coconut_and_oil.jpg"
+ },
+ "coriander-leaves": {
+  "product": "Coriander Leaves",
+  "title": "Bunches of coriander leaves.jpg",
+  "author": "Kpsudeep",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Bunches_of_coriander_leaves.jpg"
+ },
+ "cucumber": {
+  "product": "Cucumber",
+  "title": "Fresh cucumbers.jpg",
+  "author": "Halima Waziri",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Fresh_cucumbers.jpg"
+ },
+ "cumin-seeds": {
+  "product": "Cumin Seeds",
+  "title": "Seeds of Cumin.jpg",
+  "author": "Sanjay Acharya",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Seeds_of_Cumin.jpg"
+ },
+ "curry-leaves": {
+  "product": "Curry Leaves",
+  "title": "20260317 Murraya koenigii 02.jpg",
+  "author": "Flocci Nivis",
+  "licence": "CC BY 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:20260317_Murraya_koenigii_02.jpg"
+ },
+ "digestive-biscuits": {
+  "product": "Digestive Biscuits",
+  "title": "Bowl of digestive biscuits.jpg",
+  "author": "LearningLark from United States",
+  "licence": "CC BY 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Bowl_of_digestive_biscuits.jpg"
+ },
+ "drumsticks": {
+  "product": "Drumsticks",
+  "title": "Moringa oleifera of Salem.jpg",
+  "author": "Thamizhpparithi Maari",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Moringa_oleifera_of_Salem.jpg"
+ },
+ "farm-eggs": {
+  "product": "Farm Eggs",
+  "title": "Egg cartons with chicken eggs 03.jpg",
+  "author": "Krzysztof Golik",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Egg_cartons_with_chicken_eggs_03.jpg"
+ },
+ "filter-coffee-powder": {
+  "product": "Filter Coffee Powder",
+  "title": "Foaming filter coffee.jpg",
+  "author": "Charles Haynes",
+  "licence": "CC BY-SA 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Foaming_filter_coffee.jpg"
+ },
+ "french-beans": {
+  "product": "French Beans",
+  "title": "Bohnen - Phaseolus vulgaris - Rhizoctonia solani - Howard F. Schwartz.jpg",
+  "author": "Howard F. Schwartz, Colorado State University, Bugwood.org",
+  "licence": "CC BY 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Bohnen_-_Phaseolus_vulgaris_-_Rhizoctonia_solani_-_Howard_F._Schwartz.jpg"
+ },
+ "fresh-bananas": {
+  "product": "Fresh Bananas",
+  "title": "DFC 4184 Bunches of ripe bananas neatly arranged at a bustling market stall ready for shoppers.jpg",
+  "author": "PattayaPatrol",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:DFC_4184_Bunches_of_ripe_bananas_neatly_arranged_at_a_bustling_market_stall_ready_for_shoppers.jpg"
+ },
+ "fresh-coconut": {
+  "product": "Fresh Coconut",
+  "title": "Coconuts - single and cracked open.jpg",
+  "author": "Ivar Leidus",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Coconuts_-_single_and_cracked_open.jpg"
+ },
+ "fresh-curd": {
+  "product": "Fresh Curd",
+  "title": "Plain Curd Rice.jpg",
+  "author": "5boi38",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Plain_Curd_Rice.jpg"
+ },
+ "fresh-oranges": {
+  "product": "Fresh Oranges",
+  "title": "Oranges - whole-halved-segment.jpg",
+  "author": "Ivar Leidus",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Oranges_-_whole-halved-segment.jpg"
+ },
+ "full-cream-milk": {
+  "product": "Full Cream Milk",
+  "title": "Glass Milk Bottles.tif",
+  "author": "Pkgx",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Glass_Milk_Bottles.tif"
+ },
+ "garlic": {
+  "product": "Garlic",
+  "title": "Garlic bulbs of Salem.jpg",
+  "author": "Thamizhpparithi Maari",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Garlic_bulbs_of_Salem.jpg"
+ },
+ "ghee": {
+  "product": "Ghee",
+  "title": "Butterschmalz-3.jpg",
+  "author": "Rainer Z ...",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Butterschmalz-3.jpg"
+ },
+ "ginger": {
+  "product": "Ginger",
+  "title": "Ginger rhizome.jpg",
+  "author": "Mk2010",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Ginger_rhizome.jpg"
+ },
+ "greek-yogurt": {
+  "product": "Greek Yogurt",
+  "title": "Yoghurt in bowl 011715.jpg",
+  "author": "Susan Slater",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Yoghurt_in_bowl_011715.jpg"
+ },
+ "green-chillies": {
+  "product": "Green Chillies",
+  "title": "Green chillies variety.jpg",
+  "author": "Medhi jyoti",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Green_chillies_variety.jpg"
+ },
+ "green-grapes": {
+  "product": "Green Grapes",
+  "title": "A bunch of grapes.jpg",
+  "author": "Vijay Kumar Soren",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:A_bunch_of_grapes.jpg"
+ },
+ "green-tea-bags": {
+  "product": "Green Tea Bags",
+  "title": "White cup with green tea in it.jpg",
+  "author": "Douglas P Perkins",
+  "licence": "CC BY 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:White_cup_with_green_tea_in_it.jpg"
+ },
+ "groundnut-oil": {
+  "product": "Groundnut Oil",
+  "title": "Groundnut oil.jpg",
+  "author": "KISUMAR123",
+  "licence": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File:Groundnut_oil.jpg"
+ },
+ "guava": {
+  "product": "Guava",
+  "title": "Guava ID.jpg",
+  "author": "Sakurai Midori",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+  "source": "https://commons.wikimedia.org/wiki/File:Guava_ID.jpg"
+ },
+ "idli-dosa-batter": {
+  "product": "Idli Dosa Batter",
+  "title": "Idli Batter.JPG",
+  "author": "SijiR",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Idli_Batter.JPG"
+ },
+ "idli-rice": {
+  "product": "Idli Rice",
+  "title": "Riso parboiled.jpg",
+  "author": "Luigi Chiesa",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+  "source": "https://commons.wikimedia.org/wiki/File:Riso_parboiled.jpg"
+ },
+ "iodized-salt": {
+  "product": "Iodized Salt",
+  "title": "Comparison of Table Salt with Kitchen Salt.png",
+  "author": "Lexlex",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Comparison_of_Table_Salt_with_Kitchen_Salt.png"
+ },
+ "jaggery": {
+  "product": "Jaggery",
+  "title": "Organic Chemical free Kolhapur Jaggery Dhep (Block) - 1 Kg each.jpg",
+  "author": "Sushant Medhe Pawar of Kolhapur Agricultural Produce Market (Kolhapur Sheti Utpanna Bazar Samiti) from Kolhapur",
+  "licence": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File:Organic_Chemical_free_Kolhapur_Jaggery_Dhep_(Block)_-_1_Kg_each.jpg"
+ },
+ "lady-s-finger": {
+  "product": "Lady's Finger",
+  "title": "Lady's fingers (Okra) in Chennai.JPG",
+  "author": "Aravind Sivaraj",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Lady%27s_fingers_(Okra)_in_Chennai.JPG"
+ },
+ "lemons": {
+  "product": "Lemons",
+  "title": "Lemon.jpg",
+  "author": "André Karwath aka Aka",
+  "licence": "CC BY-SA 2.5",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.5",
+  "source": "https://commons.wikimedia.org/wiki/File:Lemon.jpg"
+ },
+ "mango-leaves": {
+  "product": "Mango Leaves",
+  "title": "Mango Leaves in Bangladesh.jpg",
+  "author": "LaboniDin",
+  "licence": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File:Mango_Leaves_in_Bangladesh.jpg"
+ },
+ "marigold-flowers": {
+  "product": "Marigold Flowers",
+  "title": "Marigold Flowers as garland in India.jpg",
+  "author": "SnapMeUp",
+  "licence": "CC BY 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Marigold_Flowers_as_garland_in_India.jpg"
+ },
+ "milk-bread": {
+  "product": "Milk Bread",
+  "title": "Tin Loaf - one slash in the crust.jpg",
+  "author": "Mike Finn",
+  "licence": "CC BY 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Tin_Loaf_-_one_slash_in_the_crust.jpg"
+ },
+ "mint-leaves": {
+  "product": "Mint Leaves",
+  "title": "Liat Portal for Foodie Disorder - Fresh Mint from San Francisco Farmers Market.jpg",
+  "author": "HaJunkiyada",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Liat_Portal_for_Foodie_Disorder_-_Fresh_Mint_from_San_Francisco_Farmers_Market.jpg"
+ },
+ "mixed-nuts": {
+  "product": "Mixed Nuts",
+  "title": "Fancy raw mixed nuts macro.jpg",
+  "author": "Sage Ross",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Fancy_raw_mixed_nuts_macro.jpg"
+ },
+ "mixture-namkeen": {
+  "product": "Mixture Namkeen",
+  "title": "Namkeen 05.jpg",
+  "author": "Suchitra kumari",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Namkeen_05.jpg"
+ },
+ "moong-dal": {
+  "product": "Moong Dal",
+  "title": "Moong Dal.jpg",
+  "author": "Sudeshna Banerjee",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Moong_Dal.jpg"
+ },
+ "murukku": {
+  "product": "Murukku",
+  "title": "A Traditional Tamil Snack Murukku.jpg",
+  "author": "Thamizhpparithi Maari",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:A_Traditional_Tamil_Snack_Murukku.jpg"
+ },
+ "mustard-seeds": {
+  "product": "Mustard Seeds",
+  "title": "Black mustard seeds.jpg",
+  "author": "Theredgiant",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Black_mustard_seeds.jpg"
+ },
+ "mysore-pak": {
+  "product": "Mysore Pak",
+  "title": "Mysore pak.jpg",
+  "author": "Charles Haynes",
+  "licence": "CC BY-SA 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Mysore_pak.jpg"
+ },
+ "nankhatai": {
+  "product": "Nankhatai",
+  "title": "Nankhatai.jpg",
+  "author": "S.M. Samee",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Nankhatai.jpg"
+ },
+ "onions": {
+  "product": "Onions",
+  "title": "India - Koyambedu Market - Onions 08 (3987045248).jpg",
+  "author": "McKay Savage from London, UK",
+  "licence": "CC BY 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:India_-_Koyambedu_Market_-_Onions_08_(3987045248).jpg"
+ },
+ "orange-juice": {
+  "product": "Orange Juice",
+  "title": "Orange juice 1 edit1.jpg",
+  "author": "Agency of the United States Department of Agriculture Edited Version by: Arad",
+  "licence": "Public domain",
+  "licenceUrl": "",
+  "source": "https://commons.wikimedia.org/wiki/File:Orange_juice_1_edit1.jpg"
+ },
+ "paneer": {
+  "product": "Paneer",
+  "title": "Panir Paneer Indian cheese fresh.jpg",
+  "author": "Sonja Pauen - Stanhopea",
+  "licence": "CC BY 2.0 de",
+  "licenceUrl": "https://creativecommons.org/licenses/by/2.0/de/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File:Panir_Paneer_Indian_cheese_fresh.jpg"
+ },
+ "papaya": {
+  "product": "Papaya",
+  "title": "03 Preparing papaya fruit - papaya peeled and cut in half.jpg",
+  "author": "Marek Ślusarczyk (Tupungato) Photo portfolio",
+  "licence": "CC BY 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:03_Preparing_papaya_fruit_-_papaya_peeled_and_cut_in_half.jpg"
+ },
+ "peanut-chikki": {
+  "product": "Peanut Chikki",
+  "title": "Peanut Chikki.JPG",
+  "author": "Zeel Patel",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Peanut_Chikki.JPG"
+ },
+ "poha": {
+  "product": "Poha",
+  "title": "Poha.jpg",
+  "author": "Sanjay Acharya, aka Sanjay ach at en.wikipedia",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+  "source": "https://commons.wikimedia.org/wiki/File:Poha.jpg"
+ },
+ "pomegranate": {
+  "product": "Pomegranate",
+  "title": "Pomegranate fruit - whole and piece with arils.jpg",
+  "author": "Ivar Leidus",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Pomegranate_fruit_-_whole_and_piece_with_arils.jpg"
+ },
+ "potato-chips": {
+  "product": "Potato Chips",
+  "title": "Potato-Chips.jpg",
+  "author": "Evan-Amos",
+  "licence": "Public domain",
+  "licenceUrl": "",
+  "source": "https://commons.wikimedia.org/wiki/File:Potato-Chips.jpg"
+ },
+ "potatoes": {
+  "product": "Potatoes",
+  "title": "Solanum tuberosum 15-p.bot-solana.tuber-01.jpg",
+  "author": "Ayotte, Gilles, 1948-",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Solanum_tuberosum_15-p.bot-solana.tuber-01.jpg"
+ },
+ "ragi-flour": {
+  "product": "Ragi Flour",
+  "title": "Food grain finger millet.jpg",
+  "author": "Sengai Podhuvan",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Food_grain_finger_millet.jpg"
+ },
+ "ragi-malt": {
+  "product": "Ragi Malt",
+  "title": "Raggi java.jpg",
+  "author": "ప్రశాంతి",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Raggi_java.jpg"
+ },
+ "rajma": {
+  "product": "Rajma",
+  "title": "Red kidney beans 2024-11-27.jpg",
+  "author": "Bean appreciator",
+  "licence": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File:Red_kidney_beans_2024-11-27.jpg"
+ },
+ "red-apples": {
+  "product": "Red Apples",
+  "title": "Red Apple.jpg",
+  "author": "Abhijit Tembhekar from Mumbai, India",
+  "licence": "CC BY 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Red_Apple.jpg"
+ },
+ "red-chilli-powder": {
+  "product": "Red Chilli Powder",
+  "title": "Byadgi chili powder.jpg",
+  "author": "GI tagged products",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Byadgi_chili_powder.jpg"
+ },
+ "roasted-peanuts": {
+  "product": "Roasted Peanuts",
+  "title": "Dry Roasted Virginia Peanuts.jpg",
+  "author": "Gogerr",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Dry_Roasted_Virginia_Peanuts.jpg"
+ },
+ "rock-salt": {
+  "product": "Rock Salt",
+  "title": "Pink rock salt crystal 4.jpg",
+  "author": "W.carter",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Pink_rock_salt_crystal_4.jpg"
+ },
+ "rusk": {
+  "product": "Rusk",
+  "title": "Zwieback-1.jpg",
+  "author": "No machine-readable author provided. Rainer Zenz assumed (based on copyright claims).",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+  "source": "https://commons.wikimedia.org/wiki/File:Zwieback-1.jpg"
+ },
+ "sambar-powder": {
+  "product": "Sambar Powder",
+  "title": "Sambar powder.jpg",
+  "author": "Keerthinellikkalaya",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Sambar_powder.jpg"
+ },
+ "sona-masoori-rice": {
+  "product": "Sona Masoori Rice",
+  "title": "Thai jasmine rice uncooked periodic.jpg",
+  "author": "Seb35",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Thai_jasmine_rice_uncooked_periodic.jpg"
+ },
+ "spinach-bunch": {
+  "product": "Spinach Bunch",
+  "title": "Spinach leaves.jpg",
+  "author": "Nillerdk",
+  "licence": "CC BY 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Spinach_leaves.jpg"
+ },
+ "sugar": {
+  "product": "Sugar",
+  "title": "Granulated White Sugar with Large Crystals, Bright Side Light.jpg",
+  "author": "Tobias Erbsland",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Granulated_White_Sugar_with_Large_Crystals,_Bright_Side_Light.jpg"
+ },
+ "sunflower-cooking-oil": {
+  "product": "Sunflower Cooking Oil",
+  "title": "Bottle 1 liter Sunflower refined oil.jpg",
+  "author": "Exgsp Gmbh LLC BOTTLE 1 liter Sunflower refined oil",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Bottle_1_liter_Sunflower_refined_oil.jpg"
+ },
+ "sweet-corn": {
+  "product": "Sweet Corn",
+  "title": "Boiled sweet corn on the cob in Indonesia.jpg",
+  "author": "Undeka 11",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Boiled_sweet_corn_on_the_cob_in_Indonesia.jpg"
+ },
+ "tamarind": {
+  "product": "Tamarind",
+  "title": "Tamarind (marketed).jpg",
+  "author": "David E Mead",
+  "licence": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File:Tamarind_(marketed).jpg"
+ },
+ "tomatoes": {
+  "product": "Tomatoes",
+  "title": "Tomato je.jpg",
+  "author": "Softeis",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+  "source": "https://commons.wikimedia.org/wiki/File:Tomato_je.jpg"
+ },
+ "toned-milk": {
+  "product": "Toned Milk",
+  "title": "Milk Pitcher With Lid.jpg",
+  "author": "Pitcherman (Zenon niewada)",
+  "licence": "Public domain",
+  "licenceUrl": "",
+  "source": "https://commons.wikimedia.org/wiki/File:Milk_Pitcher_With_Lid.jpg"
+ },
+ "toor-dal": {
+  "product": "Toor Dal",
+  "title": "Tur Dal.JPG",
+  "author": "Miansari66",
+  "licence": "Public domain",
+  "licenceUrl": "",
+  "source": "https://commons.wikimedia.org/wiki/File:Tur_Dal.JPG"
+ },
+ "turmeric-powder": {
+  "product": "Turmeric Powder",
+  "title": "Curcuma longa roots.jpg",
+  "author": "Simon A. Eugster",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Curcuma_longa_roots.jpg"
+ },
+ "urad-dal": {
+  "product": "Urad Dal",
+  "title": "Vigna mungo without skin.jpg",
+  "author": "Thamizhpparithi Maari",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Vigna_mungo_without_skin.jpg"
+ },
+ "vermicelli": {
+  "product": "Vermicelli",
+  "title": "Semiya 2.jpg",
+  "author": "Divya Kudua",
+  "licence": "CC BY 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Semiya_2.jpg"
+ },
+ "watermelon": {
+  "product": "Watermelon",
+  "title": "Sliced Watermelon.jpg",
+  "author": "Harsha K R",
+  "licence": "CC BY-SA 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Sliced_Watermelon.jpg"
+ },
+ "whole-wheat-atta": {
+  "product": "Whole Wheat Atta",
+  "title": "Atta flour.jpg",
+  "author": "Nga Ahorangi",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Atta_flour.jpg"
+ },
+ "whole-wheat-bread": {
+  "product": "Whole Wheat Bread",
+  "title": "Vegan Nine Grain Whole Wheat Bread.jpg",
+  "author": "Mattie Hagedorn",
+  "licence": "CC BY-SA 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Vegan_Nine_Grain_Whole_Wheat_Bread.jpg"
+ }
+}
