@@ -7,7 +7,7 @@ services:
     name: nammabasket
     runtime: docker
     plan: free
-    region: singapore
+    region: ohio  # same region as the Neon database (AWS US East 2, Ohio): every query stays local
     healthCheckPath: /index.html
     envVars:
       # PostgreSQL connection (e.g. a free Neon database). Use an EMPTY database:
