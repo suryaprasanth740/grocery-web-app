@@ -185,9 +185,9 @@
    "name": "Potatoes",
    "query": "potatoes heap",
    "queries": [
-    "potatoes tubers",
-    "raw potatoes",
-    "potato vegetable market"
+    "solanum tuberosum tubers",
+    "potatoes harvest basket",
+    "new potatoes"
    ],
    "max": 8
   },
@@ -377,9 +377,9 @@
    "name": "Camphor",
    "query": "camphor tablets",
    "queries": [
-    "camphor tablets",
-    "karpooram",
-    "camphor aarti"
+    "camphor cubes",
+    "camphor",
+    "kapur"
    ],
    "max": 8
   },
@@ -398,9 +398,9 @@
    "name": "French Beans",
    "query": "green beans vegetable",
    "queries": [
-    "green beans raw",
-    "french beans vegetable",
-    "haricot vert"
+    "phaseolus vulgaris pods",
+    "green beans",
+    "string beans"
    ],
    "max": 8
   },
@@ -617,41 +617,14 @@
    "query": "rusk toast biscuit"
   },
   {
-   "slug": "khari-biscuits",
-   "name": "Khari Biscuits",
-   "query": "khari puff pastry biscuit",
-   "queries": [
-    "khari biscuit",
-    "puff pastry biscuits",
-    "khari"
-   ],
-   "max": 8
-  },
-  {
    "slug": "banana-chips",
    "name": "Banana Chips",
    "query": "banana chips kerala"
   },
   {
-   "slug": "kodubale",
-   "name": "Kodubale",
-   "query": "kodubale snack",
-   "queries": [
-    "murukku",
-    "chakli snack",
-    "kodubale"
-   ],
-   "max": 8
-  },
-  {
    "slug": "mysore-pak",
    "name": "Mysore Pak",
    "query": "mysore pak sweet"
-  },
-  {
-   "slug": "groundnut-chikki",
-   "name": "Groundnut Chikki",
-   "query": "chikki peanut brittle"
   },
   {
    "slug": "mixture-namkeen",
@@ -680,38 +653,31 @@
    "query": "coconut cookies"
   },
   {
-   "slug": "peanut-laddu",
+   "slug": "murukku",
+   "name": "Murukku",
+   "query": "murukku"
+  },
+  {
+   "slug": "peanut-chikki",
    "name": "Peanut Chikki",
-   "query": "chikki",
+   "query": "chikki"
+  },
+  {
+   "slug": "khari-biscuits",
+   "name": "Khari Biscuits",
+   "query": "nankhatai",
    "queries": [
-    "peanut chikki",
-    "chikki",
-    "groundnut brittle"
+    "nankhatai",
+    "puff pastry",
+    "biscuits plate tea india"
    ],
    "max": 8
   }
  ],
  "only": [
-  "greek-yogurt",
   "potatoes",
-  "fresh-oranges",
-  "paneer",
-  "sona-masoori-rice",
-  "sambar-powder",
-  "assam-tea-powder",
-  "agarbatti",
-  "camphor",
   "french-beans",
-  "drumsticks",
-  "ragi-flour",
-  "idli-rice",
-  "urad-dal",
-  "besan",
-  "red-chilli-powder",
-  "buttermilk",
-  "khari-biscuits",
-  "kodubale",
-  "ragi-malt",
-  "peanut-laddu"
+  "camphor",
+  "khari-biscuits"
  ]
 }
