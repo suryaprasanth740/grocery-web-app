@@ -5,6 +5,7 @@
 #   api-tests-h2        JUnit 5 + MockMvc API tests on the in-memory H2 database (what `mvn verify` uses locally)
 #   api-tests-postgres  The same tests on a real PostgreSQL 16 server, like production (Neon)
 #   browser-tests       Starts the real app on PostgreSQL and clicks through it in Chrome (Playwright, see e2e/)
+#   docker-image        Builds the Docker image Render deploys, starts it, and checks it answers as a non-root user
 name: Build and test
 
 on:
@@ -18,10 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -80,10 +81,10 @@ jobs:
       DB_USER: nammabasket
       DB_PASSWORD: ci-only-password
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -119,6 +120,36 @@ jobs:
           name: test-reports-postgres
           path: target/surefire-reports/
 
+  docker-image:
+    name: Docker image (what Render runs)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build the image
+        run: docker build -t nammabasket:ci .
+
+      - name: Start it and check it answers
+        run: |
+          docker run -d --name app -p 8080:8080 -e ADMIN_EMAIL=admin@nammabasket.test -e ADMIN_PASSWORD=Admin@12345-ci nammabasket:ci
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8080/api/categories > /dev/null; then
+              echo "Up after ${i}x2 s"
+              curl -sf -o /dev/null -w "index.html: %{http_code}\n" http://localhost:8080/index.html
+              user=$(docker exec app whoami)
+              echo "Runs as: $user"
+              [ "$user" != "root" ] || { echo "::error title=Docker image::the app runs as root"; exit 1; }
+              size=$(docker image inspect nammabasket:ci --format '{{.Size}}')
+              echo "::notice title=Docker image::starts in about $((i*2)) s, runs as '$user', image $((size/1024/1024)) MB"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs app | tail -40
+          echo "::error title=Docker image::the container did not start"
+          exit 1
+
   browser-tests:
     name: Browser tests (Playwright)
     runs-on: ubuntu-latest
@@ -145,10 +176,10 @@ jobs:
       ADMIN_PASSWORD: Admin@12345-ci
       DEMO_SELLER_PASSWORD: Demo@12345-ci
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -167,7 +198,7 @@ jobs:
           echo "::error title=App did not start::$(tail -40 app.log | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
           exit 1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "20"
 
