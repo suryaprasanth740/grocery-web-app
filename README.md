@@ -1,274 +1,307 @@
-# FreshCart — Grocery Web Application
+# NammaBasket — Your Neighbourhood Shops, All in One Basket
 
-A full-stack grocery shopping platform: browse a product catalog, add items to a cart,
-and complete checkout — built as a portfolio/demo project.
+A multi-vendor marketplace for neighbourhood kirana shops in Bengaluru. Buyers find the shops that deliver
+to their PIN code, fill **one basket from several shops**, and pay once. Each shop gets its own order to
+pack and deliver, or the buyer picks it up. Shop owners apply, get approved by an admin, and run their
+shop from a dashboard.
 
-**Live demo:** _add your deployed link here once you complete the deployment steps below_
-**Tech stack:** Java (Spring Boot) · PostgreSQL / MySQL · HTML/CSS/JavaScript · JUnit
+A portfolio project by [Surya Prasanth G](https://github.com/suryaprasanth740), built and tested the way a
+QA engineer would: **160 API tests run on both H2 and PostgreSQL, plus 23 browser tests** on every push.
+
+**Live demo:** _not deployed yet: see [Deploying](#deploying)._ The earlier single-shop version, FreshCart,
+is on the `main` branch.
+**Stack:** Java 17 · Spring Boot 3 · Spring Data JPA · PostgreSQL · Flyway · HTML/CSS/vanilla JavaScript ·
+JUnit 5 + MockMvc · Playwright · GitHub Actions · Docker
+
+| Shop page with real product photos | Order with a delivery slot and a star rating |
+|---|---|
+| ![Shop page](docs/screenshots/shop-page.jpg) | ![Order page](docs/screenshots/order-review.jpg) |
+| **Seller dashboard: order steps** | **GST invoice** |
+| ![Seller orders](docs/screenshots/seller-orders.jpg) | ![Invoice](docs/screenshots/invoice.jpg) |
+
+_These screenshots are taken automatically by the browser tests from the real running app._
 
 ---
 
+## Contents
+
+- [What it does](#what-it-does)
+- [Quality and testing](#quality-and-testing)
+- [Tech stack and project layout](#tech-stack-and-project-layout)
+- [Running it locally](#running-it-locally)
+- [Configuration (environment variables)](#configuration-environment-variables)
+- [Database and migrations](#database-and-migrations)
+- [Running the tests](#running-the-tests)
+- [Building](#building)
+- [Deploying](#deploying)
+- [Demo accounts and test data](#demo-accounts-and-test-data)
+- [API reference](#api-reference)
+- [Honest limitations](#honest-limitations)
+
 ## What it does
 
-- Browse products by category or search
-- Create an account / log in (passwords are salted + hashed, never stored in plain text)
-- Add to cart, adjust quantities, remove items
-- Checkout with PIN code check, coupons, a full bill breakdown and a choice of payment
-  (Cash on Delivery or a **demo UPI** screen — no real money moves)
-- View order history, cancel an order, report a missing item after delivery
-- Admin panel to manage orders, products, stock, expiry dates and coupons
+**Buyers**
+- Set a PIN code (or share a location) to see the shops that deliver there, nearest first.
+- One basket from several shops. Delivery or pickup is chosen **per shop**, and the bill shows each shop's
+  fee, free-delivery amount and minimum order.
+- One checkout turns into one order per shop, all paid together: cash on delivery or a demo UPI screen with
+  success, failure and timeout.
+- Book a 2-hour **delivery or pickup slot** for today or tomorrow, or choose "as soon as possible".
+- **Save for later** with a heart, and move items between the saved list and the cart.
+- **Rate and review** products after delivery. Ratings show on product cards and shop pages.
+- A **notification bell** for order updates, a printable **GST invoice**, "order again", and missing-item
+  refunds within 48 hours.
+- Smart shopping: paste a shopping list ("2 kg thakkali, 1 litre haalu…"), turn recipes and festival kits
+  into a cart, keep to a monthly budget with cheaper swaps, and get "running low" reminders.
 
-## QA-driven features (edge cases most e-commerce apps miss)
+**Shop owners**
+- Apply to sell. The shop stays hidden until an admin approves it, and a rejected application can be fixed
+  and sent again.
+- Dashboard with today's sales, new orders, best sellers and low stock, worked out from real orders.
+- Products with MRP and discount, GST rate, best-before date and a photo (shrunk in the browser,
+  ≤ 300 KB, stored in PostgreSQL).
+- Orders move step by step: accept → prepare → out for delivery / ready for pickup → delivered.
+  Reject with a reason, which returns the stock.
+- Shop settings: hours, PIN codes served (`560xxx` = a whole area), delivery fee, minimum order,
+  pause orders, time slots with a capacity, and a GSTIN for tax invoices.
 
-I tested this app like a QA engineer, compared it with Zomato / Swiggy Instamart, and built
-fixes for the gaps I found. Every rule below has an automated test in `src/test/java`.
+**Admins**
+- Approve, reject, suspend and reactivate shops and accounts. Every action is written to an audit log.
+- Handle buyer reports by hiding a product or suspending a shop, and hide abusive reviews.
+- Manage categories and promotions, search all orders, and see marketplace stats.
 
-| Problem found | What the app does now |
-|---|---|
-| Two customers buy the **last item** at the same moment | Stock is reserved with one atomic SQL `UPDATE ... WHERE stock >= qty`; only one wins. The database also refuses negative stock. |
-| **Double click** on "Place order" | Each checkout has a request id; the same id twice returns the same order |
-| Same cart checked out in **two tabs** | The cart is deleted in one statement; the second checkout finds nothing and is refused |
-| No input limits | Address 10–300 chars, max 20 of one item, never more than stock |
-| **Price changed** after adding to cart | Cart shows "price changed from ₹30 to ₹32"; an order with the old total is refused |
-| Bill on the page ≠ amount charged | The bill is calculated only on the server; cart, checkout and order use the same numbers |
-| **Hidden fees** | Bill shows item total, coupon, delivery fee, "other fees ₹0" and GST included |
-| **PIN code** checked only at the end | PIN code checked while typing, before placing the order |
-| Coupon misuse | Minimum order, expiry, per-customer limit, cap on % discounts, never below ₹0 |
-| **Money deducted but order failed** | Demo UPI: success / failure / 10-minute timeout. A late payment is refunded automatically |
-| Cancel after the order is packed | Only allowed while "Placed"; stock goes back; paid orders are refunded |
-| **Missing item** in a grocery delivery | "Report a problem" within 48 hours, refund approved instantly (coupon share taken off) |
-| Item out of stock while packing | Customer chooses at checkout: refund / replace with similar / call me |
-| **Expired products** | Every product has a best-before date; items expiring today cannot be sold |
-| Brute-force login | Account locked for 15 minutes after 5 wrong passwords |
-| Seeing another customer's order by changing the URL | Every order API checks the owner (403) |
+## Quality and testing
 
-## Smart shopping features (not common in quick-commerce apps)
+Full test plan, requirement traceability, detailed test cases and defect log:
+**[docs/TEST_PLAN.md](docs/TEST_PLAN.md)**.
 
-| Feature | What it does | Where in the code |
+| Level | What | Count |
 |---|---|---|
-| **Paste your list → cart** (`/list.html`) | Reads a list written the normal way ("2 kg tomato, 1 litre milk, atta 5kg, dozen eggs") and matches each line to a product with the right number of packs. Understands Hindi, Kannada, Tamil and Telugu words in English letters (doodh, haalu, thakkali, akki...), plurals and small spelling mistakes. | `ShoppingListService`, `UnitUtil` |
-| **Recipe → cart** (`/recipes.html`) | Pick a dish and the number of people. Every ingredient is scaled and rounded to real pack sizes (200 g dal for 4 people → 1.2 kg for 24 → two 1 kg packs). Things usually at home (salt, oil) can be skipped. | `RecipeCatalog`, `RecipeService` |
-| **Festival kits** | Pongal, Diwali, Ugadi and Ganesh Chaturthi kits: pooja items and sweet-making basics in one click. | `RecipeCatalog` |
-| **Budget mode** (`/budget.html`, cart page) | Set a monthly budget. Shows how much is spent this month (Indian time, cancelled orders and refunds not counted), warns **before checkout** if the cart goes over, and offers one-click cheaper swaps. | `BudgetService` |
-| **Running low?** | Learns how often you buy each item from your own orders (milk every 3 days) and reminds you when it's due. | `ReorderService` |
+| API / integration | JUnit 5 + MockMvc: status codes, response bodies **and** database effects | 160 |
+| Database | The same 160 tests on PostgreSQL 16 in CI, as well as H2 | 160 × 2 |
+| Browser (end-to-end) | Playwright in Chrome against the real app: buyer → seller → buyer → admin journey, every public page on desktop and phone | 23 |
+| Container | The Docker image Render runs is built, started and checked (non-root user) on every push | 1 |
 
-New API endpoints: `POST /api/smart-list/parse`, `GET /api/recipes`, `GET /api/recipes/{id}?servings=6`,
-`GET/PUT /api/budget`, `GET /api/reorder`, `POST /api/cart/add-many`, `POST /api/cart/swap`.
-All of them are covered by `SmartShoppingTest`.
+Some of the edge cases that are tested:
 
-## Tech stack
+| Risk | What the app does (and the test that proves it) |
+|---|---|
+| Two buyers take the **last item** or the **last slot place** at the same moment | An atomic stock update and a shop row lock: exactly one wins (`CRIT-01`, `SLOT-07`) |
+| Double click / two tabs on Place order | A request id makes checkout idempotent (`CRIT-02`, `CRIT-03`) |
+| One shop's item fails in a two-shop basket | All or nothing: no order for any shop, stock untouched (`MV-05`) |
+| Seller A edits seller B's product, or a buyer opens another buyer's order | 404 / 403, and nothing changes (`CAT-03`, `SEC-01`) |
+| Price changed or total tampered with in the browser | The bill is calculated only on the server; a different total is refused (`CRIT-07`, `CRIT-08`) |
+| Coupon on a basket from several shops | Counts as one use and is split by item value; invoices take each line's share off before GST (`MV-07`, `INV-03`) |
+| Order steps skipped or repeated | Only valid steps are allowed; stock is returned exactly once (`STEP-03`, `STEP-06`) |
+| A server error with secrets in its message | The client sees a generic message only (`ERR-09`) |
+| Negative stock or an unknown status written straight to the database | Database CHECK constraints refuse it (`DatabaseMigrationTest`) |
+
+## Tech stack and project layout
 
 | Layer | Choice |
 |---|---|
-| Backend | Java 17, Spring Boot 3 (Spring Web, Spring Data JPA) |
-| Database | MySQL (falls back to in-memory H2 automatically for local dev) |
-| Frontend | HTML, CSS, vanilla JavaScript (no framework/build step) |
-| Auth | Session-based, salted SHA-256 password hashing |
-| Hosting (suggested) | Render.com (free tier) |
-| Tests | JUnit 5 + Spring Boot Test + MockMvc, run by GitHub Actions on every push |
-
-> **Why Spring Boot instead of plain Java/servlets:** it's the current industry-standard
-> way to build Java web backends and is what most job postings screen for, while keeping
-> the same core language skills (Java, MySQL) that were used originally.
-
-## Project structure
+| Backend | Java 17, Spring Boot 3.3 (Web, Data JPA, Validation), BCrypt (spring-security-crypto) |
+| Database | PostgreSQL in production (e.g. Neon); in-memory H2 in PostgreSQL mode for local runs and tests |
+| Migrations | Flyway (`src/main/resources/db/migration`); Hibernate only validates (`ddl-auto=validate`) |
+| Frontend | Plain HTML, CSS and JavaScript served by Spring Boot (no framework, no build step) |
+| Auth | Session cookie (HttpOnly, SameSite=Lax, optionally Secure); roles BUYER / SELLER / ADMIN; CSRF header check on every change |
+| Tests | JUnit 5, Spring MockMvc, AssertJ, Playwright; GitHub Actions |
+| Hosting | Docker on Render (backend + pages); optional Netlify/Vercel in front, proxying `/api` |
 
 ```
 grocery-web-app/
-├── pom.xml
-├── render.yaml                  # Render deployment config (backend)
-├── netlify.toml                 # Netlify: hosts the frontend, proxies /api to Render
-├── vercel.json                  # Vercel: hosts the frontend, proxies /api to Render
 ├── src/main/java/com/suryaprasanth/grocery/
-│   ├── GroceryApplication.java
-│   ├── model/                   # JPA entities: Product, Category, User, CartItem, Order, OrderItem, Coupon, OrderIssue
-│   ├── service/                 # Business rules: OrderService, BillingService, CouponService, DeliveryService
-│   ├── repository/              # Spring Data JPA repositories
-│   ├── controller/               # REST controllers (auth, products, categories, cart, orders)
-│   ├── dto/                      # Request/response payloads
-│   ├── util/                     # Password hashing, session helpers
-│   └── config/DataInitializer.java  # Seeds the catalog on first run
-└── src/main/resources/
-    ├── application.properties
-    └── static/                  # Frontend pages (incl. admin.html), css/, js/
-src/test/java/...                # Automated API tests (JUnit 5 + MockMvc)
+│   ├── controller/      REST endpoints (auth, shops, products, cart, orders, seller, admin, reviews, ...)
+│   ├── service/         Business rules (OrderService, BillingService, SlotService, ReviewService, InvoiceService, ...)
+│   ├── model/           JPA entities (User, Shop, Product, Order, Checkout, Review, Notification, ...)
+│   ├── repository/      Spring Data repositories
+│   ├── dto/             Request and response shapes, with validation rules
+│   ├── config/          Demo data, CSRF interceptor, shop rules
+│   └── util/            Passwords, sessions, units, email normalising
+├── src/main/resources/
+│   ├── application.properties
+│   ├── db/migration/    Flyway migrations (V1__initial_schema.sql, ...)
+│   └── static/          Pages (*.html), css/, js/, img/products/ (bundled photos + credits.json)
+├── src/test/java/...    API tests (JUnit 5 + MockMvc)
+├── e2e/                 Browser tests (Playwright)
+├── docs/                TEST_PLAN.md, TEST_CASES.md, NAMMABASKET_PLAN.md, screenshots
+├── tools/               Helpers: photo collection, schema export, test plan inventory
+├── .github/workflows/   tests.yml (CI), photos.yml, schema.yml
+├── Dockerfile           Image that Render runs
+├── render.yaml          Render Blueprint
+├── netlify.toml / vercel.json   Optional static hosting with /api proxied to Render
+└── .env.example         Every environment variable, with safe example values
 ```
 
 ## Running it locally
 
-No database setup needed — the app uses an in-memory H2 database by default.
+You need **Java 17** and **Maven 3.9+**. No database is needed.
 
 ```bash
-git clone https://github.com/<your-username>/grocery-web-app.git
+git clone https://github.com/suryaprasanth740/grocery-web-app.git
 cd grocery-web-app
-mvn spring-boot:run
+git checkout nammabasket
+ADMIN_PASSWORD='Admin@12345' DEMO_SELLER_PASSWORD='Demo@12345' mvn spring-boot:run
 ```
 
-Then open **http://localhost:8080** in your browser. The catalog is seeded automatically
-on first startup.
+Open **http://localhost:8080**. On first start the app creates the tables (Flyway) and the demo data:
+4 shops, about 100 products with photos, categories and coupons. Log in as the admin
+(`admin@nammabasket.local` / the password above) or as a demo shop owner (see
+[Demo accounts](#demo-accounts-and-test-data)). The in-memory database starts empty again on every restart.
 
-**Admin login:** `admin@freshcart.com`. If you did not set `ADMIN_PASSWORD`, a random password
-is printed in the console when the app starts (look for `ADMIN_PASSWORD is not set`).
-To choose your own: `ADMIN_PASSWORD=MySecret123 mvn spring-boot:run`
+**With a real PostgreSQL database** (closer to production):
 
-**Test coupons:** `FRESH50` (₹50 off above ₹299), `SAVE10` (10% up to ₹100 above ₹199),
-`BIG100` (₹100 off above ₹999), `OLD20` (already expired — always rejected).
-**Test PIN codes:** any `560xxx` (Bengaluru) is delivered; others like `110001` are not.
+```bash
+docker run -d --name nb-db -e POSTGRES_DB=nammabasket -e POSTGRES_USER=nammabasket \
+  -e POSTGRES_PASSWORD=change-me -p 5432:5432 postgres:16
+DB_URL=jdbc:postgresql://localhost:5432/nammabasket DB_USER=nammabasket DB_PASSWORD=change-me \
+  ADMIN_PASSWORD='Admin@12345' mvn spring-boot:run
+```
+
+## Configuration (environment variables)
+
+Everything that changes between environments is an environment variable. The full list with safe example
+values is in **[.env.example](.env.example)**. Copy it to `.env`, which Git ignores, and never commit real passwords.
+
+| Variable | Default | What it does |
+|---|---|---|
+| `DB_URL` | in-memory H2 | JDBC URL of the PostgreSQL database, e.g. `jdbc:postgresql://ep-xxx.aws.neon.tech/neondb?sslmode=require` |
+| `DB_USER` / `DB_PASSWORD` | `sa` / empty | Database login |
+| `PORT` | `8080` | HTTP port (Render sets it) |
+| `COOKIE_SECURE` | `false` | `true` makes the login cookie HTTPS-only. Set it in production. |
+| `ADMIN_EMAIL` | `admin@nammabasket.local` | Admin account created on first start |
+| `ADMIN_PASSWORD` | random | The admin's password. If empty, a random one is printed once in the log. **Set it in production.** |
+| `DEMO_SHOPS` | `true` | Adds 3 demo shops with products and photos next to the starter demo kirana |
+| `DEMO_SELLER_PASSWORD` | random (no login) | Lets you log in as the demo shop owners |
+
+Business rules (delivery fee, COD limit, cart limit, UPI timeout, login lockout…) are plain settings in
+`application.properties` under `app.*`, each with a comment.
+
+## Database and migrations
+
+- **Flyway owns the schema.** On start-up Flyway runs any migration in `src/main/resources/db/migration`
+  that hasn't run yet, and records it in the `flyway_schema_history` table.
+- **Hibernate only checks.** With `spring.jpa.hibernate.ddl-auto=validate`, the app refuses to start if a
+  table or column the code needs is missing. A forgotten migration is caught by the first test run, not by
+  a user.
+- **The same SQL works everywhere.** Local runs and the H2 tests use H2 in PostgreSQL mode, and CI runs every
+  test on real PostgreSQL 16 too.
+- **The database protects itself.** Enum columns have CHECK constraints, stock can't go below 0, emails and
+  reviews have unique keys, and every relation has a foreign key.
+
+**To change the schema**
+1. Change the entity in `model/`.
+2. Add a new file `V2__what_changed.sql`, then `V3__…`, and so on. **Never edit a migration that has already
+   run anywhere.** Flyway checks a checksum and stops if an applied file changes.
+3. Adding a value to an enum stored as text also means changing its CHECK constraint, for example:
+   `alter table orders drop constraint ck_orders_status; alter table orders add constraint ck_orders_status check (status in (...));`
+4. Not sure what SQL Hibernate expects? Run **Actions → Schema export**. It saves the DDL for the current
+   entities to the `schema-export` branch (see `tools/schema/README.md`).
+5. Run `mvn verify`. If the migration and the entities disagree, every test fails at start-up with
+   Hibernate's "Schema-validation" message.
+
+**Coming from FreshCart?** The FreshCart database on `main` was created by Hibernate (`ddl-auto=update`),
+not by Flyway. Point NammaBasket at a **new, empty** PostgreSQL database (create a new database or project in
+Neon). Flyway refuses to run on a non-empty database that has no migration history, so the old one can't
+be changed by accident. FreshCart keeps running on its own database.
 
 ## Running the tests
 
 ```bash
-mvn test
+mvn verify                       # all 160 API tests on in-memory H2
+
+# the same tests on PostgreSQL
+DB_URL=jdbc:postgresql://localhost:5432/nammabasket DB_USER=nammabasket DB_PASSWORD=change-me mvn verify
 ```
 
-The tests are also run automatically by GitHub Actions on every push
-(repo → **Actions** tab → **Build and test**). They cover the last-item race, double clicks,
-boundary values, coupons, UPI success / failure / timeout, cancel rules, missing-item refunds,
-expiry dates, admin rules and security checks.
+Browser tests: start the app, then follow **[e2e/README.md](e2e/README.md)**, which comes down to
+`cd e2e && npm install && npx playwright install chromium && npm test`.
 
----
+GitHub Actions (**Actions → Build and test**) runs four jobs on every push and pull request:
 
-## Deploying it for free (so you can put a live link on your resume)
+| Job | What it runs |
+|---|---|
+| API tests (H2) | `mvn verify` |
+| API tests (PostgreSQL) | `mvn verify` against a PostgreSQL 16 service container |
+| Browser tests (Playwright) | Starts the jar on PostgreSQL, runs `e2e/`, publishes screenshots to the `ci-screenshots` branch |
+| Docker image | Builds the image Render deploys, starts it, checks it answers and runs as a non-root user |
 
-This gives you one public URL, no cost, no custom domain — exactly what you'd share
-with an interviewer.
+The test totals appear on each run's summary page. If anything fails, the reason is shown there too.
 
-### Step 1 — Push this project to GitHub
+## Building
 
 ```bash
-cd grocery-web-app
-git init
-git add .
-git commit -m "Initial commit: FreshCart grocery web app"
-git branch -M main
-git remote add origin https://github.com/<your-username>/grocery-web-app.git
-git push -u origin main
+mvn clean package                 # target/grocery-web-app.jar (runs the tests first)
+java -jar target/grocery-web-app.jar
+
+docker build -t nammabasket .     # the image Render runs
+docker run -p 8080:8080 --env-file .env nammabasket
 ```
 
-(Create the empty repository on GitHub first — github.com → New repository — then
-copy its URL into the command above.)
+## Deploying
 
-### Step 2 — Create a free permanent PostgreSQL database on Neon
+The free setup: **Neon** for PostgreSQL and **Render** for the app. Optionally put **Netlify or Vercel** in
+front for a nicer URL.
 
-Without this step the app uses an in-memory database, and **every restart wipes all users
-and orders**. Neon's free tier keeps your data.
+1. **Database (Neon).** Create a project at [neon.tech](https://neon.tech) and copy the connection details.
+   Make the JDBC URL from them: `jdbc:postgresql://<host>/<database>?sslmode=require`, plus the user and password.
+   Use an empty database; Flyway creates the tables.
+2. **App (Render).** New → **Blueprint** → choose this repository and the `nammabasket` branch. Render reads
+   [`render.yaml`](render.yaml) and asks for the secret values: `DB_URL`, `DB_USER`, `DB_PASSWORD`,
+   `ADMIN_EMAIL`, `ADMIN_PASSWORD` and, optionally, `DEMO_SELLER_PASSWORD`. `DEMO_SHOPS=true` and
+   `COOKIE_SECURE=true` are already set. Render builds the `Dockerfile`, which runs the app on port 8080
+   as a non-root user. The first deploy takes a few minutes.
+3. **Check it.** Open `https://<your-service>.onrender.com`. The log should show Flyway
+   `Migrating schema "public" to version "1 - initial schema"`, then `Started GroceryApplication`. Log in at `/login.html` with your admin email.
+4. **Optional front door (Netlify or Vercel).** Change the Render URL in `netlify.toml` or `vercel.json`,
+   then import the repository. They serve the pages and pass `/api/*` to Render, so the login cookie works
+   without CORS.
+5. **Keep it honest.** The free Render plan sleeps when idle, so the first visit can take up to a minute.
+   The pages keep retrying while it wakes. Open the site a minute before showing it to someone.
 
-1. Go to **https://neon.tech** and sign up (GitHub login is easiest).
-2. Create a project (any name, region: Singapore is closest to India).
-3. On the dashboard click **Connect** and copy the connection details. You need:
-   host (like `ep-xxxx.ap-southeast-1.aws.neon.tech`), database name (usually `neondb`),
-   user, and password.
-4. Build the JDBC URL:
-   `jdbc:postgresql://<host>/<database>?sslmode=require`
+## Demo accounts and test data
 
-### Step 3 — Deploy the backend on Render
+| What | Value |
+|---|---|
+| Admin | `ADMIN_EMAIL` / `ADMIN_PASSWORD` (default email `admin@nammabasket.local`) |
+| Demo shop owners (password = `DEMO_SELLER_PASSWORD`) | `lakshmi.provisions@demo.nammabasket.in` (Sri Lakshmi Provisions, has a GSTIN) · `hasiru.tarkari@demo.nammabasket.in` (Hasiru Tarkari Angadi) · `gokula.bakery@demo.nammabasket.in` (Gokula Dairy & Bakery) |
+| Buyers | Sign up at `/register.html` |
+| PIN codes | Any `560xxx` (Bengaluru) is served; e.g. `110001` is not |
+| Coupons | `FRESH50` (₹50 off above ₹299) · `SAVE10` (10% up to ₹100 above ₹199) · `BIG100` (₹100 off above ₹999) · `OLD20` (expired, always refused) |
+| Payment | Cash on delivery up to ₹3000, or the demo UPI screen (choose success or failure) |
 
-1. Go to **https://render.com** and sign up (GitHub login is easiest).
-2. Click **New +** → **Web Service** → connect your GitHub account → select your
-   `grocery-web-app` repository.
-3. Render should auto-detect the `render.yaml` file and pre-fill the settings. If not, set:
-   - **Environment:** Java
-   - **Build Command:** `mvn clean package -DskipTests`
-   - **Start Command:** `java -Xmx400m -Xss512k -jar target/grocery-web-app.jar`
-4. Under **Environment Variables**, add:
-   | Key | Value |
-   |---|---|
-   | `DB_URL` | `jdbc:postgresql://<host>/<database>?sslmode=require` |
-   | `DB_USER` | your Neon user |
-   | `DB_PASSWORD` | your Neon password |
-   | `ADMIN_PASSWORD` | a strong password for the admin panel |
-5. Select the **Free** instance type and click **Create Web Service**.
-6. Wait for the build to finish (first build can take a few minutes). Render will give you
-   a URL like `https://grocery-web-app-xxxx.onrender.com` — **that's your live link.**
+## API reference
 
-### Optional — Host the frontend on Netlify or Vercel
+All endpoints are under `/api` and use JSON. Requests that change something must send the header
+`X-Requested-With: XMLHttpRequest` (CSRF protection). Errors always come back as `{"message": "..."}` with a
+4xx or 5xx status.
 
-Netlify and Vercel **cannot run the Java backend**. They only host static files, and a Spring Boot server needs a long-running JVM. So the setup is split:
+| Area | Endpoints |
+|---|---|
+| Auth | `POST /auth/register` · `POST /auth/register-seller` · `POST /auth/login` · `POST /auth/logout` · `GET /auth/me` |
+| Catalogue | `GET /categories` · `GET /products` · `GET /products/search` (paged) · `GET /products/{id}` · `GET /images/{id}` |
+| Shops | `GET /shops?pincode=&lat=&lng=` · `GET /shops/{slug}` · `GET /shops/{id}/slots` · `GET /shops/{id}/reviews` · `GET /delivery/check?pincode=` |
+| Cart & saved | `GET /cart` · `POST /cart/add` · `PUT /cart/update` · `DELETE /cart/remove/{productId}` · `DELETE /cart/clear` · `POST /cart/accept-prices` · `POST /cart/save-for-later/{productId}` · `GET /saved` · `POST/DELETE /saved/{productId}` · `POST /saved/{productId}/move-to-cart` |
+| Orders | `POST /orders/quote` · `POST /orders/checkout` · `GET /orders` · `GET /orders/{id}` · `POST /orders/{id}/pay` · `POST /orders/{id}/cancel` · `POST /orders/{id}/issues` · `POST /orders/{id}/reorder` · `GET /orders/{id}/invoice` |
+| Reviews & reports | `GET/POST /products/{id}/reviews` · `GET /reviews/mine` · `GET /reports/reasons` · `POST /reports` |
+| Notifications | `GET /notifications` · `POST /notifications/{id}/read` · `POST /notifications/read-all` |
+| Smart shopping | `POST /smart-list/parse` · `GET /recipes` · `GET /recipes/{id}?servings=` · `GET/PUT /budget` · `GET /reorder` · `POST /cart/add-many` · `POST /cart/swap` |
+| Seller | `GET/PUT /seller/shop` · `POST /seller/shop/resubmit` · `PUT /seller/shop/accepting` · `GET/POST /seller/products` · `PUT /seller/products/{id}` (`/stock`, `/active`) · `POST /seller/images` · `GET /seller/orders` · `GET /seller/orders/{id}` · `PUT /seller/orders/{id}/status` · `POST /seller/orders/{id}/reject` · `GET /seller/orders/{id}/invoice` · `GET /seller/summary` |
+| Admin | `/admin/shops` (approve, reject, suspend, reactivate) · `/admin/users` · `/admin/orders`, `/admin/orders/search`, `/admin/orders/{id}/status`, `/admin/orders/{id}/invoice` · `/admin/products` · `/admin/reports` · `/admin/reviews` · `/admin/categories` · `/admin/coupons` · `/admin/issues` · `/admin/audit` · `/admin/stats` |
 
-```
-Browser ──► Netlify / Vercel  (HTML, CSS, JS from src/main/resources/static)
-               │
-               └── /api/*  ──proxy──►  Render  (Spring Boot API + MySQL)
-```
+## Honest limitations
 
-Netlify/Vercel **forward** every `/api/...` request to Render. The browser only ever talks to one domain, so the login session cookie keeps working. No CORS setup and no Java changes are needed.
-
-**Netlify** (uses `netlify.toml`)
-1. netlify.com → **Add new site → Import an existing project** → pick this repo.
-2. Leave the settings as they are. `netlify.toml` already sets the publish folder and the `/api` proxy.
-3. Deploy. Your site is at `https://<name>.netlify.app`.
-
-**Vercel** (uses `vercel.json`)
-1. vercel.com → **Add New → Project** → import this repo.
-2. Framework preset: **Other**. Leave everything else as it is.
-3. Deploy. Your site is at `https://<name>.vercel.app`.
-
-Keep the Render service running. It is still the backend. If your Render URL changes, update it in **both** `netlify.toml` (`to = ...`) and `vercel.json` (`destination`).
-
-**Cold starts:** a free Render service sleeps after 15 minutes idle and needs about 30–60 s to wake up.
-- Netlify gives up on a proxied request after 26 s, and Vercel after 2 minutes.
-- `js/api.js` handles this. While the server wakes up, it shows *"Waking up the server…"* and retries page-loading (GET) requests automatically. Actions like placing an order are never retried, so nothing happens twice.
-- To avoid the wait completely, the optional GitHub Action `.github/workflows/keep-backend-awake.yml` pings the backend every 10 minutes. One always-on free service uses about 744 of Render's 750 free hours a month. Turn it off any time under the repo's **Actions** tab.
-
-### Step 4 — Put the link on your resume
-
-Use the `onrender.com` URL from Step 3. One honest heads-up worth knowing (and mentioning
-if an interviewer asks why the first click is slow): Render's free tier spins the app down
-after 15 minutes of inactivity, so the very first visit after a while can take 30–60 seconds
-to wake up. Every visit after that is instant. This is a well-known free-tier tradeoff, not a
-bug in your app.
+- **No real payments.** UPI is a demo screen. A real app would use Razorpay or PhonePe and trust only their signed webhook.
+- **One time zone.** Slots and "today" use India time (Asia/Kolkata); PIN codes are Indian.
+- **Single server.** Login lockout counts live in memory and reset on restart; several servers would need Redis.
+- **Not real tax documents.** Invoices follow the GST layout, but are not filed tax documents.
+- **Demo stock.** Demo products get a new best-before date when theirs passes (`app.demo.refresh-expired-stock`),
+  so the free demo keeps working.
+- **Browser coverage.** Browser tests run in Chrome only. Accessibility has basic automated checks so far;
+  a full review is planned.
+- **Cold starts.** The free Render plan sleeps after inactivity, so the first request can take up to a minute.
 
 ---
 
-## API reference (for your own understanding / interview talking points)
-
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/api/auth/register` | Create an account |
-| POST | `/api/auth/login` | Log in |
-| POST | `/api/auth/logout` | Log out |
-| GET | `/api/auth/me` | Current logged-in user |
-| GET | `/api/categories` | List categories |
-| GET | `/api/products` | List products (optional `?categoryId=` or `?search=`) |
-| GET | `/api/products/{id}` | Product detail |
-| GET | `/api/cart` | View cart (requires login) |
-| POST | `/api/cart/add` | Add item to cart |
-| PUT | `/api/cart/update` | Update item quantity |
-| DELETE | `/api/cart/remove/{productId}` | Remove item |
-| POST | `/api/cart/accept-prices` | Accept changed prices in the cart |
-| GET | `/api/delivery/check?pincode=` | Do we deliver to this PIN code? |
-| GET | `/api/coupons` | Offers available now |
-| POST | `/api/orders/quote` | The bill for the current cart (optional coupon) |
-| POST | `/api/orders/checkout` | Place an order from the current cart |
-| GET | `/api/orders` | Order history |
-| GET | `/api/orders/{id}` | Single order detail |
-| POST | `/api/orders/{id}/pay` | Demo UPI result (`SUCCESS` / `FAILED`) |
-| POST | `/api/orders/{id}/cancel` | Cancel (only while placed) |
-| POST | `/api/orders/{id}/issues` | Report a missing / damaged / expired item |
-| GET/PUT/POST | `/api/admin/...` | Admin: orders, status, products, issues, coupons |
-
-## Honest limitations (worth knowing, not hiding)
-
-- No real payment gateway — UPI is a demo screen. A real app would use Razorpay / PhonePe
-  and trust only their signed webhook, never the browser.
-- Login lockout counts are kept in memory (reset on restart); a bigger site would use Redis.
-- Seeded demo products get a fresh best-before date on restart once they expire
-  (`app.demo.refresh-expired-stock=true`) so the free live demo keeps working. Set it to
-  `false` to test expiry by hand.
-- Render's free tier sleeps after inactivity, causing a cold-start delay on the first visit.
-- Table schema is auto-generated by Hibernate (`ddl-auto=update`) rather than versioned
-  migrations — fine for a project this size, but a real production app would use a tool
-  like Flyway or Liquibase.
-
-## Possible next steps (good talking points for interviews)
-
-- Real payment gateway (Razorpay test mode) with webhook signature checks
-- Photo upload for missing / damaged item reports
-- Live delivery tracking and delivery-time estimates per area
-- Pagination for large catalogs
-- UI automation tests with Playwright or Selenium
-- Versioned database migrations with Flyway
-
----
-
-Built by [Surya Prasanth G](https://github.com/suryaprasanth740).
+Product photos: Wikimedia Commons contributors, used under CC BY / CC BY-SA / CC0 / public domain.
+The full list is on `/credits.html` and in `src/main/resources/static/img/products/credits.json`.
