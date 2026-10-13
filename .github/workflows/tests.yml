@@ -122,6 +122,8 @@ jobs:
   browser-tests:
     name: Browser tests (Playwright)
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # only to publish the screenshots to the ci-screenshots branch
     timeout-minutes: 25
     services:
       postgres:
@@ -210,3 +212,20 @@ jobs:
             e2e/report/
             e2e/test-results/
             app.log
+
+      # The screenshots are also put on the "ci-screenshots" branch (replaced on every push),
+      # so they can be looked at on GitHub without downloading the artifact.
+      - name: Publish screenshots to the ci-screenshots branch
+        if: always() && github.event_name == 'push'
+        run: |
+          [ -d e2e/screenshots ] && [ -n "$(ls -A e2e/screenshots)" ] || exit 0
+          cp -r e2e/screenshots /tmp/shots
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan ci-screenshots
+          git rm -rfq .
+          cp /tmp/shots/*.png .
+          echo "Screenshots from the browser tests of ${GITHUB_SHA} on ${GITHUB_REF_NAME}." > README.md
+          git add -A
+          git commit -qm "Browser test screenshots for ${GITHUB_SHA::7}"
+          git push -fq origin ci-screenshots
