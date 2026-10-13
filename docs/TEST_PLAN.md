@@ -37,8 +37,9 @@
 | Level | What it proves | Tool | Where it runs |
 |---|---|---|---|
 | Unit | Pure rules with fixed inputs (time-slot windows, cut-off minutes) | JUnit 5 | `SlotRulesTest` |
-| API / integration | Each endpoint: status code, response body and the database effect (stock, orders, audit rows) | JUnit 5 + Spring MockMvc + AssertJ | `src/test/java/...` (157 tests) |
-| Database compatibility | The same 157 tests on a real PostgreSQL 16 server (production uses PostgreSQL on Neon) | GitHub Actions service container | job "API tests (PostgreSQL)" |
+| API / integration | Each endpoint: status code, response body and the database effect (stock, orders, audit rows) | JUnit 5 + Spring MockMvc + AssertJ | `src/test/java/...` (160 tests) |
+| Database compatibility | The same 160 tests on a real PostgreSQL 16 server (production uses PostgreSQL on Neon). Tables come from the Flyway migration and Hibernate validates them, so a schema mistake fails every test | GitHub Actions service container | job "API tests (PostgreSQL)" |
+| Container | The Docker image Render runs: it builds, starts, answers, and runs as a non-root user | Docker | job "Docker image" |
 | End-to-end (browser) | Real app + real database + real Chrome: buyer, seller and admin journeys | Playwright 1.47 | `e2e/` (23 tests) |
 | Exploratory | Looking at every screenshot from the browser run; trying odd inputs by hand | Screenshots on the `ci-screenshots` branch | after each push |
 
@@ -61,7 +62,7 @@
 
 **Start testing a change when:** it compiles, and the person changing it has added or updated tests for the rule they changed.
 **A change is done when:**
-1. All three CI jobs are green (no test skipped or disabled to get there).
+1. All four CI jobs are green (no test skipped or disabled to get there).
 2. Every bug fix has a regression test that failed before the fix.
 3. No open defect of severity Critical or Major.
 4. The browser screenshots have been looked at for layout problems.
@@ -113,6 +114,7 @@ Each line of the QA brief is mapped to the automated tests that prove it. IDs ar
 | Unknown endpoint returns 404 | SMART-09, E2E-PAGE-14 |
 | Validation failures return client errors | ERR-01, ERR-07, ERR-08, CRIT-06, CRIT-09 |
 | Server errors don't leak sensitive information | ERR-09, ERR-08, ONB-12 |
+| Database-level protection (PostgreSQL-compatible test configuration) | DB-01, DB-02, DB-03 |
 | **New features** | |
 | Ratings & reviews | REV-01 … REV-06, E2E-MARK-06, E2E-MARK-07 |
 | Time slots | SLOT-01 … SLOT-07, SLOTU-01 … SLOTU-04, E2E-MARK-04 |
@@ -173,8 +175,7 @@ Real problems found while building and testing NammaBasket. Each fixed bug has a
 
 | Item | Risk | Plan |
 |---|---|---|
-| Database tables are created by Hibernate `ddl-auto=update` | A column rename or type change won't migrate safely in production | Phase 9: add Flyway migrations |
-| Admin default email is still `admin@freshcart.com` when `ADMIN_EMAIL` isn't set | Old brand name in production | Set `ADMIN_EMAIL` before go-live (Phase 9 docs) |
+| Admin password is printed once in the log when `ADMIN_PASSWORD` is not set | Anyone who can read the logs can log in as admin | Phase 10: don't print it in production; the README says to set it |
 | Accessibility checked only at a basic level | Screen-reader and keyboard problems may remain | Phase 10: axe-core scan in the browser tests + keyboard walk-through |
 | Browser tests run in Chrome only | Safari/Firefox layout differences | Manual check before release |
 | Slot times use India time (Asia/Kolkata) on the server | Shops outside India aren't supported | Out of scope for this project |
@@ -183,7 +184,7 @@ Real problems found while building and testing NammaBasket. Each fixed bug has a
 
 Generated from the test code by `python3 tools/testplan/inventory.py "<run>"`, so the list always matches what CI runs.
 
-_157 API tests (each run twice: on H2 and on PostgreSQL 16) and 23 browser tests. "Pass" = passed in CI run [#38403553397](https://github.com/suryaprasanth740/grocery-web-app/actions/runs/38403553397) (commit 145c072, 13 Oct 2026)._
+_160 API tests (each run twice: on H2 and on PostgreSQL 16) and 23 browser tests. "Pass" = passed in CI run [#38407768068](https://github.com/suryaprasanth740/grocery-web-app/actions/runs/38407768068) (commit 0916ed4, 13 Oct 2026)._
 
 #### Authentication & roles (`AuthRolesTest`, 11 tests)
 
@@ -431,6 +432,14 @@ _157 API tests (each run twice: on H2 and on PostgreSQL 16) and 23 browser tests
 | INV-04 | Shop without a GSTIN prints a bill of supply; with a GSTIN, a tax invoice showing it | Pass |
 | INV-05 | Who can see it: the buyer, the selling shop and admins; another buyer 403, another shop 404 | Pass |
 | INV-06 | GSTIN format is checked when the shop saves it: a wrong one is refused with 400 | Pass |
+
+#### Database: migrations and constraints (`DatabaseMigrationTest`, 3 tests)
+
+| ID | What the test checks | Result |
+|---|---|---|
+| DB-01 | Flyway applied every migration successfully, starting with V1 | Pass |
+| DB-02 | The database itself refuses negative stock and unknown order statuses, even if the Java checks were skipped | Pass |
+| DB-03 | Two accounts can't share one email: the database has a unique key, not only the Java check | Pass |
 
 #### Browser: `e2e/tests/marketplace.spec.js` (8 tests)
 
