@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * FreshCart's smart shopping features:
+ * Smart shopping features:
  *  - Paste a shopping list -> matched products   POST /api/smart-list/parse
  *  - Recipes and festival kits -> exact packs    GET  /api/recipes, /api/recipes/{id}?servings=6
  *  - Monthly budget mode                         GET/PUT /api/budget

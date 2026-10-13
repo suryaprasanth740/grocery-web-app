@@ -1,9 +1,9 @@
-# FreshCart frontend on Netlify.
-# The Java backend + MySQL stay on Render; Netlify serves the HTML/CSS/JS and
+# Optional: serve the NammaBasket pages from Netlify.
+# The Java backend + PostgreSQL stay on Render; Netlify serves the HTML/CSS/JS and
 # forwards every /api/* request to Render. The browser only ever talks to the
 # Netlify domain, so the login session cookie keeps working with no code changes.
 #
-# If your Render URL changes, update the "to" line below.
+# Point the "to" line below at YOUR Render service URL (Render dashboard -> your service).
 
 [build]
   publish = "src/main/resources/static"

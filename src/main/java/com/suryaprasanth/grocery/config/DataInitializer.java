@@ -51,7 +51,7 @@ public class DataInitializer implements CommandLineRunner {
     public DataInitializer(CategoryRepository categoryRepository, ProductRepository productRepository,
                            CouponRepository couponRepository, UserRepository userRepository,
                            ShopRepository shopRepository, OrderRepository orderRepository,
-                           @Value("${app.admin.email:admin@freshcart.com}") String adminEmail,
+                           @Value("${app.admin.email:admin@nammabasket.local}") String adminEmail,
                            @Value("${app.admin.password:}") String adminPassword,
                            @Value("${app.demo.refresh-expired-stock:true}") boolean refreshExpiredDemoStock,
                            MarketplaceDemoData marketplaceDemoData) {

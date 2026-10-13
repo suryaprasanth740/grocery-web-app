@@ -1,17 +1,34 @@
+# Render Blueprint for the NammaBasket backend (Spring Boot API + the pages it serves).
+# Render: New -> Blueprint -> pick this repo and the branch to deploy. Values marked
+# "sync: false" are asked for once in the Render dashboard and never stored in Git.
+# Every variable is explained in .env.example.
 services:
   - type: web
-    name: grocery-web-app
+    name: nammabasket
     runtime: docker
     plan: free
     region: singapore
     healthCheckPath: /index.html
     envVars:
+      # PostgreSQL connection (e.g. a free Neon database). Use an EMPTY database:
+      # Flyway creates the tables on first start.
       - key: DB_URL
         sync: false
       - key: DB_USER
         sync: false
       - key: DB_PASSWORD
         sync: false
-      # Password for the admin panel login (admin@freshcart.com by default)
+      # Admin login for /admin.html, created on first start
+      - key: ADMIN_EMAIL
+        sync: false
       - key: ADMIN_PASSWORD
         sync: false
+      # Demo shops with products and photos (set "false" for a marketplace with only real sellers)
+      - key: DEMO_SHOPS
+        value: "true"
+      # Lets you log in as the demo shop owners to show the seller side (leave empty to disable)
+      - key: DEMO_SELLER_PASSWORD
+        sync: false
+      # Render serves the app over HTTPS, so the login cookie can be HTTPS-only
+      - key: COOKIE_SECURE
+        value: "true"
