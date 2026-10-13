@@ -41,20 +41,25 @@
             <artifactId>spring-security-crypto</artifactId>
         </dependency>
 
+        <!-- Database migrations: Flyway creates and changes the tables (src/main/resources/db/migration) -->
         <dependency>
-            <groupId>com.mysql</groupId>
-            <artifactId>mysql-connector-j</artifactId>
-            <scope>runtime</scope>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
         </dependency>
-        <!-- PostgreSQL driver: lets the app use a free permanent cloud database (e.g. Neon) -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <!-- PostgreSQL driver: production database (e.g. Neon) -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Used only as a fallback local database if no MySQL env vars are set,
-             so the project also runs out-of-the-box with zero setup. -->
+        <!-- In-memory database for local runs and tests when DB_URL is not set (PostgreSQL mode),
+             so the project runs out of the box with zero setup. -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
